@@ -71,7 +71,8 @@ function mergeIntervals(intervals) {
   for (let i = 1; i < sorted.length; i++) {
     const next = sorted[i];
     // "Adjacent counts as merged" is a design choice; good for block math.
-    if (next.startMs <= cur.endMs) {
+    // ALTERED: changed to "<" from "<=" to keep exact boundaries
+    if (next.startMs < cur.endMs) {
       cur.endMs = Math.max(cur.endMs, next.endMs);
     } else {
       merged.push(cur);
@@ -158,7 +159,10 @@ export function computeAvailabilityBlocks({
       clamped.push({ startMs, endMs });
     }
 
-    mergedBusyByUser.set(userId, mergeIntervals(clamped));
+    const merged = mergeIntervals(clamped);
+    if (merged.length > 0) {
+      mergedBusyByUser.set(userId, merged); // only store if non-empty
+    }
   }
 
   // Block iteration with per-user pointers (fast enough for MVP).

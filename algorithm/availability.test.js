@@ -3,7 +3,7 @@ import { computeAvailabilityBlocks, DEFAULT_G_MINUTES } from './availability';
 
 // --- Test Data Helpers ---
 // A fixed base time to make math easy (e.g., 10:00 AM UTC)
-const BASE_TIME = Date.UTC(2026, 0, 1, 10, 0, 0, 0); 
+const BASE_TIME = Date.UTC(2026, 0, 1, 10, 0, 0, 0);
 const ONE_MIN = 60 * 1000;
 const ONE_BLOCK = DEFAULT_G_MINUTES * ONE_MIN; // 15 minutes
 const ONE_HOUR = 60 * ONE_MIN;
@@ -23,6 +23,17 @@ describe('Algorithm Module: Simple Availability (MVP)', () => {
         computeAvailabilityBlocks({
           windowStartMs: "invalid",
           windowEndMs: t(60),
+          participants: []
+        });
+      }).toThrow(/windowStartMs\/windowEndMs must be numbers/);
+    });
+
+    // NEW: cover the "windowEndMs is invalid" side of the OR branch
+    test('should throw error if windowEndMs is not a finite number', () => {
+      expect(() => {
+        computeAvailabilityBlocks({
+          windowStartMs: t(0),
+          windowEndMs: NaN,
           participants: []
         });
       }).toThrow(/windowStartMs\/windowEndMs must be numbers/);
@@ -84,6 +95,22 @@ describe('Algorithm Module: Simple Availability (MVP)', () => {
       expect(result[0].endMs).toBe(t(10));
       expect(result[2].endMs).toBe(t(30));
     });
+
+    // NEW: cover partial final block behavior (window not multiple of granularity)
+    test('should create a final partial block when windowEnd is not aligned to block size', () => {
+      const result = computeAvailabilityBlocks({
+        windowStartMs: t(0),
+        windowEndMs: t(16), // 16 minutes, with 15-minute blocks
+        participants: [{ userId: 'user1', events: [] }],
+        granularityMinutes: 15
+      });
+
+      expect(result).toHaveLength(2);
+      expect(result[0].startMs).toBe(t(0));
+      expect(result[0].endMs).toBe(t(15));
+      expect(result[1].startMs).toBe(t(15));
+      expect(result[1].endMs).toBe(t(16)); // partial block
+    });
   });
 
   // =================================================================
@@ -91,7 +118,12 @@ describe('Algorithm Module: Simple Availability (MVP)', () => {
   // Requirement: Events overlapping a block mark the user as busy for that block.
   // =================================================================
   describe('Event Overlap Logic', () => {
-    const user = { userId: 'u1', events: [] };
+    let user;
+
+    // NEW: avoid shared mutable state across tests
+    beforeEach(() => {
+      user = { userId: 'u1', events: [] };
+    });
 
     test('should mark user as busy if event completely covers a block', () => {
       // Event: 0 to 30 mins
@@ -162,6 +194,25 @@ describe('Algorithm Module: Simple Availability (MVP)', () => {
       // Block 3 (30-45): Busy (overlap 31-40)
       expect(result[2].busyUserIds).toContain('u1');
     });
+
+    // NEW: cover clamping eliminating an event entirely (no overlap after clamp)
+    test('should treat user as free if an event is entirely outside the window (clamped away)', () => {
+      user.events = [
+        { startMs: t(-60), endMs: t(-30) }, // fully before window
+        { startMs: t(90), endMs: t(120) }   // fully after window
+      ];
+
+      const result = computeAvailabilityBlocks({
+        windowStartMs: t(0),
+        windowEndMs: t(30),
+        participants: [user],
+        granularityMinutes: 15
+      });
+
+      expect(result).toHaveLength(2);
+      expect(result[0].freeUserIds).toContain('u1');
+      expect(result[1].freeUserIds).toContain('u1');
+    });
   });
 
   // =================================================================
@@ -231,6 +282,28 @@ describe('Algorithm Module: Simple Availability (MVP)', () => {
       // Should be free because the event is invalid/zero-length
       expect(result[0].freeUserIds).toContain('u1');
     });
+
+    // NEW: cover missing startMs/endMs fields being ignored
+    test('should ignore events missing startMs or endMs', () => {
+      const user = {
+        userId: 'u1',
+        events: [
+          { startMs: t(0) },           // missing endMs
+          { endMs: t(15) },            // missing startMs
+          { startMs: t(0), endMs: t(15) } // valid
+        ]
+      };
+
+      const result = computeAvailabilityBlocks({
+        windowStartMs: t(0),
+        windowEndMs: t(15),
+        participants: [user],
+        granularityMinutes: 15
+      });
+
+      // still busy because of the one valid event
+      expect(result[0].busyUserIds).toContain('u1');
+    });
   });
 
   // =================================================================
@@ -270,110 +343,181 @@ describe('Algorithm Module: Simple Availability (MVP)', () => {
       expect(result[0].totalCount).toBe(0);
       expect(result[0].availabilityFraction).toBe(1); // Avoid division by zero, default to "open"
     });
+
+    // NEW: cover that "priority" is accepted (forward compatible), but ignored in MVP
+    test('should accept a priority argument without changing MVP output', () => {
+      const baseArgs = {
+        windowStartMs: t(0),
+        windowEndMs: t(15),
+        participants: [{ userId: 'u1', events: [] }],
+        granularityMinutes: 15
+      };
+
+      const r1 = computeAvailabilityBlocks(baseArgs);
+      const r2 = computeAvailabilityBlocks({ ...baseArgs, priority: "B1" });
+
+      expect(r2).toEqual(r1);
+    });
   });
 });
+
 // ================================================================
 // more tests to get 100% coverage
 // ===============================================================
+
 // Test for granularity edge cases negative or 0
 describe('Granularity Edge Cases', () => {
-    test('should throw error if granularityMinutes is non-positive', () => {
-        expect( () => {
-            computeAvailabilityBlocks({
-                windowStartMs: t(0),
-                windowEndMs: t(60),
-                participants: [],
-                granularityMinutes: 0
-            });
-        }).toThrow();
-    });
+  test('should throw error if granularityMinutes is non-positive', () => {
+    expect(() => {
+      computeAvailabilityBlocks({
+        windowStartMs: t(0),
+        windowEndMs: t(60),
+        participants: [],
+        granularityMinutes: 0
+      });
+    }).toThrow(/granularityMinutes must be a positive number/);
+  });
 
-    test('should throw error if granularityMinutes is negative', () => {
-        expect( () => {
-            computeAvailabilityBlocks({
-                windowStartMs: t(0),
-                windowEndMs: t(60),
-                participants: [],
-                granularityMinutes: -15
-            });
-        }).toThrow();
-    });
+  test('should throw error if granularityMinutes is negative', () => {
+    expect(() => {
+      computeAvailabilityBlocks({
+        windowStartMs: t(0),
+        windowEndMs: t(60),
+        participants: [],
+        granularityMinutes: -15
+      });
+    }).toThrow(/granularityMinutes must be a positive number/);
+  });
+
+  // NEW: cover non-finite blockMs paths (NaN / Infinity)
+  test('should throw error if granularityMinutes is NaN', () => {
+    expect(() => {
+      computeAvailabilityBlocks({
+        windowStartMs: t(0),
+        windowEndMs: t(60),
+        participants: [],
+        granularityMinutes: NaN
+      });
+    }).toThrow(/granularityMinutes must be a positive number/);
+  });
+
+  test('should throw error if granularityMinutes is Infinity', () => {
+    expect(() => {
+      computeAvailabilityBlocks({
+        windowStartMs: t(0),
+        windowEndMs: t(60),
+        participants: [],
+        granularityMinutes: Infinity
+      });
+    }).toThrow(/granularityMinutes must be a positive number/);
+  });
 });
 
 // Test for ev === null or undefined
 describe('Event Null/Undefined Handling', () => {
-    test('should ignore null events in participant event list and assert user is "free"', () => {
-        const user = {
-            userId: 'u1',
-            events: [null, { startMs: t(10), endMs: t(20) }]
-        };
+  test('should ignore null events in participant event list (no crash, valid event still counts)', () => {
+    const user = {
+      userId: 'u1',
+      events: [null, { startMs: t(10), endMs: t(20) }]
+    };
 
-        const result = computeAvailabilityBlocks({
-            windowStartMs: t(0),
-            windowEndMs: t(30),
-            participants: [user],
-            granularityMinutes: 15
-        });
-        // Block 1 (0-15): Busy (overlap 10-15)
-        expect(result[0].busyUserIds).toContain('u1');
-        // Block 2 (15-30): Busy (overlap 15-20)
-        expect(result[1].busyUserIds).toContain('u1');
+    const result = computeAvailabilityBlocks({
+      windowStartMs: t(0),
+      windowEndMs: t(30),
+      participants: [user],
+      granularityMinutes: 15
     });
 
-    test('should ignore undefined events in participant event list and assert user is "free"', () => {
-        const user = {
-            userId: 'u1',
-            events: [undefined, { startMs: t(10), endMs: t(20) }]
-        };
+    // Block 1 (0-15): Busy (overlap 10-15)
+    expect(result[0].busyUserIds).toContain('u1');
+    // Block 2 (15-30): Busy (overlap 15-20)
+    expect(result[1].busyUserIds).toContain('u1');
+  });
 
-        const result = computeAvailabilityBlocks({
-            windowStartMs: t(0),
-            windowEndMs: t(30),
-            participants: [user],
-            granularityMinutes: 15
-        });
-        // Block 1 (0-15): Busy (overlap 10-15)
-        expect(result[0].busyUserIds).toContain('u1');
-        // Block 2 (15-30): Busy (overlap 15-20)
-        expect(result[1].busyUserIds).toContain('u1');
+  test('should ignore undefined events in participant event list (no crash, valid event still counts)', () => {
+    const user = {
+      userId: 'u1',
+      events: [undefined, { startMs: t(10), endMs: t(20) }]
+    };
+
+    const result = computeAvailabilityBlocks({
+      windowStartMs: t(0),
+      windowEndMs: t(30),
+      participants: [user],
+      granularityMinutes: 15
     });
+
+    // Block 1 (0-15): Busy (overlap 10-15)
+    expect(result[0].busyUserIds).toContain('u1');
+    // Block 2 (15-30): Busy (overlap 15-20)
+    expect(result[1].busyUserIds).toContain('u1');
+  });
 });
 
 // Test for ev.startMs or ev.endMs not finite
 describe('Event Timestamp Validation', () => {
-    test('should ignore events with non-finite startMs and assert user is "free"', () => {
-        const user = {
-            userId: 'u1',
-            events: [{ startMs: NaN, endMs: t(20) }, { startMs: t(10), endMs: t(20) }]
-        };
+  test('should ignore events with non-finite startMs and still count valid events', () => {
+    const user = {
+      userId: 'u1',
+      events: [{ startMs: NaN, endMs: t(20) }, { startMs: t(10), endMs: t(20) }]
+    };
 
-        const result = computeAvailabilityBlocks({
-            windowStartMs: t(0),
-            windowEndMs: t(30),
-            participants: [user],
-            granularityMinutes: 15
-        });
-        // Block 1 (0-15): Busy (overlap 10-15)
-        expect(result[0].busyUserIds).toContain('u1');
-        // Block 2 (15-30): Busy (overlap 15-20)
-        expect(result[1].busyUserIds).toContain('u1');
+    const result = computeAvailabilityBlocks({
+      windowStartMs: t(0),
+      windowEndMs: t(30),
+      participants: [user],
+      granularityMinutes: 15
     });
 
-    test('should ignore events with non-finite endMs and assert user is "free"', () => {
-        const user = {
-            userId: 'u1',
-            events: [{ startMs: t(10), endMs: Infinity }, { startMs: t(10), endMs: t(20) }]
-        };
+    expect(result[0].busyUserIds).toContain('u1');
+    expect(result[1].busyUserIds).toContain('u1');
+  });
 
-        const result = computeAvailabilityBlocks({
-            windowStartMs: t(0),
-            windowEndMs: t(30),
-            participants: [user],
-            granularityMinutes: 15
-        });
-        // Block 1 (0-15): Busy (overlap 10-15)
-        expect(result[0].busyUserIds).toContain('u1');
-        // Block 2 (15-30): Busy (overlap 15-20)
-        expect(result[1].busyUserIds).toContain('u1');
+  test('should ignore events with non-finite endMs and still count valid events', () => {
+    const user = {
+      userId: 'u1',
+      events: [{ startMs: t(10), endMs: Infinity }, { startMs: t(10), endMs: t(20) }]
+    };
+
+    const result = computeAvailabilityBlocks({
+      windowStartMs: t(0),
+      windowEndMs: t(30),
+      participants: [user],
+      granularityMinutes: 15
     });
+
+    expect(result[0].busyUserIds).toContain('u1');
+    expect(result[1].busyUserIds).toContain('u1');
+  });
+});
+
+// NEW: cover the Array.isArray(p.events) ? p.events : [] path
+describe('Participant Event List Validation', () => {
+  test('should treat participant.events = null as empty list (user should be free)', () => {
+    const user = { userId: 'u1', events: null };
+
+    const result = computeAvailabilityBlocks({
+      windowStartMs: t(0),
+      windowEndMs: t(30),
+      participants: [user],
+      granularityMinutes: 15
+    });
+
+    expect(result[0].freeUserIds).toContain('u1');
+    expect(result[1].freeUserIds).toContain('u1');
+  });
+
+  test('should treat participant.events = "not an array" as empty list (user should be free)', () => {
+    const user = { userId: 'u1', events: "not an array" };
+
+    const result = computeAvailabilityBlocks({
+      windowStartMs: t(0),
+      windowEndMs: t(30),
+      participants: [user],
+      granularityMinutes: 15
+    });
+
+    expect(result[0].freeUserIds).toContain('u1');
+    expect(result[1].freeUserIds).toContain('u1');
+  });
 });
