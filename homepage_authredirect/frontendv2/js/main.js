@@ -1,0 +1,31 @@
+import { renderGroups } from "./groups/groupsView.js";
+import { renderCalendar } from "./calendar/calendarView.js";
+
+console.log("Frontend loaded");
+
+renderCalendar();
+
+document.getElementById("calendarBtn").onclick = showCalendar;
+document.getElementById("groupsBtn").onclick = showGroups;
+
+document.getElementById("create-group-btn").onclick = () => {
+  console.log("create group button click");
+};
+
+document.getElementById("loginBtn").onclick = () => {
+  window.location.href = "/auth/google";
+};
+
+function showCalendar() {
+  console.log("Switching to calendar view");
+  document.getElementById("calendar").hidden = false;
+  document.getElementById("groups").hidden = true;
+  renderCalendar();
+}
+
+function showGroups() {
+  console.log("Switching to groups view");
+  document.getElementById("calendar").hidden = true;
+  document.getElementById("groups").hidden = false;
+  renderGroups();
+}
