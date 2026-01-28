@@ -8,6 +8,7 @@ export interface EventInterval {
 // Attempt to use a map
 const eventsByUserId: Map<string, EventInterval[]> = new Map();
 
+
 // Basic (not a test) object use
 /*
 const start_lecture_utc = Date.UTC(2026, 0, 26, 12, 0); // Jan 26, 2026, 12:00 PM UTC

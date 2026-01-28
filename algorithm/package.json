@@ -3,17 +3,18 @@
   "version": "1.0.0",
   "description": "",
   "main": "index.js",
- "scripts": {
-"test": "vitest run",
- "test:watch": "vitest",
- "typecheck": "tsc --noEmit"
-},
+  "scripts": {
+    "test": "jest"
+  },
   "keywords": [],
   "author": "",
   "license": "ISC",
   "type": "module",
   "devDependencies": {
+    "@babel/preset-env": "^7.28.6",
+    "@babel/preset-typescript": "^7.28.5",
     "@types/node": "^25.0.10",
+    "jest": "^30.2.0",
     "typescript": "^5.9.3",
     "vitest": "^4.0.18"
   }
