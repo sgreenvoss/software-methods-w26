@@ -2,7 +2,6 @@ require("dotenv").config();
 
 const express = require("express");
 const path = require("path");
-const { Pool } = require("pg");
 
 const http = require('http');
 const https = require('https');
@@ -31,27 +30,6 @@ app.use(express.static(path.join(__dirname, "..", "frontendv2")));
 // Check that the server works
 app.get("/", (req, res) => {
   res.send("Server is running");
-});
-
-// Database connection
-const pool = new Pool({
-  user: process.env.DB_USER,
-  host: process.env.DB_HOST,
-  database: process.env.DB_NAME,
-  password: process.env.DB_PASSWORD,
-  port: process.env.DB_PORT,
-});
-
-// GET all users
-app.get("/users", async (req, res) => {
-  const result = await pool.query("SELECT * FROM users");
-  res.json(result.rows);
-});
-
-// GET all groups
-app.get("/groups", async (req, res) => {
-  const result = await pool.query("SELECT * FROM groups");
-  res.json(result.rows);
 });
 
 // Google Oauth Connection
