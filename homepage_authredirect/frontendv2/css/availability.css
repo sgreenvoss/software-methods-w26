@@ -1,0 +1,5 @@
+.availability-block {
+  position: absolute;
+  inset: 0;
+  background-color: rgba(76, 175, 80, 0.35);
+}
