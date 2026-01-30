@@ -1,5 +1,5 @@
 import { renderGroups } from "./groups/groupsView.js";
-import { renderCalendar } from "./calendar/calendarView.js";
+import { renderCalendar } from "./calendar/calendarController.js";
 
 console.log("Frontend loaded");
 
@@ -29,3 +29,4 @@ function showGroups() {
   document.getElementById("groups").hidden = false;
   renderGroups();
 }
+

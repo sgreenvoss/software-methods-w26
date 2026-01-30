@@ -1,12 +1,12 @@
 export const mockEvents = [
   {
     title: "CS Class",
-    start: "2026-02-10T10:00",
-    end: "2026-02-10T11:15"
+    start: "2026-01-27T10:00",
+    end: "2026-01-27T11:15"
   },
   {
     title: "Study Group",
-    start: "2026-02-11T14:00",
-    end: "2026-02-11T15:00"
+    start: "2026-01-30T14:00",
+    end: "2026-01-30T15:00"
   }
 ];
