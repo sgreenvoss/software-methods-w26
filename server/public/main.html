@@ -1,0 +1,138 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>OAuth Success</title>
+  <style>
+    :root {
+      color-scheme: light;
+      --ink: #0f172a;
+      --muted: #475569;
+      --paper: #f6f3ee;
+      --card: #ffffff;
+      --accent: #2563eb;
+      --accent-2: #0f766e;
+      --stroke: #e2e8f0;
+      font-family: "Garamond", "Times New Roman", serif;
+    }
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      min-height: 100vh;
+      color: var(--ink);
+      background:
+        radial-gradient(800px 320px at 10% -10%, #bfdbfe66, transparent 60%),
+        radial-gradient(700px 500px at 90% 15%, #99f6e466, transparent 60%),
+        linear-gradient(180deg, var(--paper) 0%, #efeae2 100%);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 28px;
+    }
+    .shell {
+      width: min(920px, 100%);
+      background: var(--card);
+      border-radius: 18px;
+      border: 1px solid var(--stroke);
+      padding: 28px;
+      box-shadow: 0 16px 30px rgba(15, 23, 42, 0.12);
+    }
+    h1 {
+      margin: 0 0 6px;
+      font-size: clamp(28px, 4vw, 44px);
+      letter-spacing: 0.4px;
+    }
+    .subtitle {
+      margin: 0 0 18px;
+      color: var(--muted);
+      font-size: 15px;
+    }
+    .week {
+      display: inline-flex;
+      gap: 10px;
+      align-items: center;
+      background: #f1f5f9;
+      border: 1px solid var(--stroke);
+      border-radius: 12px;
+      padding: 8px 12px;
+      font-size: 14px;
+      color: var(--muted);
+      margin-bottom: 18px;
+    }
+    .actions {
+      display: grid;
+      gap: 12px;
+      grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+    }
+    a.button {
+      text-decoration: none;
+      color: white;
+      background: var(--accent);
+      padding: 12px 14px;
+      border-radius: 12px;
+      font-size: 16px;
+      text-align: center;
+      box-shadow: 0 10px 16px rgba(37, 99, 235, 0.22);
+      transition: transform 0.08s ease;
+    }
+    a.button.secondary {
+      background: var(--accent-2);
+      box-shadow: 0 10px 16px rgba(15, 118, 110, 0.22);
+    }
+    a.button:active { transform: translateY(1px); }
+    .meta {
+      margin-top: 18px;
+      color: var(--muted);
+      font-size: 13px;
+    }
+  </style>
+</head>
+<body>
+  <div class="shell">
+    <h1>OAuth success</h1>
+    <p class="subtitle">Jump into refresh tools or view your weekly calendar.</p>
+    <div class="week">
+      <span id="weekRange">Loading week window...</span>
+    </div>
+    <div class="actions">
+      <a class="button" href="/refresh.html">Open refresh tools</a>
+      <a class="button secondary" href="/calendar.html">Open calendar view</a>
+    </div>
+    <p class="meta">This page auto-fills the current Sunday–Saturday window and shares it across tools.</p>
+  </div>
+
+  <script>
+    const WEEK_START_KEY = 'windowStartMs';
+    const WEEK_END_KEY = 'windowEndMs';
+
+    function getWeekWindow() {
+      const now = new Date();
+      const start = new Date(now);
+      start.setHours(0, 0, 0, 0);
+      start.setDate(now.getDate() - now.getDay());
+      const end = new Date(start);
+      end.setDate(start.getDate() + 6);
+      end.setHours(23, 59, 59, 999);
+      return { start, end };
+    }
+
+    function formatDate(d) {
+      return d.toLocaleDateString(undefined, {
+        weekday: 'short',
+        month: 'short',
+        day: '2-digit',
+        year: 'numeric',
+      });
+    }
+
+    (function initWeek() {
+      const { start, end } = getWeekWindow();
+      localStorage.setItem(WEEK_START_KEY, String(start.getTime()));
+      localStorage.setItem(WEEK_END_KEY, String(end.getTime()));
+      document.getElementById('weekRange').textContent =
+        `Week window: ${formatDate(start)} – ${formatDate(end)}`;
+    })();
+  </script>
+</body>
+</html>

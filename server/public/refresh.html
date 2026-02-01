@@ -1,0 +1,260 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Refresh Cache</title>
+  <style>
+    :root {
+      color-scheme: light;
+      --ink: #0f172a;
+      --muted: #475569;
+      --paper: #f6f3ee;
+      --card: #ffffff;
+      --accent: #2563eb;
+      --accent-2: #0f766e;
+      --stroke: #e2e8f0;
+      font-family: "Garamond", "Times New Roman", serif;
+    }
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      min-height: 100vh;
+      color: var(--ink);
+      background:
+        radial-gradient(800px 360px at 10% -10%, #bfdbfe66, transparent 60%),
+        radial-gradient(700px 500px at 90% 10%, #99f6e466, transparent 60%),
+        linear-gradient(180deg, var(--paper) 0%, #efeae2 100%);
+    }
+    header {
+      max-width: 1100px;
+      margin: 0 auto;
+      padding: 28px 22px 12px;
+    }
+    h1 {
+      margin: 0 0 6px;
+      font-size: clamp(26px, 4vw, 40px);
+      letter-spacing: 0.3px;
+    }
+    .subtitle {
+      margin: 0;
+      color: var(--muted);
+      font-size: 15px;
+    }
+    main {
+      max-width: 1100px;
+      margin: 0 auto;
+      padding: 12px 22px 40px;
+      display: grid;
+      gap: 18px;
+      grid-template-columns: 1fr;
+    }
+    .panel {
+      background: var(--card);
+      border: 1px solid var(--stroke);
+      border-radius: 16px;
+      box-shadow: 0 12px 24px rgba(15, 23, 42, 0.12);
+      padding: 18px;
+    }
+    label {
+      display: block;
+      margin-top: 10px;
+      color: var(--muted);
+      font-size: 13px;
+    }
+    input {
+      padding: 8px 10px;
+      width: 320px;
+      max-width: 100%;
+      border-radius: 10px;
+      border: 1px solid var(--stroke);
+      font-family: inherit;
+      font-size: 15px;
+    }
+    button {
+      margin-top: 10px;
+      padding: 10px 14px;
+      border: none;
+      border-radius: 10px;
+      cursor: pointer;
+      color: #fff;
+      background: var(--accent);
+      box-shadow: 0 8px 14px rgba(37, 99, 235, 0.2);
+      font-size: 15px;
+    }
+    button.secondary {
+      background: var(--accent-2);
+      box-shadow: 0 8px 14px rgba(15, 118, 110, 0.2);
+    }
+    pre {
+      background: #f8fafc;
+      border-radius: 12px;
+      padding: 12px;
+      overflow: auto;
+      white-space: pre-wrap;
+      border: 1px solid var(--stroke);
+    }
+    .row {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 16px;
+      margin-top: 12px;
+    }
+    .week {
+      display: inline-flex;
+      gap: 10px;
+      align-items: center;
+      background: #f1f5f9;
+      border: 1px solid var(--stroke);
+      border-radius: 12px;
+      padding: 8px 12px;
+      font-size: 14px;
+      color: var(--muted);
+      margin-top: 10px;
+    }
+    @media (min-width: 980px) {
+      main { grid-template-columns: 1.1fr 1fr; }
+    }
+  </style>
+</head>
+<body>
+  <header>
+    <h1>Refresh tools</h1>
+    <p class="subtitle">Sync cached events, view metadata, and check availability.</p>
+    <div class="week">
+      <span id="weekRange">Loading week window...</span>
+    </div>
+  </header>
+
+  <main>
+    <section class="panel">
+      <div class="row">
+        <div>
+          <label for="windowStart">Window start (local date/time)</label>
+          <input id="windowStart" type="datetime-local" />
+        </div>
+        <div>
+          <label for="windowEnd">Window end (local date/time)</label>
+          <input id="windowEnd" type="datetime-local" />
+        </div>
+        <div>
+          <label for="personId">Person ID (optional)</label>
+          <input id="personId" type="text" placeholder="1" />
+        </div>
+      </div>
+
+      <div class="row">
+        <div>
+          <label for="windowStartMs">Window start (epoch ms)</label>
+          <input id="windowStartMs" type="text" placeholder="1770019200000" />
+        </div>
+        <div>
+          <label for="windowEndMs">Window end (epoch ms)</label>
+          <input id="windowEndMs" type="text" placeholder="1770537540000" />
+        </div>
+      </div>
+
+      <div class="row">
+        <button id="refreshBtn">Refresh cache</button>
+        <button id="eventsBtn" class="secondary">Get cached events</button>
+        <button id="availabilityBtn" class="secondary">Get availability</button>
+      </div>
+    </section>
+
+    <section class="panel">
+      <h2>Response</h2>
+      <pre id="output">(waiting)</pre>
+    </section>
+  </main>
+
+  <script>
+    const output = document.getElementById('output');
+    const windowStart = document.getElementById('windowStart');
+    const windowEnd = document.getElementById('windowEnd');
+    const windowStartMs = document.getElementById('windowStartMs');
+    const windowEndMs = document.getElementById('windowEndMs');
+    const personId = document.getElementById('personId');
+    const weekRange = document.getElementById('weekRange');
+    const WEEK_START_KEY = 'windowStartMs';
+    const WEEK_END_KEY = 'windowEndMs';
+
+    function localInputToEpochMs(value) {
+      if (!value) return null;
+      const ms = Date.parse(value);
+      return Number.isFinite(ms) ? String(ms) : null;
+    }
+
+    function toLocalInputValue(date) {
+      const pad = (n) => String(n).padStart(2, '0');
+      return `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())}T${pad(date.getHours())}:${pad(date.getMinutes())}`;
+    }
+
+    function getWeekWindow() {
+      const now = new Date();
+      const start = new Date(now);
+      start.setHours(0, 0, 0, 0);
+      start.setDate(now.getDate() - now.getDay());
+      const end = new Date(start);
+      end.setDate(start.getDate() + 6);
+      end.setHours(23, 59, 59, 999);
+      return { start, end };
+    }
+
+    function formatDate(d) {
+      return d.toLocaleDateString(undefined, {
+        weekday: 'short',
+        month: 'short',
+        day: '2-digit',
+        year: 'numeric',
+      });
+    }
+
+    function syncWeekInputs() {
+      const { start, end } = getWeekWindow();
+      const startMs = localStorage.getItem(WEEK_START_KEY) || String(start.getTime());
+      const endMs = localStorage.getItem(WEEK_END_KEY) || String(end.getTime());
+      localStorage.setItem(WEEK_START_KEY, startMs);
+      localStorage.setItem(WEEK_END_KEY, endMs);
+      windowStartMs.value = startMs;
+      windowEndMs.value = endMs;
+      windowStart.value = toLocalInputValue(new Date(Number(startMs)));
+      windowEnd.value = toLocalInputValue(new Date(Number(endMs)));
+      weekRange.textContent = `Week window: ${formatDate(new Date(Number(startMs)))} – ${formatDate(new Date(Number(endMs)))}`;
+    }
+
+    function buildQuery() {
+      const start = windowStartMs.value.trim() || localInputToEpochMs(windowStart.value);
+      const end = windowEndMs.value.trim() || localInputToEpochMs(windowEnd.value);
+      const params = new URLSearchParams();
+      if (start) params.set('windowStartMs', start);
+      if (end) params.set('windowEndMs', end);
+      const pid = personId.value.trim();
+      if (pid) params.set('personId', pid);
+      return params.toString();
+    }
+
+    async function doRequest(method, path) {
+      const query = buildQuery();
+      const url = query ? `${path}?${query}` : path;
+      output.textContent = `Loading ${url}...`;
+      const res = await fetch(url, { method });
+      const text = await res.text();
+      output.textContent = text;
+    }
+
+    syncWeekInputs();
+
+    document.getElementById('refreshBtn').addEventListener('click', () => {
+      doRequest('GET', '/events/refresh');
+    });
+
+    document.getElementById('eventsBtn').addEventListener('click', () => {
+      doRequest('GET', '/events');
+    });
+
+    document.getElementById('availabilityBtn').addEventListener('click', () => {
+      doRequest('GET', '/availability');
+    });
+  </script>
+</body>
+</html>

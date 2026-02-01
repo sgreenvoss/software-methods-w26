@@ -1,0 +1,270 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Calendar View</title>
+  <style>
+    :root {
+      color-scheme: light;
+      --ink: #121418;
+      --muted: #4b5563;
+      --paper: #f7f4ef;
+      --accent: #0f766e;
+      --accent-2: #7c2d12;
+      --card: #ffffff;
+      --stroke: #e5e7eb;
+      font-family: "Palatino Linotype", "Book Antiqua", Palatino, serif;
+    }
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      color: var(--ink);
+      background:
+        radial-gradient(900px 400px at 10% -10%, #fde68a55, transparent 60%),
+        radial-gradient(700px 500px at 90% 10%, #99f6e455, transparent 60%),
+        linear-gradient(180deg, #f7f4ef 0%, #f3efe9 100%);
+      min-height: 100vh;
+    }
+    header {
+      padding: 36px 22px 12px;
+      max-width: 1040px;
+      margin: 0 auto;
+    }
+    h1 {
+      margin: 0 0 6px;
+      letter-spacing: 0.3px;
+      font-size: clamp(28px, 4vw, 42px);
+    }
+    .subtitle {
+      margin: 0;
+      color: var(--muted);
+      font-size: 15px;
+    }
+    main {
+      max-width: 1040px;
+      margin: 0 auto;
+      padding: 12px 22px 44px;
+      display: grid;
+      gap: 18px;
+      grid-template-columns: 1fr;
+    }
+    .panel {
+      background: var(--card);
+      border: 1px solid var(--stroke);
+      border-radius: 16px;
+      box-shadow: 0 8px 18px rgba(15, 23, 42, 0.08);
+      padding: 18px;
+    }
+    .controls {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+      gap: 12px;
+    }
+    label {
+      display: block;
+      font-size: 13px;
+      color: var(--muted);
+      margin-bottom: 6px;
+    }
+    input {
+      width: 100%;
+      padding: 10px 12px;
+      border-radius: 10px;
+      border: 1px solid var(--stroke);
+      font-family: inherit;
+      font-size: 15px;
+    }
+    button {
+      appearance: none;
+      border: none;
+      background: var(--accent);
+      color: white;
+      padding: 10px 14px;
+      border-radius: 10px;
+      font-size: 15px;
+      cursor: pointer;
+      transition: transform 0.08s ease, box-shadow 0.2s ease;
+      box-shadow: 0 6px 14px rgba(15, 118, 110, 0.25);
+    }
+    button.secondary {
+      background: var(--accent-2);
+      box-shadow: 0 6px 14px rgba(124, 45, 18, 0.25);
+    }
+    button:active { transform: translateY(1px); }
+
+    .events {
+      display: grid;
+      gap: 12px;
+    }
+    .event {
+      border: 1px solid var(--stroke);
+      border-radius: 12px;
+      padding: 12px 14px;
+      background: #fafafa;
+    }
+    .event h3 {
+      margin: 0 0 6px;
+      font-size: 16px;
+    }
+    .event p {
+      margin: 0;
+      color: var(--muted);
+      font-size: 13px;
+    }
+    .empty {
+      color: var(--muted);
+      font-size: 14px;
+      margin: 6px 0 0;
+    }
+    .note {
+      color: var(--muted);
+      font-size: 13px;
+      margin-top: 6px;
+    }
+
+    @media (min-width: 920px) {
+      main { grid-template-columns: 1.1fr 1.4fr; }
+    }
+  </style>
+</head>
+<body>
+  <header>
+    <h1>Calendar View</h1>
+    <p class="subtitle">Pull cached events from the API and inspect time windows.</p>
+  </header>
+
+  <main>
+    <section class="panel">
+      <h2>Query</h2>
+      <div class="controls">
+        <div>
+          <label for="windowStart">Window start (local date/time)</label>
+          <input id="windowStart" type="datetime-local" />
+        </div>
+        <div>
+          <label for="windowEnd">Window end (local date/time)</label>
+          <input id="windowEnd" type="datetime-local" />
+        </div>
+        <div>
+          <label for="personId">Person ID (optional)</label>
+          <input id="personId" type="text" placeholder="1" />
+        </div>
+      </div>
+      <div style="margin-top: 14px; display: flex; gap: 10px; flex-wrap: wrap;">
+        <button id="loadBtn">Load events</button>
+        <button id="refreshBtn" class="secondary">Refresh cache</button>
+      </div>
+      <p class="note" id="weekRange">Loading week window...</p>
+    </section>
+
+    <section class="panel">
+      <h2>Events</h2>
+      <div id="events" class="events"></div>
+      <p id="empty" class="empty" style="display:none;">No events returned for this window.</p>
+    </section>
+  </main>
+
+  <script>
+    const eventsEl = document.getElementById('events');
+    const emptyEl = document.getElementById('empty');
+    const windowStart = document.getElementById('windowStart');
+    const windowEnd = document.getElementById('windowEnd');
+    const personId = document.getElementById('personId');
+    const weekRange = document.getElementById('weekRange');
+    const WEEK_START_KEY = 'windowStartMs';
+    const WEEK_END_KEY = 'windowEndMs';
+
+    function localInputToEpochMs(value) {
+      if (!value) return null;
+      const ms = Date.parse(value);
+      return Number.isFinite(ms) ? String(ms) : null;
+    }
+
+    function toLocalInputValue(date) {
+      const pad = (n) => String(n).padStart(2, '0');
+      return `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())}T${pad(date.getHours())}:${pad(date.getMinutes())}`;
+    }
+
+    function getWeekWindow() {
+      const now = new Date();
+      const start = new Date(now);
+      start.setHours(0, 0, 0, 0);
+      start.setDate(now.getDate() - now.getDay());
+      const end = new Date(start);
+      end.setDate(start.getDate() + 6);
+      end.setHours(23, 59, 59, 999);
+      return { start, end };
+    }
+
+    function formatDate(d) {
+      return d.toLocaleDateString(undefined, {
+        weekday: 'short',
+        month: 'short',
+        day: '2-digit',
+        year: 'numeric',
+      });
+    }
+
+    function syncWeekInputs() {
+      const { start, end } = getWeekWindow();
+      const startMs = localStorage.getItem(WEEK_START_KEY) || String(start.getTime());
+      const endMs = localStorage.getItem(WEEK_END_KEY) || String(end.getTime());
+      localStorage.setItem(WEEK_START_KEY, startMs);
+      localStorage.setItem(WEEK_END_KEY, endMs);
+      windowStart.value = toLocalInputValue(new Date(Number(startMs)));
+      windowEnd.value = toLocalInputValue(new Date(Number(endMs)));
+      weekRange.textContent = `Week window: ${formatDate(new Date(Number(startMs)))} – ${formatDate(new Date(Number(endMs)))}`;
+    }
+
+    function buildQuery() {
+      const params = new URLSearchParams();
+      const start = localInputToEpochMs(windowStart.value);
+      const end = localInputToEpochMs(windowEnd.value);
+      if (start) params.set('windowStartMs', start);
+      if (end) params.set('windowEndMs', end);
+      const pid = personId.value.trim();
+      if (pid) params.set('personId', pid);
+      return params.toString();
+    }
+
+    function renderEvents(events) {
+      eventsEl.innerHTML = '';
+      emptyEl.style.display = events.length ? 'none' : 'block';
+      for (const ev of events) {
+        const card = document.createElement('div');
+        card.className = 'event';
+        const title = document.createElement('h3');
+        title.textContent = ev.summary || 'Untitled event';
+        const meta = document.createElement('p');
+        const start = ev.event_start || ev.start || ev.start?.dateTime || ev.start?.date;
+        const end = ev.event_end || ev.end || ev.end?.dateTime || ev.end?.date;
+        meta.textContent = `Start: ${start ?? 'n/a'} | End: ${end ?? 'n/a'}`;
+        card.appendChild(title);
+        card.appendChild(meta);
+        eventsEl.appendChild(card);
+      }
+    }
+
+    async function loadEvents() {
+      const query = buildQuery();
+      const url = query ? `/events?${query}` : '/events';
+      const res = await fetch(url);
+      const data = await res.json();
+      renderEvents(Array.isArray(data) ? data : (data.events || []));
+    }
+
+    async function refreshCache() {
+      const query = buildQuery();
+      const url = query ? `/events/refresh?${query}` : '/events/refresh';
+      await fetch(url);
+      await loadEvents();
+    }
+
+    document.getElementById('loadBtn').addEventListener('click', loadEvents);
+    document.getElementById('refreshBtn').addEventListener('click', refreshCache);
+
+    syncWeekInputs();
+  </script>
+</body>
+</html>
