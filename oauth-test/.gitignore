@@ -1,4 +1,0 @@
-.env
-node_modules/
-secrets/
-public/events.txt
