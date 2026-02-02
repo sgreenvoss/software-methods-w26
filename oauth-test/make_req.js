@@ -53,6 +53,47 @@ async function listEvents(auth, filePath) {
   await fs.writeFile(filePath, events.join('\n'));
 }
 
+async function getUserInfo(auth, filePath, users) {
+  const people = google.people({version: 'v1', auth: auth});
+  const result = await people.people.get({
+    resourceName: 'people/me',
+    personFields: 'names,emailAddresses',
+  });
+
+  let name;
+  let email;
+  let user;
+
+  const profile = result.data;
+
+  if (profile.names && profile.names.length > 0) {
+    name = profile.names[0].displayName;
+  }
+
+  if (profile.emailAddresses && profile.emailAddresses.length > 0) {
+    email = profile.emailAddresses[0].value;
+  }
+
+  if (users.some(user => user.email === email) !== true) {
+    const userId = crypto.randomUUID();
+    user = {
+      email: email,
+      name: name,
+      userId: userId,
+      groupIds: []
+    };
+
+    users.push(user);
+    console.log("new user: ", user.userId);
+    fs.appendFile(filePath, "Welcome, new user!\n");
+  } else {    
+    user = users.find(user => user.email === email);
+    console.log("returning user: ", user.userId);
+    fs.appendFile(filePath, "Welcome back, " + user.name + "!\n");
+  }
+
+}
+
 async function main() {
   const app = express();
   app.use(express.static('public'));
