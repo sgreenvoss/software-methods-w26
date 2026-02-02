@@ -22,7 +22,9 @@ const oauth2Client = new google.auth.OAuth2(
 
 // Access scopes for two non-Sign-In scopes: Read-only Drive activity and Google Calendar.
 const scopes = [
-  'https://www.googleapis.com/auth/calendar.readonly'
+  'https://www.googleapis.com/auth/calendar.readonly',
+  'https://www.googleapis.com/auth/userinfo.email',
+  'https://www.googleapis.com/auth/userinfo.profile'
 ];
 
 /* Global variable that stores user credential in this code example.
@@ -127,6 +129,8 @@ async function main() {
     res.redirect(authorizationUrl);
   });
 
+  users = [];
+
  // Receive the callback from Google's OAuth 2.0 server.
   app.get('/oauth2callback', async (req, res) => {
     let q = url.parse(req.url, true).query;
@@ -146,6 +150,8 @@ async function main() {
     if (tokens.scope.includes("https://www.googleapis.com/auth/calendar.readonly")) {
       // Write events to a text file inside /public
       await listEvents(oauth2Client, 'public/events.txt');
+
+      await getUserInfo(oauth2Client, 'public/events.txt', users);
 
       // Redirect user to the main webpage
       return res.redirect('/main.html');
