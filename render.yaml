@@ -1,0 +1,45 @@
+# Exported from Render on 2026-02-02T06:55:42Z
+version: "1"
+projects:
+- name: My project
+  environments:
+  - name: Production
+    services:
+    - type: web
+      name: scheduler-frontend
+      runtime: static
+      repo: https://github.com/sgreenvoss/software-methods-w26
+      staticPublishPath: .
+      autoDeployTrigger: commit
+      rootDir: frontend
+    - type: web
+      name: scheduler-backend
+      runtime: node
+      repo: https://github.com/sgreenvoss/software-methods-w26
+      plan: free
+      envVars:
+      - key: DATABASE_URL
+        sync: false
+      - key: SESSION_SECRET
+        sync: false
+      - key: GOOGLE_REDIRECT_URI
+        sync: false
+      - key: GOOGLE_CLIENT_SECRET
+        sync: false
+      - key: GOOGLE_CLIENT_ID
+        sync: false
+      region: oregon
+      buildCommand: npm install
+      startCommand: node make_req.js
+      autoDeployTrigger: commit
+      rootDir: backend
+    databases:
+    - name: scheduler-database
+      databaseName: scheduledb_5ddh
+      user: scheduledb_5ddh_user
+      plan: free
+      region: oregon
+      ipAllowList:
+      - source: 0.0.0.0/0
+        description: everywhere
+      postgresMajorVersion: "18"
