@@ -22,9 +22,10 @@ const oauth2Client = new google.auth.OAuth2(
 
 // Access scopes for two non-Sign-In scopes: Read-only Drive activity and Google Calendar.
 const scopes = [
-  'https://www.googleapis.com/auth/calendar.readonly'
+  'https://www.googleapis.com/auth/calendar.readonly',
+  'https://www.googleapis.com/auth/userinfo.email',
+  'https://www.googleapis.com/auth/userinfo.profile'
 ];
-
 /* Global variable that stores user credential in this code example.
  * ACTION ITEM for developers:
  *   Store user's refresh token in your data store if
@@ -51,6 +52,47 @@ async function listEvents(auth, filePath) {
   });
 
   await fs.writeFile(filePath, events.join('\n'));
+}
+
+async function getUserInfo(auth, filePath, users) {
+  const people = google.people({version: 'v1', auth: auth});
+  const result = await people.people.get({
+    resourceName: 'people/me',
+    personFields: 'names,emailAddresses',
+  });
+
+  let name;
+  let email;
+  let user;
+
+  const profile = result.data;
+
+  if (profile.names && profile.names.length > 0) {
+    name = profile.names[0].displayName;
+  }
+
+  if (profile.emailAddresses && profile.emailAddresses.length > 0) {
+    email = profile.emailAddresses[0].value;
+  }
+
+  if (users.some(user => user.email === email) !== true) {
+    const userId = crypto.randomUUID();
+    user = {
+      email: email,
+      name: name,
+      userId: userId,
+      groupIds: []
+    };
+
+    users.push(user);
+    console.log("new user: ", user.userId);
+    fs.appendFile(filePath, "Welcome, new user!\n");
+  } else {    
+    user = users.find(user => user.email === email);
+    console.log("returning user: ", user.userId);
+    fs.appendFile(filePath, "Welcome back, " + user.name + "!\n");
+  }
+
 }
 
 async function main() {
@@ -85,6 +127,8 @@ async function main() {
 
     res.redirect(authorizationUrl);
   });
+
+  users = [];
 
  // Receive the callback from Google's OAuth 2.0 server.
   app.get('/oauth2callback', async (req, res) => {
