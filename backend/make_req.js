@@ -4,7 +4,10 @@ const cors = require('cors')
 require('dotenv').config();
 
 const app = express();
-const {testConnection} = require('./data_interface.js');
+//const {testConnection} = require('./data_interface.js');
+const authRoutes = require('./routes/auth');
+const userRoutes = require('./routes/person');
+//const { attachUser } = require('./middleware/auth');
 
 app.use(cors()); // this is just for development - do origin, credentials when deployed
 const PORT = process.env.PORT || 3000;
@@ -34,6 +37,9 @@ app.get('/api/test-db', async (req, res) => {
 app.get('/health', (req, res) => {
   res.json({ status: 'healthy' });
 });
+
+app.use('/auth', authRoutes);
+app.use('api/users', userRoutes);
 
 app.listen(PORT, () => {
   console.log(`Server running on port ${PORT}`);
