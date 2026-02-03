@@ -3,10 +3,11 @@ const express = require('express');
 const { google } = require('googleapis');
 const cors = require('cors')
 require('dotenv').config();
+const db = require("./db/index");
 
 const app = express();
 //const {testConnection} = require('./data_interface.js');
-const authRoutes = require('./routes/auth');
+//const authRoutes = require('./routes/auth');
 //const userRoutes = require('./routes/person');
 //const { attachUser } = require('./middleware/auth');
 
@@ -39,9 +40,6 @@ app.get('/health', (req, res) => {
   res.json({ status: 'healthy' });
 });
 
-app.use('/auth', authRoutes);
-// app.use('api/users', userRoutes);
-
 app.get('/', async (req, res) => {
 //     // Generate a secure random state value.
   const state = crypto.randomBytes(32).toString('hex');
@@ -61,6 +59,11 @@ app.get('/', async (req, res) => {
     state: state
   });
 });
+
+// app.get('/google', 
+// )
+const res = db.getUsersWithName('stella');
+console.log(res);
 
 app.listen(PORT, () => {
   console.log(`Server running on port ${PORT}`);
