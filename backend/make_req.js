@@ -1,10 +1,11 @@
 // server.js
 const express = require('express');
-const { Pool } = require('pg');
 const cors = require('cors')
 require('dotenv').config();
 
 const app = express();
+const {testConnection} = require('data_interface.js');
+
 app.use(cors()); // this is just for development - do origin, credentials when deployed
 const PORT = process.env.PORT || 3000;
 
@@ -27,12 +28,8 @@ app.get('/', (req, res) => {
 // Database test route
 app.get('/api/test-db', async (req, res) => {
   try {
-    const result = await pool.query('SELECT NOW()');
-    res.json({ 
-      success: true, 
-      timestamp: result.rows[0].now,
-      message: 'Database connected successfully!' 
-    });
+    const result = await testConnection();
+    res.json(result);
   } catch (error) {
     res.status(500).json({ 
       success: false, 
