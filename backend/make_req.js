@@ -4,7 +4,7 @@ const cors = require('cors')
 require('dotenv').config();
 
 const app = express();
-const {testConnection} = require('data_interface.js');
+const {testConnection} = require('./data_interface.js');
 
 app.use(cors()); // this is just for development - do origin, credentials when deployed
 const PORT = process.env.PORT || 3000;
