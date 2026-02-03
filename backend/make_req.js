@@ -9,14 +9,6 @@ const {testConnection} = require('./data_interface.js');
 app.use(cors()); // this is just for development - do origin, credentials when deployed
 const PORT = process.env.PORT || 3000;
 
-// Database connection
-const pool = new Pool({
-  connectionString: process.env.DATABASE_URL,
-  ssl: {
-    rejectUnauthorized: false
-  }
-});
-
 // Middleware
 app.use(express.json());
 
