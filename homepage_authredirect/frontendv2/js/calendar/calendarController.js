@@ -1,5 +1,6 @@
 import { renderCalendarGrid } from "./calendarRender.js";
 import { renderAvailability } from "./availabilityRender.js";
+import { apiGet } from "../api/api.js";
 
 let currentWeekStart = getStartOfWeek(new Date());
 
@@ -10,7 +11,7 @@ function getStartOfWeek(date) {
   return d;
 }
 
-export function renderCalendar() {
+export async function renderCalendar() {
   const container = document.getElementById("calendar");
   container.innerHTML = "";
 
@@ -40,8 +41,16 @@ export function renderCalendar() {
   header.append(prev, title, next);
   container.appendChild(header);
 
-  console.log("Before renderCalendarGrid:", container.innerHTML);
-  renderCalendarGrid(container, currentWeekStart);
+  try {
+      const events = await apiGet('/api/events');
+
+      console.log("Before renderCalendarGrid:", container.innerHTML);
+      renderCalendarGrid(container, currentWeekStart, events);
+  }
+  catch (error) {
+      console.error('Error fetching calendar', error);
+      container.innerHTML += "<p>No calendar loaded</p>";
+  }
 
   console.log("Before renderAvailability", container.innerHTML);
   renderAvailability();

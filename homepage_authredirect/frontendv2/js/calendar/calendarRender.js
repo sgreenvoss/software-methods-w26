@@ -1,7 +1,10 @@
-import { mockEvents } from "./calendarMock.js";
+export async function renderCalendarGrid(container, weekStart, events) {
+  // container.innerHTML = "";
 
-export function renderCalendarGrid(container, weekStart) {
-//   container.innerHTML = "";
+  // Configuration
+  const START_HOUR = 1;
+  const END_HOUR = 24; // 9 PM
+  const TOTAL_MINUTES = (END_HOUR - START_HOUR) * 60;
 
   const days = [];
   for (let i = 0; i < 7; i++) {
@@ -26,11 +29,12 @@ export function renderCalendarGrid(container, weekStart) {
     grid.appendChild(header);
   });
 
-  for (let hour = 8; hour <= 20; hour++) {
-    const timeLabel = document.createElement("div");
-    timeLabel.className = "time-label";
-    timeLabel.textContent = `${hour}:00`;
-    grid.appendChild(timeLabel);
+
+  for (let hour = START_HOUR; hour <= END_HOUR; hour++) {
+      const timeLabel = document.createElement("div");
+      timeLabel.className = "time-label";
+      timeLabel.textContent = `${hour}:00`;
+      grid.appendChild(timeLabel);
 
     days.forEach(day => {
       const cell = document.createElement("div");
@@ -38,22 +42,23 @@ export function renderCalendarGrid(container, weekStart) {
       cell.dataset.day = day.toDateString();
       cell.dataset.hour = hour;
 
-      mockEvents.forEach(event => {
+      events.forEach(event => {
         const start = new Date(event.start);
         if (
           start.toDateString() === day.toDateString() &&
           start.getHours() === hour
         ) {
-          const eventDiv = document.createElement("div");
-          eventDiv.className = "calendar-event";
-          eventDiv.textContent = event.title;
-          cell.appendChild(eventDiv);
+            const eventDiv = document.createElement("div");
+            eventDiv.className = "calendar-event";
+            eventDiv.textContent = event.title;
+            cell.appendChild(eventDiv);
         }
-      });
+        });
 
       grid.appendChild(cell);
     });
-  }
+}
+
 
   container.appendChild(grid);
 }
