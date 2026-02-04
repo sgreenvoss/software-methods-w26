@@ -42,7 +42,8 @@ export async function renderCalendar() {
   container.appendChild(header);
 
   try {
-      const events = await apiGet('/api/events');
+    // check permissions!
+      const events = await apiGet('https://scheduler-backend-9b2i.onrender.com/api/events');
 
       console.log("Before renderCalendarGrid:", container.innerHTML);
       renderCalendarGrid(container, currentWeekStart, events);
