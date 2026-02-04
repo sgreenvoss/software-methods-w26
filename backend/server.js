@@ -106,7 +106,7 @@ app.get('/oauth2callback', async (req, res) => {
       }
       else {
         //res.send('login yay');
-        res.redirect('/');
+        res.redirect('/api/events');
       }
     });
  
