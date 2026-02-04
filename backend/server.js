@@ -109,8 +109,21 @@ app.get('/oauth2callback', async (req, res) => {
       singleEvents: true, // Expands recurring events into individual instances
       orderBy: 'startTime',
     });
+    const events = response.data.items;
+    const formattedEvents = events.map((event) => {
+      // Handle "All Day" events which use .date instead of .dateTime
+      const start = event.start.dateTime || event.start.date;
+      const end = event.end.dateTime || event.end.date;
 
-    return res;
+      return {
+        title: event.summary || "No Title",
+        start: start,
+        end: end
+      };
+    });
+
+    // Send the transient JSON data to frontend
+    res.json(formattedEvents);
   //   console.log(req.session.tokens);
   //   req.session.save(err => {
   //     if(err) {
