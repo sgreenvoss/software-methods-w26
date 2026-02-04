@@ -91,11 +91,7 @@ app.get('/oauth2callback', async (req, res) => {
     console.log(q);
     return res.redirect(frontend + '/error.html');
   }
-  // TEMP FIX -> change back once session issue diagnosed
-  // if (q.state !== req.session.state) {
-  //   console.log(q);
-  //   return res.redirect(frontend + '/error.html');
-  // }
+
   console.log(q);
   console.log(q.code);
   try {
@@ -121,8 +117,10 @@ app.get('/oauth2callback', async (req, res) => {
 });
 
 app.get("/api/events", async (req, res) => {
+  console.log('Session ID:', req.sessionID);
+  console.log('Session data:', req.session);
+  console.log('Tokens in session:', req.session.tokens);
   // Check if user is logged in
-  console.log(req.session.tokens);
   if (!req.session.tokens) {
     return res.status(401).json({ error: "User not authenticated" });
   }
