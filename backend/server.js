@@ -87,8 +87,14 @@ app.get('/oauth2callback', async (req, res) => {
   const q = url.parse(req.url, true).query;
 
   // Security checks
-  if (q.error) return res.redirect(frontend + '/error.html');
-  if (q.state !== req.session.state) return res.redirect(frontend + '/error.html');
+  if (q.error) {
+    console.error(q.toString());
+    return res.redirect(frontend + '/error.html');
+  }
+  if (q.state !== req.session.state) {
+    console.error(q.toString());
+    return res.redirect(frontend + '/error.html');
+  }
 
   try {
     const { tokens } = await oauth2Client.getToken(q.code);
