@@ -154,9 +154,15 @@ app.get("/api/events", async (req, res) => {
 });
 
 
-app.listen(PORT, () => {
+app.listen(PORT, async () => {
   console.log(`Server running on port ${PORT}`);
-  const res = db.getUsersWithName('stella');
-  console.log(res);
-  db.getUserWithID(2);
+  
+  try {
+    const users = await db.getUsersWithName('stella');
+    console.log('Users:', users);
+    const user = await db.getUserWithID(2);
+    console.log('User 2:', user);
+  } catch (error) {
+    console.error('DB test failed:', error);
+  }
 });
