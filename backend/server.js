@@ -88,11 +88,11 @@ app.get('/oauth2callback', async (req, res) => {
 
   // Security checks
   if (q.error) {
-    console.error(q.toString());
+    console.log(q);
     return res.redirect(frontend + '/error.html');
   }
   if (q.state !== req.session.state) {
-    console.error(q.toString());
+    console.log(q);
     return res.redirect(frontend + '/error.html');
   }
 
