@@ -109,7 +109,7 @@ app.get('/oauth2callback', async (req, res) => {
         res.status(401).send('credentials');
       }
       else {
-        res.send('login yay');
+        //res.send('login yay');
         res.redirect('/');
       }
     });
