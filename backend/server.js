@@ -1,7 +1,7 @@
 // server.js
 const express = require('express');
 const { google } = require('googleapis');
-const {crypto} = require('crypto');
+import * as crypto from 'crypto';
 const cors = require('cors')
 require('dotenv').config();
 const db = require("./db/index");
