@@ -94,26 +94,39 @@ app.get('/oauth2callback', async (req, res) => {
 
   console.log(q);
   console.log(q.code);
-  try {
     const { tokens } = await oauth2Client.getToken(q.code);
     
     req.session.tokens = tokens; 
-    console.log(req.session.tokens);
-    req.session.save(err => {
-      if(err) {
-        console.log(err); 
-        res.status(401).send('credentials');
-      }
-      else {
-        //res.send('login yay');
-        console.log('aqui');
-      }
+    oauth2Client.setCredentials(req.session.tokens);
+
+    const calendar = google.calendar({ version: 'v3', auth: oauth2Client });
+
+    // Fetch next 10 events from the primary calendar
+    const response = await calendar.events.list({
+      calendarId: 'primary',
+      timeMin: new Date().toISOString(), // From now onwards
+      maxResults: 10,
+      singleEvents: true, // Expands recurring events into individual instances
+      orderBy: 'startTime',
     });
+
+    return res;
+  //   console.log(req.session.tokens);
+  //   req.session.save(err => {
+  //     if(err) {
+  //       console.log(err); 
+  //       res.status(401).send('credentials');
+  //     }
+  //     else {
+  //       //res.send('login yay');
+  //       console.log('aqui');
+  //     }
+  //   });
  
-  } catch (err) {
-    console.error("Login failed", err);
-    res.redirect('/');
-  }
+  // } catch (err) {
+  //   console.error("Login failed", err);
+  //   res.redirect('/');
+  // }
 });
 
 app.get("/api/events", async (req, res) => {
