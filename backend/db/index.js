@@ -23,6 +23,23 @@ const createUser = async(email, fname, lname, username) => {
     return result.rows[0];
 };
 
+
+const getUserWithID = async(id) => {
+    const query = `
+        SELECT email, first_name, last_name, username FROM person
+        WHERE user_id = $1
+    `
+    const result = await pool.query(query, [id]);
+    console.log(result);
+    return result;
+}
+// TODO: get userwithID
+// get groups from user
+// get users from group
+// check if user already in db
+// get stored events from a user
+
+
 const getUsersWithName = async(name) => {
     console.log('running q');
     const query = `
@@ -38,5 +55,6 @@ module.exports = {
     pool,
     testConnection,
     createUser,
-    getUsersWithName
+    getUsersWithName,
+    getUserWithID
 }

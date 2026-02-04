@@ -62,9 +62,11 @@ app.get('/', async (req, res) => {
 
 // app.get('/google', 
 // )
-const res = db.getUsersWithName('stella');
-console.log(res);
+
 
 app.listen(PORT, () => {
   console.log(`Server running on port ${PORT}`);
+  const res = db.getUsersWithName('stella');
+  console.log(res);
+  db.getUserWithID(2);
 });
