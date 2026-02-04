@@ -96,12 +96,14 @@ app.get('/oauth2callback', async (req, res) => {
   //   console.log(q);
   //   return res.redirect(frontend + '/error.html');
   // }
-
+  console.log(q);
+  console.log(q.code);
   try {
     const { tokens } = await oauth2Client.getToken(q.code);
     
-    // IMPORTANT: Save tokens to the SESSION, not a global variable
     req.session.tokens = tokens; 
+    console.log(req.session.tokens);
+    req.session.save(tokens);
 
     // throw it back to front end babyyyy
     res.redirect('/'); 
@@ -113,6 +115,7 @@ app.get('/oauth2callback', async (req, res) => {
 
 app.get("/api/events", async (req, res) => {
   // Check if user is logged in
+  console.log(req.session.tokens);
   if (!req.session.tokens) {
     return res.status(401).json({ error: "User not authenticated" });
   }
