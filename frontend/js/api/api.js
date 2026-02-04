@@ -1,5 +1,5 @@
-// api.js
-// if backend changes update this file
+
+
 
 export async function apiGet(path) {
   const response = await fetch(path, {

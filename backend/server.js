@@ -1,18 +1,34 @@
-// server.js
+// requirements
 const express = require('express');
 const { google } = require('googleapis');
 const crypto = require('crypto');
-const cors = require('cors')
-require('dotenv').config();
+const path = require("path");
 const db = require("./db/index");
 const session = require('express-session');
 const url = require('url');
-const frontend = 'https://scheduler-frontend-aasq.onrender.com';
+const cors = require('cors')
+
+// .env config
+require('dotenv').config({
+  path: process.env.NODE_ENV === 'production' ? '.env.production' : '.env.development'
+});
+console.log("ENV:", process.env.NODE_ENV);
+console.log("Frontend URL:", process.env.FRONTEND_URL);
 
 
+const frontend = process.env.FRONTEND_URL;
 const app = express();
 
-app.use(cors({credentials:true, origin:'https://scheduler-frontend-aasq.onrender.com'}));
+
+app.use(cors({
+  credentials:true, 
+  origin: process.env.FRONTEND_URL
+}));
+
+// Serve frontend in development mode
+if (process.env.NODE_ENV !== "production") {
+  app.use(express.static(path.join(__dirname, "..", "frontend")));
+}
 
 app.use(session({
   secret: process.env.SESSION_SECRET,
@@ -65,7 +81,7 @@ app.get('/health', (req, res) => {
 });
 
 app.get('/auth/google', async (req, res) => {
-//     // Generate a secure random state value.
+// Generate a secure random state value.
   const state = crypto.randomBytes(32).toString('hex');
   // Store state in the session
   req.session.state = state;

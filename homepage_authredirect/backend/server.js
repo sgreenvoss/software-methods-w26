@@ -24,7 +24,6 @@ const scopes = [
   'https://www.googleapis.com/auth/calendar.readonly'
 ];
 
-// --- Middleware ---
 
 // Serve frontend folder
 app.use(express.static(path.join(__dirname, "..", "frontendv2")));

@@ -13,7 +13,7 @@ document.getElementById("create-group-btn").onclick = () => {
 };
 
 document.getElementById("loginBtn").onclick = () => {
-  window.location.href = "https://scheduler-backend-9b2i.onrender.com/auth/google";
+  window.location.href = "/auth/google";
 };
 
 function showCalendar() {
@@ -29,4 +29,5 @@ function showGroups() {
   document.getElementById("groups").hidden = false;
   renderGroups();
 }
+
 
