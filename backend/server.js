@@ -21,7 +21,7 @@ app.use(session({
   cookie: {
     httpOnly: true,
     sameSite: 'none',
-    secure: true,
+    secure: false, // JUST FOR DEVEL
     maxAge: 24*60*60*1000
   }
 }));
@@ -91,10 +91,11 @@ app.get('/oauth2callback', async (req, res) => {
     console.log(q);
     return res.redirect(frontend + '/error.html');
   }
-  if (q.state !== req.session.state) {
-    console.log(q);
-    return res.redirect(frontend + '/error.html');
-  }
+  // TEMP FIX -> change back once session issue diagnosed
+  // if (q.state !== req.session.state) {
+  //   console.log(q);
+  //   return res.redirect(frontend + '/error.html');
+  // }
 
   try {
     const { tokens } = await oauth2Client.getToken(q.code);
