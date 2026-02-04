@@ -104,10 +104,10 @@ app.get('/oauth2callback', async (req, res) => {
     req.session.tokens = tokens; 
 
     // throw it back to front end babyyyy
-   // res.redirect(frontend + '/index.html'); 
+    res.redirect('/'); 
   } catch (err) {
     console.error("Login failed", err);
-   // res.redirect(frontend + '/error.html');
+    res.redirect('/');
   }
 });
 
