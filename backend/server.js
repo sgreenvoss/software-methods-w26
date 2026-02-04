@@ -103,10 +103,17 @@ app.get('/oauth2callback', async (req, res) => {
     
     req.session.tokens = tokens; 
     console.log(req.session.tokens);
-    req.session.save(tokens);
-
-    // throw it back to front end babyyyy
-    res.redirect('/'); 
+    req.session.save(err => {
+      if(err) {
+        console.log(err); 
+        res.status(401).send('credentials');
+      }
+      else {
+        res.send('login yay');
+        res.redirect('/');
+      }
+    });
+ 
   } catch (err) {
     console.error("Login failed", err);
     res.redirect('/');
