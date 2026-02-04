@@ -40,7 +40,7 @@ app.get('/health', (req, res) => {
   res.json({ status: 'healthy' });
 });
 
-app.get('/', async (req, res) => {
+app.get('/auth/google', async (req, res) => {
 //     // Generate a secure random state value.
   const state = crypto.randomBytes(32).toString('hex');
   // Store state in the session
