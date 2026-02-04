@@ -10,18 +10,21 @@ const url = require('url');
 
 
 const app = express();
+
+app.use(cors({credentials:true, origin:'https://scheduler-frontend-aasq.onrender.com'}));
+
 app.use(session({
   secret: process.env.SESSION_SECRET,
   resave:false,
   saveUninitialized: false,
   cookie: {
     httpOnly: true,
-    //sameSite: lax,
+    sameSite: 'none',
+    secure: true,
     maxAge: 24*60*60*1000
   }
 }));
 
-app.use(cors({credentials:true, origin:'https://scheduler-frontend-aasq.onrender.com'}));
 const PORT = process.env.PORT || 3000;
 app.use(express.json());
 
