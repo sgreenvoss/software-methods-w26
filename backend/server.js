@@ -6,6 +6,7 @@ const cors = require('cors')
 require('dotenv').config();
 const db = require("./db/index");
 const session = require('express-session');
+const url = require('url');
 
 
 const app = express();
@@ -91,7 +92,7 @@ app.get('/oauth2callback', async (req, res) => {
     // IMPORTANT: Save tokens to the SESSION, not a global variable
     req.session.tokens = tokens; 
 
-    // Redirect to your main app
+    // throw it back to front end babyyyy
     res.redirect('https://scheduler-frontend-aasq.onrender.com/index.html'); 
   } catch (err) {
     console.error("Login failed", err);
