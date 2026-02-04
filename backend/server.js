@@ -7,6 +7,7 @@ require('dotenv').config();
 const db = require("./db/index");
 const session = require('express-session');
 const url = require('url');
+const frontend = 'https://scheduler-frontend-aasq.onrender.com';
 
 
 const app = express();
@@ -86,8 +87,8 @@ app.get('/oauth2callback', async (req, res) => {
   const q = url.parse(req.url, true).query;
 
   // Security checks
-  if (q.error) return res.redirect('/error.html');
-  if (q.state !== req.session.state) return res.redirect('/error.html');
+  if (q.error) return res.redirect(frontend + '/error.html');
+  if (q.state !== req.session.state) return res.redirect(frontend + '/error.html');
 
   try {
     const { tokens } = await oauth2Client.getToken(q.code);
@@ -96,10 +97,10 @@ app.get('/oauth2callback', async (req, res) => {
     req.session.tokens = tokens; 
 
     // throw it back to front end babyyyy
-    res.redirect('https://scheduler-frontend-aasq.onrender.com/index.html'); 
+    res.redirect(frontend + '/index.html'); 
   } catch (err) {
     console.error("Login failed", err);
-    res.redirect('https://scheduler-frontend-aasq.onrender.com/error.html');
+    res.redirect(frontend + '/error.html');
   }
 });
 
@@ -161,12 +162,12 @@ app.get("/api/events", async (req, res) => {
 app.listen(PORT, async () => {
   console.log(`Server running on port ${PORT}`);
   
-  try {
-    const users = await db.getUsersWithName('stella');
-    console.log('Users:', users);
-    const user = await db.getUserWithID(2);
-    console.log('User 2:', user);
-  } catch (error) {
-    console.error('DB test failed:', error);
-  }
+  // try {
+  //   const users = await db.getUsersWithName('stella');
+  //   console.log('Users:', users);
+  //   const user = await db.getUserWithID(2);
+  //   console.log('User 2:', user);
+  // } catch (error) {
+  //   console.error('DB test failed:', error);
+  // }
 });
