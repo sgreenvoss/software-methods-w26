@@ -37,8 +37,9 @@ app.use(session({
   saveUninitialized: false,
   cookie: {
     httpOnly: true,
-    sameSite: isProduction ? 'none' : 'lax',
+    sameSite: 'none',
     secure: isProduction,
+    domain: '.onrender.com',
     maxAge: 24*60*60*1000
   }
 }));
