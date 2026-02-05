@@ -186,21 +186,35 @@ app.get('/oauth2callback', async (req, res) => {
     delete req.session.state;
     delete req.session.pending_username;
 
-    req.session.save((saveErr) => {
-      if (saveErr) {
-        // Something went wrong (e.g., database died, session store full)
-        console.error("Session Save Error:", saveErr);
-        return res.redirect('/login?error=save_failed');
-      }
-
-      // everything worked!
-      res.redirect('/api/events'); // temp redirect to events on backend
+    await new Promise((resolve, reject) => {
+      req.session.save((saveErr) => {
+        if (saveErr) {
+          console.error("Session Save Error:", saveErr);
+          reject(saveErr);
+        } else {
+          resolve();
+        }
+      });
     });
-     
+
+    // Add a small delay to ensure DB write completes
+    await new Promise(resolve => setTimeout(resolve, 100));
+    console.log('session saved, redirecting.');
+    res.redirect(frontend);
+
   } catch (authErr) {
     console.error("Login failed", authErr);
     res.redirect(frontend + '/error.html');
   }
+});
+
+app.get('/test-session', (req, res) => {
+  res.json({
+    sessionID: req.sessionID,
+    userId: req.session.userId,
+    isAuthenticated: req.session.isAuthenticated,
+    fullSession: req.session
+  });
 });
 
 app.get("/api/events", async (req, res) => {
