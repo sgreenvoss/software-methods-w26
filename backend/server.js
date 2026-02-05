@@ -287,7 +287,9 @@ app.get('/api/me', async (req, res) => {
     const person_info = await db.getUserByID(req.session.userId);
     res.json(person_info);
   }
-  res.json("");
+  else {
+    res.json("");
+  }
 }) 
 
 app.listen(PORT, async () => {
