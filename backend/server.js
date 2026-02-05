@@ -25,9 +25,9 @@ app.use(cors({
 }));
 
 // Serve frontend in development mode
-if (process.env.NODE_ENV !== "production") {
-  app.use(express.static(path.join(__dirname, "..", "frontend"), { index: false }));
-}
+// if (process.env.NODE_ENV !== "production") {
+//   app.use(express.static(path.join(__dirname, "..", "frontend"), { index: false }));
+// }
 
 
 const isProduction = process.env.NODE_ENV === 'production';
@@ -39,7 +39,6 @@ app.use(session({
     httpOnly: true,
     sameSite: 'none',
     secure: isProduction,
-    domain: '.onrender.com',
     maxAge: 24*60*60*1000
   }
 }));
@@ -59,14 +58,19 @@ const scopes = [
   'https://www.googleapis.com/auth/userinfo.profile'
 ];
 
-app.get('/login', (req, res) => {
-  // If already logged in, send them to the app
-  if (req.session.tokens) {
-    return res.redirect('/');
-  }
-  res.sendFile(path.join(__dirname, "..", "frontend", "login.html"));
-});
+// app.get('/login', (req, res) => {
+//   // If already logged in, send them to the app
+//   if (req.session.tokens) {
+//     return res.redirect('/');
+//   }
+//   res.sendFile(path.join(__dirname, "..", "frontend", "login.html"));
+// });
 
+// check if user is logged in or not
+app.get('api/me', (req, res) => {
+  if (!req.session.tokens) return res.json({ loggedIn: false }); // stay on login page
+  res.json( { loggedIn: true }) // go to calendar view
+});
 
 app.get('/', (req, res) => {
   // Check if user has tokens
@@ -154,7 +158,7 @@ app.get('/oauth2callback', async (req, res) => {
       }
 
       // everything worked!
-      res.redirect('/');
+      res.redirect(process.env.FRONTEND_URL + '/');
     });
      
   } catch (authErr) {
@@ -224,8 +228,6 @@ app.get("/api/events", async (req, res) => {
     res.status(500).json({ error: "Failed to fetch events" });
   }
 });
-
-
 
 app.listen(PORT, async () => {
   console.log(`Server running on port ${PORT}`);

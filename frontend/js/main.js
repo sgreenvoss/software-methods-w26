@@ -1,9 +1,21 @@
 import { renderGroups } from "./groups/groupsView.js";
 import { renderCalendar } from "./calendar/calendarController.js";
+import { getCurrentUser } from "./auth.js"
 
 console.log("Frontend loaded");
 
-renderCalendar();
+async function initApp() {
+  const user = await getCurrentUser();
+
+  if (!user.loggedIn) {
+    window.location.href = "/login.html";
+  }
+
+  console.log("welcome!");
+  renderCalendar();
+}
+
+initApp();
 
 document.getElementById("calendarBtn").onclick = showCalendar;
 document.getElementById("groupsBtn").onclick = showGroups;
@@ -26,8 +38,6 @@ function showGroups() {
   renderGroups();
 }
 
-
-
 document.getElementById("logoutBtn").onclick = () => {
-  window.location.href = "/logout";
+  window.location.href = "https://scheduler-backend-9b29.onrender.com/logout";
 };
