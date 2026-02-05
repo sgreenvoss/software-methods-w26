@@ -15,7 +15,6 @@ require('dotenv').config({
 console.log("ENV:", process.env.NODE_ENV);
 console.log("Frontend URL:", process.env.FRONTEND_URL);
 
-
 const frontend = process.env.FRONTEND_URL;
 const app = express();
 
@@ -27,17 +26,19 @@ app.use(cors({
 
 // Serve frontend in development mode
 if (process.env.NODE_ENV !== "production") {
-  app.use(express.static(path.join(__dirname, "..", "frontend")));
+  app.use(express.static(path.join(__dirname, "..", "frontend"), { index: false }));
 }
 
+
+const isProduction = process.env.NODE_ENV === 'production';
 app.use(session({
   secret: process.env.SESSION_SECRET,
   resave:false,
   saveUninitialized: false,
   cookie: {
     httpOnly: true,
-    sameSite: 'none',
-    secure: true,
+    sameSite: isProduction ? 'none' : 'lax',
+    secure: isProduction,
     maxAge: 24*60*60*1000
   }
 }));
@@ -57,10 +58,36 @@ const scopes = [
   'https://www.googleapis.com/auth/userinfo.profile'
 ];
 
-// Test route
-app.get('/', (req, res) => {
-  res.json({ message: 'Social Scheduler API is running!' });
+app.get('/login', (req, res) => {
+  // If already logged in, send them to the app
+  if (req.session.tokens) {
+    return res.redirect('/');
+  }
+  res.sendFile(path.join(__dirname, "..", "frontend", "login.html"));
 });
+
+
+app.get('/', (req, res) => {
+  // Check if user has tokens
+  if (req.session.tokens) {
+    // Authorized: Serve the main app
+    res.sendFile(path.join(__dirname, "..", "frontend", "index.html"));
+  } else {
+    // Unauthorized: Send them to login
+    res.redirect('/login');
+  }
+});
+
+
+app.get('/logout', (req, res) => {
+  req.session.destroy((err) => {
+    if (err) {
+      return console.log(err);
+    }
+    res.redirect('/login');
+  });
+});
+
 
 // Database test route
 app.get('/api/test-db', async (req, res) => {
@@ -110,52 +137,29 @@ app.get('/oauth2callback', async (req, res) => {
 
   console.log(q);
   console.log(q.code);
+
+  try {
     const { tokens } = await oauth2Client.getToken(q.code);
     
+    // IMPORTANT: Save tokens to the SESSION, not a global variable
     req.session.tokens = tokens; 
-    oauth2Client.setCredentials(req.session.tokens);
 
-    const calendar = google.calendar({ version: 'v3', auth: oauth2Client });
+    // Redirect to your main app
+    req.session.save((saveErr) => {
+      if (saveErr) {
+        // Something went wrong (e.g., database died, session store full)
+        console.error("Session Save Error:", saveErr);
+        return res.redirect('/login?error=save_failed');
+      }
 
-    // Fetch next 10 events from the primary calendar
-    const response = await calendar.events.list({
-      calendarId: 'primary',
-      timeMin: new Date().toISOString(), // From now onwards
-      maxResults: 10,
-      singleEvents: true, // Expands recurring events into individual instances
-      orderBy: 'startTime',
+      // everything worked!
+      res.redirect('/');
     });
-    const events = response.data.items;
-    const formattedEvents = events.map((event) => {
-      // Handle "All Day" events which use .date instead of .dateTime
-      const start = event.start.dateTime || event.start.date;
-      const end = event.end.dateTime || event.end.date;
-
-      return {
-        title: event.summary || "No Title",
-        start: start,
-        end: end
-      };
-    });
-
-    // Send the transient JSON data to frontend
-    res.json(formattedEvents);
-  //   console.log(req.session.tokens);
-  //   req.session.save(err => {
-  //     if(err) {
-  //       console.log(err); 
-  //       res.status(401).send('credentials');
-  //     }
-  //     else {
-  //       //res.send('login yay');
-  //       console.log('aqui');
-  //     }
-  //   });
- 
-  // } catch (err) {
-  //   console.error("Login failed", err);
-  //   res.redirect('/');
-  // }
+     
+  } catch (authErr) {
+    console.error("Login failed", authErr);
+    res.redirect('/error.html');
+  }
 });
 
 app.get("/api/events", async (req, res) => {
@@ -173,11 +177,16 @@ app.get("/api/events", async (req, res) => {
   const calendar = google.calendar({ version: 'v3', auth: oauth2Client });
 
   try {
-    // Fetch next 10 events from the primary calendar
+    // Fetch next 50 events from the primary calendar
+
+    const calendarStart = new Date();
+
+    calendarStart.setDate(calendarStart.getDate() - 14);
+
     const response = await calendar.events.list({
       calendarId: 'primary',
-      timeMin: new Date().toISOString(), // From now onwards
-      maxResults: 10,
+      timeMin: calendarStart.toISOString(), // From now onwards
+      maxResults: 50,
       singleEvents: true, // Expands recurring events into individual instances
       orderBy: 'startTime',
     });
@@ -216,15 +225,8 @@ app.get("/api/events", async (req, res) => {
 });
 
 
+
 app.listen(PORT, async () => {
   console.log(`Server running on port ${PORT}`);
   
-  // try {
-  //   const users = await db.getUsersWithName('stella');
-  //   console.log('Users:', users);
-  //   const user = await db.getUserWithID(2);
-  //   console.log('User 2:', user);
-  // } catch (error) {
-  //   console.error('DB test failed:', error);
-  // }
 });
