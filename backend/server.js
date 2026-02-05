@@ -194,7 +194,7 @@ app.get('/oauth2callback', async (req, res) => {
       }
 
       // everything worked!
-      res.redirect(frontend + '/');
+      res.redirect('/api/events'); // temp redirect to events on backend
     });
      
   } catch (authErr) {
