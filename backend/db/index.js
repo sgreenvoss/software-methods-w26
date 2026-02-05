@@ -26,7 +26,7 @@ const createUser = async(email, fname, lname, username) => {
 };
 
 const insertUpdateUser = async(google_id, email, first_name, last_name, username, refresh_token, access_token, token_expiry) => {
-    const _username = username;
+    var _username = username;
     if (!username) {
         _username = first_name; // temp fix
     }
