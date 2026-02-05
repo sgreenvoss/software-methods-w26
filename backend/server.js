@@ -72,16 +72,16 @@ app.get('api/me', (req, res) => {
   res.json( { loggedIn: true }) // go to calendar view
 });
 
-app.get('/', (req, res) => {
-  // Check if user has tokens
-  if (req.session.tokens) {
-    // Authorized: Serve the main app
-    res.sendFile(path.join(__dirname, "..", "frontend", "index.html"));
-  } else {
-    // Unauthorized: Send them to login
-    res.redirect('/login');
-  }
-});
+// app.get('/', (req, res) => {
+//   // Check if user has tokens
+//   if (req.session.tokens) {
+//     // Authorized: Serve the main app
+//     res.sendFile(path.join(__dirname, "..", "frontend", "index.html"));
+//   } else {
+//     // Unauthorized: Send them to login
+//     res.redirect('/login');
+//   }
+// });
 
 
 app.get('/logout', (req, res) => {
