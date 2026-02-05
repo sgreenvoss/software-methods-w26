@@ -69,7 +69,7 @@ const scopes = [
 // check if user is logged in or not
 app.get('api/me', (req, res) => {
   if (!req.session.tokens) return res.json({ loggedIn: false }); // stay on login page
-  res.json( { loggedIn: true }) // go to calendar view
+  return res.json( { loggedIn: true }); // go to calendar view
 });
 
 // app.get('/', (req, res) => {
@@ -158,7 +158,7 @@ app.get('/oauth2callback', async (req, res) => {
       }
 
       // everything worked!
-      res.redirect(process.env.FRONTEND_URL + '/');
+      res.redirect('/');
     });
      
   } catch (authErr) {
