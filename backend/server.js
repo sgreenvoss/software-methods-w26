@@ -6,7 +6,6 @@ const path = require("path");
 const db = require("./db/index");
 const session = require('express-session');
 const url = require('url');
-const cors = require('cors')
 const pgSession = require('connect-pg-simple')(session);
 
 // .env config
@@ -19,10 +18,24 @@ console.log("Frontend URL:", process.env.FRONTEND_URL);
 const frontend = process.env.FRONTEND_URL;
 const app = express();
 
+const isProduction = process.env.NODE_ENV === 'production';
 
-app.use(cors({
-  credentials:true, 
-  origin: process.env.FRONTEND_URL
+app.use(express.json());
+
+app.use(session({
+  store: new pgSession({
+    pool:db.pool,
+    tableName:'session'
+  }),
+  secret: process.env.SESSION_SECRET,
+  resave:false,
+  saveUninitialized: false,
+  cookie: {
+    httpOnly: true,
+    sameSite: 'lax',
+    secure: isProduction,
+    maxAge: 24*60*60*1000
+  }
 }));
 
 // Serve frontend in development mode
@@ -30,6 +43,24 @@ app.use(cors({
 //   app.use(express.static(path.join(__dirname, "..", "frontend"), { index: false }));
 // }
 app.use(express.static(path.join(__dirname, "..", "frontend"), { index: false }));
+
+const oauth2Client = new google.auth.OAuth2(
+  process.env.GOOGLE_CLIENT_ID,
+  process.env.GOOGLE_CLIENT_SECRET,
+  process.env.GOOGLE_REDIRECT_URI
+);
+
+const scopes = [
+  'https://www.googleapis.com/auth/calendar.readonly',
+  'https://www.googleapis.com/auth/userinfo.email',
+  'https://www.googleapis.com/auth/userinfo.profile'
+];
+
+const PORT = process.env.PORT || 3000;
+
+
+// ===================PAGES========================
+
 
 app.get('/', (req, res) => {
   if (typeof req.session.userId !== "undefined") {
@@ -43,37 +74,7 @@ app.get('/login', (req, res) => {
   res.sendFile(path.join(__dirname, "..", "frontend", "login.html"));
 });
 
-const isProduction = process.env.NODE_ENV === 'production';
-app.use(session({
-  store: new pgSession({
-    pool:db.pool,
-    tableName:'session'
-  }),
-  secret: process.env.SESSION_SECRET,
-  resave:false,
-  saveUninitialized: false,
-  cookie: {
-    httpOnly: true,
-    sameSite: 'none',
-    secure: isProduction,
-    maxAge: 24*60*60*1000
-  }
-}));
 
-const PORT = process.env.PORT || 3000;
-app.use(express.json());
-
-const oauth2Client = new google.auth.OAuth2(
-  process.env.GOOGLE_CLIENT_ID,
-  process.env.GOOGLE_CLIENT_SECRET,
-  process.env.GOOGLE_REDIRECT_URI
-);
-
-const scopes = [
-  'https://www.googleapis.com/auth/calendar.readonly',
-  'https://www.googleapis.com/auth/userinfo.email',
-  'https://www.googleapis.com/auth/userinfo.profile'
-];
 
 // app.get('/login', (req, res) => {
 //   // If already logged in, send them to the app
@@ -216,7 +217,7 @@ app.get('/oauth2callback', async (req, res) => {
 
   } catch (authErr) {
     console.error("Login failed", authErr);
-    res.redirect('/api/events');
+    res.redirect('/');
   }
 });
 
