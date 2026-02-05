@@ -140,16 +140,28 @@ app.get('/oauth2callback', async (req, res) => {
     return res.redirect(frontend + '/error.html');
   }
 
+  if (q.state !== req.session.state) {
+    return res.status(403).send('State mismatch. Possible CSRF attack.');
+  }
+
   console.log(q);
   console.log(q.code);
 
   try {
     const { tokens } = await oauth2Client.getToken(q.code);
-    
-    // IMPORTANT: Save tokens to the SESSION, not a global variable
-    req.session.tokens = tokens; 
+    oauth2Client.setCredentials(tokens);
 
-    // Redirect to your main app
+    const oauth2 = google.oauth2({version: 'v2', auth: oauth2Client});
+    const {data: userInfo} = await oauth2.userinfo.get();
+
+    const userId = db.insertUpdateUser(
+      userInfo.id, userInfo.email, userInfo.given_name, userInfo.family_name, tokens.refresh_token, tokens.access_token, tokens.expiry_date
+    );
+
+    req.session.userId = userId;
+    req.session.isAuthenticated = true;
+    delete req.session.state;
+
     req.session.save((saveErr) => {
       if (saveErr) {
         // Something went wrong (e.g., database died, session store full)
@@ -158,12 +170,12 @@ app.get('/oauth2callback', async (req, res) => {
       }
 
       // everything worked!
-      res.redirect('/');
+      res.redirect(frontend + '/');
     });
      
   } catch (authErr) {
     console.error("Login failed", authErr);
-    res.redirect('/error.html');
+    res.redirect(frontend + '/error.html');
   }
 });
 
@@ -172,18 +184,26 @@ app.get("/api/events", async (req, res) => {
   console.log('Session data:', req.session);
   console.log('Tokens in session:', req.session.tokens);
   // Check if user is logged in
-  if (!req.session.tokens) {
+  if (!req.session.userId || !req.session.isAuthenticated) {
     return res.status(401).json({ error: "User not authenticated" });
   }
-
-  // Set credentials for this specific request using session data
-  oauth2Client.setCredentials(req.session.tokens);
-
-  const calendar = google.calendar({ version: 'v3', auth: oauth2Client });
-
   try {
-    // Fetch next 50 events from the primary calendar
+    // Set credentials for this specific request using session data
+    const user = await db.getUserById(req.session.userId);
+    if (!user || !user.refresh_token) {
+      return res.status(401).json({ error: "No tokens found. Please re-authenticate." });
+    }
+    const refreshToken = user.refresh_token; // TODO: encrypt this
 
+    oauth2Client.setCredentials( {
+      refresh_token: refreshToken,
+      access_token: user.access_token,
+      expiry_date: user.token_expiry ? new Date(user.token_expiry).getTime() : null
+    });
+
+    // add some updating tokens logic here
+
+    const calendar = google.calendar({ version: 'v3', auth: oauth2Client });
     const calendarStart = new Date();
 
     calendarStart.setDate(calendarStart.getDate() - 14);
@@ -192,7 +212,7 @@ app.get("/api/events", async (req, res) => {
       calendarId: 'primary',
       timeMin: calendarStart.toISOString(), // From now onwards
       maxResults: 50,
-      singleEvents: true, // Expands recurring events into individual instances
+      singleEvents: true, 
       orderBy: 'startTime',
     });
 
@@ -202,9 +222,7 @@ app.get("/api/events", async (req, res) => {
       return res.json([]);
     }
 
-    // Map Google's complex object to your simple JSON format
     const formattedEvents = events.map((event) => {
-      // Handle "All Day" events which use .date instead of .dateTime
       const start = event.start.dateTime || event.start.date;
       const end = event.end.dateTime || event.end.date;
 
@@ -214,17 +232,18 @@ app.get("/api/events", async (req, res) => {
         end: end
       };
     });
-
-    // Send the transient JSON data to frontend
+  
     res.json(formattedEvents);
 
   } catch (error) {
     console.error('Error fetching calendar', error);
     
-    // If token expired/invalid, might want to clear session
-    if (error.code === 401) {
-        req.session.tokens = null;
+    // If authentication failed, clear session
+    if (error.code === 401 || error.code === 403) {
+      req.session.destroy();
+      return res.status(401).json({ error: "Authentication expired. Please log in again." });
     }
+    
     res.status(500).json({ error: "Failed to fetch events" });
   }
 });

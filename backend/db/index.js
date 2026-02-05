@@ -25,16 +25,39 @@ const createUser = async(email, fname, lname, username) => {
     return result.rows[0];
 };
 
-
-const getUserWithID = async(id) => {
-    const query = `
-        SELECT email, first_name, last_name, username FROM person
-        WHERE user_id = $1
-    `
-    const result = await pool.query(query, [id]);
-    console.log(result);
-    return result;
+const insertUpdateUser = async(google_id, email, first_name, last_name, refresh_token, access_token, token_expiry) => {
+    
+    const result = await pool.query( `
+        INSERT INTO people (google_id, email, first_name, last_name, refresh_token, access_token, token_expiry)
+        VALUES ($1, $2, $3, $4, $5, $6, $7)
+        ON CONFLICT (google_id)
+        DO UPDATE SET 
+            refresh_token = $5
+            access_token = $6
+            token_expiry = $7
+            updated_at = NOW()
+        RETURNING google_id`,
+        [   
+            google_id,
+            email,
+            first_name,
+            last_name,
+            refresh_token,
+            access_token,
+            new Date(token_expiry)
+        ]
+    );
+    // double check - might just be .id?
+    return result.rows[0].google_id;
 }
+
+const getUserById = async(user_id) => {
+    const result = await pool.query(
+        `SELECT google_id, refresh_token, access_token, token_expiry FROM people WHERE id = $1`, [user_id]
+    );
+    return result.rows[0];
+}
+
 // TODO: get userwithID
 // get groups from user
 // get users from group
@@ -58,5 +81,6 @@ module.exports = {
     testConnection,
     createUser,
     getUsersWithName,
-    getUserWithID
+    getUserWithID,
+    insertUpdateUser
 }
