@@ -163,7 +163,7 @@ app.get('/oauth2callback', async (req, res) => {
     const {data: userInfo} = await oauth2.userinfo.get();
 
     console.log('in the callback, username is ' + req.session.pending_username);
-    const userId = db.insertUpdateUser(
+    const userId = await db.insertUpdateUser(
       userInfo.id,
       userInfo.email, 
       userInfo.given_name, 

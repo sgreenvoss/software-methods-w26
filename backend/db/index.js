@@ -39,7 +39,7 @@ const insertUpdateUser = async(google_id, email, first_name, last_name, username
             access_token = $7,
             token_expiry = $8,
             updated_at = NOW()
-        RETURNING google_id`,
+        RETURNING user_id`,
         [   
             google_id,
             email,
