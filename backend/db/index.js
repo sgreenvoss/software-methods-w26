@@ -32,9 +32,9 @@ const insertUpdateUser = async(google_id, email, first_name, last_name, refresh_
         VALUES ($1, $2, $3, $4, $5, $6, $7)
         ON CONFLICT (google_id)
         DO UPDATE SET 
-            refresh_token = $5
-            access_token = $6
-            token_expiry = $7
+            refresh_token = $5,
+            access_token = $6,
+            token_expiry = $7,
             updated_at = NOW()
         RETURNING google_id`,
         [   
@@ -48,12 +48,12 @@ const insertUpdateUser = async(google_id, email, first_name, last_name, refresh_
         ]
     );
     // double check - might just be .id?
-    return result.rows[0].google_id;
+    return result.rows[0].user_id;
 }
 
 const getUserByID = async(user_id) => {
     const result = await pool.query(
-        `SELECT google_id, refresh_token, access_token, token_expiry FROM people WHERE id = $1`, [user_id]
+        `SELECT google_id, refresh_token, access_token, token_expiry FROM people WHERE user_id = $1`, [user_id]
     );
     return result.rows[0];
 }
