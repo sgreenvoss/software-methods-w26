@@ -42,7 +42,7 @@ app.use(session({
   saveUninitialized: false,
   cookie: {
     httpOnly: true,
-    sameSite: 'lax',
+    sameSite: 'none',
     secure: isProduction,
     maxAge: 24*60*60*1000
   }
@@ -126,17 +126,23 @@ app.get('/auth/google', async (req, res) => {
   req.session.state = state;
   req.session.pending_username = username;
 
-  // Generate a url that asks permissions for the Drive activity and Google Calendar scope
-  const authorizationUrl = oauth2Client.generateAuthUrl({
-
-    access_type: 'offline',
-    scope: scopes,
-    // Enable incremental authorization. Recommended as a best practice.
-    include_granted_scopes: true,
-    // Include the state parameter to reduce the risk of CSRF attacks.
-    state: state
+  // force a session save before redirect
+  req.session.save((err) => {
+    if (err) {
+      console.error('session save error:', err);
+      return res.status(500).send('session error');
+    }
+    const authorizationUrl = oauth2Client.generateAuthUrl({
+      access_type: 'offline',
+      scope: scopes,
+      // Enable incremental authorization. Recommended as a best practice.
+      include_granted_scopes: true,
+      // Include the state parameter to reduce the risk of CSRF attacks.
+      state: state
+    });
+    res.redirect(authorizationUrl);
   });
-  res.redirect(authorizationUrl);
+  
 });
 
 app.get('/oauth2callback', async (req, res) => {
