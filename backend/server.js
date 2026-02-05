@@ -89,6 +89,7 @@ app.get('/logout', (req, res) => {
 });
 
 
+
 // Database test route
 app.get('/api/test-db', async (req, res) => {
   try {

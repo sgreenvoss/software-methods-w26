@@ -1,5 +1,7 @@
 import { renderGroups } from "./groups/groupsView.js";
 import { renderCalendar } from "./calendar/calendarController.js";
+import { getCurrentUser } from "./auth.js";
+
 
 console.log("Frontend loaded");
 
