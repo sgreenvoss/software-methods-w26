@@ -52,6 +52,7 @@ const insertUpdateUser = async(google_id, email, first_name, last_name, username
         ]
     );
     // double check - might just be .id?
+    console.log('insert result:', result.rows[0]);
     return result.rows[0].user_id;
 }
 

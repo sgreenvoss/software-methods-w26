@@ -206,7 +206,8 @@ app.get('/oauth2callback', async (req, res) => {
 app.get("/api/events", async (req, res) => {
   console.log('Session ID:', req.sessionID);
   console.log('Session data:', req.session);
-  console.log('Tokens in session:', req.session.tokens);
+  console.log('userid:', req.session.userId);
+  console.log('isAuthenticated:', req.session.isAuthenticated);
   // Check if user is logged in
   if (!req.session.userId || !req.session.isAuthenticated) {
     return res.status(401).json({ error: "User not authenticated" });
@@ -214,6 +215,7 @@ app.get("/api/events", async (req, res) => {
   try {
     // Set credentials for this specific request using session data
     const user = await db.getUserByID(req.session.userId);
+    console.log('user in /api/events: ', user);
     if (!user || !user.refresh_token) {
       return res.status(401).json({ error: "No tokens found. Please re-authenticate." });
     }
