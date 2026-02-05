@@ -213,7 +213,7 @@ app.get('/oauth2callback', async (req, res) => {
     // Add a small delay to ensure DB write completes
     await new Promise(resolve => setTimeout(resolve, 100));
     console.log('session saved, redirecting.');
-    res.redirect("/api/events");
+    res.redirect("/");
 
   } catch (authErr) {
     console.error("Login failed", authErr);
