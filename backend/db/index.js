@@ -51,7 +51,7 @@ const insertUpdateUser = async(google_id, email, first_name, last_name, refresh_
     return result.rows[0].google_id;
 }
 
-const getUserById = async(user_id) => {
+const getUserByID = async(user_id) => {
     const result = await pool.query(
         `SELECT google_id, refresh_token, access_token, token_expiry FROM people WHERE id = $1`, [user_id]
     );
@@ -81,6 +81,6 @@ module.exports = {
     testConnection,
     createUser,
     getUsersWithName,
-    getUserWithID,
+    getUserByID,
     insertUpdateUser
 }

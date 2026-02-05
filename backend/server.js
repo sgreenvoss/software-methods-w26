@@ -189,7 +189,7 @@ app.get("/api/events", async (req, res) => {
   }
   try {
     // Set credentials for this specific request using session data
-    const user = await db.getUserById(req.session.userId);
+    const user = await db.getUserByID(req.session.userId);
     if (!user || !user.refresh_token) {
       return res.status(401).json({ error: "No tokens found. Please re-authenticate." });
     }
