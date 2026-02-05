@@ -29,7 +29,19 @@ app.use(cors({
 // if (process.env.NODE_ENV !== "production") {
 //   app.use(express.static(path.join(__dirname, "..", "frontend"), { index: false }));
 // }
+app.use(express.static(path.join(__dirname, "..", "frontend"), { index: false }));
 
+app.get('/', (req, res) => {
+  if (req.session.userId) {
+    res.sendFile(path.join(__dirname, "..", "frontend", "index.html"));
+  } else {
+    res.redirect('/login');
+  }
+});
+
+app.get('/login', (req, res) => {
+  res.sendFile(path.join(__dirname, "..", "frontend", "login.html"));
+});
 
 const isProduction = process.env.NODE_ENV === 'production';
 app.use(session({
