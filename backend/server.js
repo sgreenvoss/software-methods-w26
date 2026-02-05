@@ -32,7 +32,7 @@ app.use(cors({
 app.use(express.static(path.join(__dirname, "..", "frontend"), { index: false }));
 
 app.get('/', (req, res) => {
-  if (req.session.userId) {
+  if (typeof req.session.userId !== "undefined") {
     res.sendFile(path.join(__dirname, "..", "frontend", "index.html"));
   } else {
     res.redirect('/login');
@@ -212,11 +212,11 @@ app.get('/oauth2callback', async (req, res) => {
     // Add a small delay to ensure DB write completes
     await new Promise(resolve => setTimeout(resolve, 100));
     console.log('session saved, redirecting.');
-    res.redirect(frontend);
+    res.redirect("/api/events");
 
   } catch (authErr) {
     console.error("Login failed", authErr);
-    res.redirect(frontend + '/error.html');
+    res.redirect('/api/events');
   }
 });
 
