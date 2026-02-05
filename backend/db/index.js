@@ -28,7 +28,7 @@ const createUser = async(email, fname, lname, username) => {
 const insertUpdateUser = async(google_id, email, first_name, last_name, username, refresh_token, access_token, token_expiry) => {
     
     const result = await pool.query( `
-        INSERT INTO person (google_id, email, first_name, last_name, refresh_token, access_token, token_expiry)
+        INSERT INTO person (google_id, email, first_name, last_name, username, refresh_token, access_token, token_expiry)
         VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
         ON CONFLICT (google_id)
         DO UPDATE SET 
