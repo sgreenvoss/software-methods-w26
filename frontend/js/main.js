@@ -10,11 +10,7 @@ document.getElementById("groupsBtn").onclick = showGroups;
 
 document.getElementById("create-group-btn").onclick = () => {
   console.log("create group button click");
-};
-
-document.getElementById("loginBtn").onclick = () => {
-  window.location.href = "/auth/google";
-};
+}
 
 function showCalendar() {
   console.log("Switching to calendar view");
@@ -31,3 +27,7 @@ function showGroups() {
 }
 
 
+
+document.getElementById("logoutBtn").onclick = () => {
+  window.location.href = "/logout";
+};

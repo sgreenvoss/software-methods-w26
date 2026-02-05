@@ -1,20 +1,29 @@
 .calendar-grid {
   display: grid;
   grid-template-columns: 80px repeat(7, 1fr);
+  width: 100%;
 }
 
 .calendar-cell {
   position: relative;
-  min-height: 40px;
-  border: 1px solid #ddd;
+  min-height: 60px;
+  border: 1px solid #eee;
+  /* width: 100%; */
 }
 
 .calendar-event {
-  background-color: #2196f3;
+  position: absolute; /* Allows event to cross cell borders*/
+  width: 80%;
+
+  background-color: cornflowerblue;
   color: white;
   font-size: 12px;
-  padding: 2px;
-  border-radius: 3px;
+
+  padding: 4px;
+  z-index: 10;
+  border-radius: 4px;
+  overflow: hidden;
+  box-shadow: 0 2px 4px rgba(0,0,0,0.1);
 }
 
 .day-header {

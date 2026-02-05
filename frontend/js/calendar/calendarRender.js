@@ -2,8 +2,8 @@ export async function renderCalendarGrid(container, weekStart, events) {
   // container.innerHTML = "";
 
   // Configuration
-  const START_HOUR = 1;
-  const END_HOUR = 24; // 9 PM
+  const START_HOUR = 0;
+  const END_HOUR = 23; // 9 PM
   const TOTAL_MINUTES = (END_HOUR - START_HOUR) * 60;
 
   const days = [];
@@ -44,6 +44,10 @@ export async function renderCalendarGrid(container, weekStart, events) {
 
       events.forEach(event => {
         const start = new Date(event.start);
+        const startMins = start.getMinutes();
+        const end = new Date(event.end);
+        const duration = (end - start) / (1000 * 60)
+
         if (
           start.toDateString() === day.toDateString() &&
           start.getHours() === hour
@@ -51,6 +55,11 @@ export async function renderCalendarGrid(container, weekStart, events) {
             const eventDiv = document.createElement("div");
             eventDiv.className = "calendar-event";
             eventDiv.textContent = event.title;
+
+            // set event height and starting position
+            eventDiv.style.height = `${duration}px`;
+            eventDiv.style.top = `${startMins}px`;
+
             cell.appendChild(eventDiv);
         }
         });

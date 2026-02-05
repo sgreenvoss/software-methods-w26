@@ -2,22 +2,27 @@
 
 
 /* 1. Center the header content on the screen */
+
+body {
+  font-family: 'Courier New', Courier, monospace;
+}
+
 header {
   display: flex;
-  justify-content: center; /* Centers buttons horizontally */
-  align-items: center;     /* Centers buttons vertically */
-  gap: 20px;               /* Adds equal space between the buttons */
-  padding: 20px;
+  justify-content: center; /* Centers  horizontally */
+  align-items: center;     /* Centers  vertically */
+  gap: 20px;               /* Adds equal space between elements */
 }
 
 /* 2. Shared button styles */
 button {
   padding: 10px 20px;
-  font-size: 16px;
-  border: none;
+  font-size: 20px;
+  border:none;
   border-radius: 5px;
   cursor: pointer;         /* Changes the mouse to a hand icon */
   transition: opacity 0.3s; /* Smooth effect for hovering */
+  font-family: 'Courier New', Courier, monospace;
 }
 
 /* 3. Distinct colors for each button */
@@ -34,4 +39,17 @@ button {
 /* 4. Hover effect for feedback */
 button:hover {
   opacity: 0.8;
+}
+
+#beta {
+  color: cornflowerblue;
+  font-weight:bolder;
+  font-size: 30px;
+  margin-left: 40px;
+}
+
+#logo {
+  color:darkslategray;
+  font-weight:bolder;
+  font-size:70px;
 }
