@@ -76,6 +76,7 @@ app.get('/login', (req, res) => {
   res.sendFile(path.join(__dirname, "..", "frontend", "login.html"));
 });
 
+<<<<<<< HEAD
 
 // app.get('/login', (req, res) => {
 //   // If already logged in, send them to the app
@@ -103,6 +104,8 @@ app.get('/api/me', async (req, res) => {
 // });
 
 
+=======
+>>>>>>> 7758e5047adfa661e1252d9665790ece20a0f656
 app.get('/logout', (req, res) => {
   req.session.destroy((err) => {
     if (err) {
@@ -111,7 +114,6 @@ app.get('/logout', (req, res) => {
     res.redirect('/login');
   });
 });
-
 
 // Database test route
 app.get('/api/test-db', async (req, res) => {
