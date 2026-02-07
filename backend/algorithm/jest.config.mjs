@@ -20,6 +20,9 @@ const config = {
   // Indicates whether the coverage information should be collected while executing the test
   collectCoverage: true,
 
+  // Collect coverage only for the MVC event_management module
+  collectCoverageFrom: ["event_management/**/*.js", "!event_management/**/*.test.js"],
+
   // An array of glob patterns indicating a set of files for which coverage information should be collected
   // collectCoverageFrom: undefined,
 
@@ -33,6 +36,16 @@ const config = {
 
   // Indicates which provider should be used to instrument code for coverage
   coverageProvider: "v8",
+
+  // Enforce 100% coverage for the MVC event_management module
+  coverageThreshold: {
+    "event_management/": {
+      branches: 100,
+      functions: 100,
+      lines: 100,
+      statements: 100,
+    },
+  },
 
   // A list of reporter names that Jest uses when writing coverage reports
   // coverageReporters: [
