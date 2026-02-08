@@ -266,8 +266,7 @@ app.get("/api/events", async (req, res) => {
     // TODO: add a check to see if their calendar is already in the db
     try {
       await db.addCalendar(req.session.userId, calendar.summary);
-      console.log("add calendar returned without error.");
-      const calID = db.getCalendarID(req.session.userId);
+      const calID = await db.getCalendarID(req.session.userId);
       console.log("calendar id is", calID);
       // db.addEvents(db.getCalendarID(req.session.userId), formattedEvents)
       //   .catch(err => console.error("events insert failed", err));
@@ -290,8 +289,8 @@ app.get("/api/events", async (req, res) => {
 });
 
 app.get('/api/email-send-test', async(req,res) => {
-  await email.groupRequest("sgreenvoss@gmail.com", "stellag",
-    "test from", "testusername"
+  email.groupRequest("sgreenvoss@gmail.com", "stellag",
+    "test_from", "testusername"
   );
 })
 
