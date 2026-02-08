@@ -264,7 +264,11 @@ app.get("/api/events", async (req, res) => {
       };
     });
     // TODO: add a check to see if their calendar is already in the db
-    db.addCalendar(response.calendarId, req.userId, response.id);
+    try {
+      await db.addCalendar(calendar.id, req.session.userId, calendar.summary);
+    } catch(error) {
+      console.error('error storing calendar: ', error);
+    }
     res.json(formattedEvents);
 
   } catch (error) {
