@@ -100,6 +100,17 @@ const getNameByID = async(id) => {
     return result;
 }
 
+const searchFor = async(search) => {
+    // regex to search for usernames that start
+    // with the user's search
+    const result = await pool.query(
+        `SELECT user_id, username FROM person 
+        WHERE username ILIKE $1 LIMIT 10`,
+        [`${search}%`]
+    );
+    return result;
+}
+
 module.exports = {
     pool,
     query: (text, params) => pool.query(text,params),
@@ -108,5 +119,6 @@ module.exports = {
     getUsersWithName,
     getUserByID,
     getNameByID,
-    insertUpdateUser
+    insertUpdateUser,
+    searchFor
 }

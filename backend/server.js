@@ -43,10 +43,6 @@ app.use(session({
   }
 }));
 
-// Serve frontend in development mode
-// if (process.env.NODE_ENV !== "production") {
-//   app.use(express.static(path.join(__dirname, "..", "frontend"), { index: false }));
-// }
 
 app.use(express.static(path.join(__dirname, "..", "frontend"), { index: false }));
 
@@ -80,16 +76,7 @@ app.get('/login', (req, res) => {
   res.sendFile(path.join(__dirname, "..", "frontend", "login.html"));
 });
 
-// app.get('/login', (req, res) => {
-//   // If already logged in, send them to the app
-//   if (req.session.tokens) {
-//     return res.redirect('/');
-//   }
-//   res.sendFile(path.join(__dirname, "..", "frontend", "login.html"));
-// });
-
-// check if user is logged in or not
-
+// ===================API=====================
 app.get('/api/me', async (req, res) => {
   if (req.session.userId) {
     const person_info = await db.getUserByID(req.session.userId);
@@ -287,6 +274,17 @@ app.get("/api/events", async (req, res) => {
     }
     
     res.status(500).json({ error: "Failed to fetch events" });
+  }
+});
+
+app.get('/api/users/search', async(req, res) => {
+  const {q} = req.query;
+  try {
+    const users = db.searchFor(q);
+    res.json(users.rows);
+  } catch(error) {
+    console.error('search error: ', error);
+    res.status(500).json({error: 'Search failed'});
   }
 });
 
