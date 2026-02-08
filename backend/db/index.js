@@ -75,7 +75,7 @@ const addCalendar = async(user_id, calendar_name="primary") => {
 const getCalendarID = async(user_id) => {
     const result = await pool.query(
         `SELECT calendar_id FROM calendar
-        WHERE user_id IS $1`,
+        WHERE user_id = $1`,
         [user_id]
     );
     return result.rows[0];
