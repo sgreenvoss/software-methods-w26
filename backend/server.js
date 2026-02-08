@@ -266,10 +266,10 @@ app.get("/api/events", async (req, res) => {
     // TODO: add a check to see if their calendar is already in the db
     try {
       await db.addCalendar(req.session.userId, calendar.summary);
-      const calID = await db.getCalendarID(req.session.userId);
+      const calID = await db.getCalendarID(req.session.userId).calendar_id;
       console.log("calendar id is", calID);
-      // db.addEvents(db.getCalendarID(req.session.userId), formattedEvents)
-      //   .catch(err => console.error("events insert failed", err));
+      db.addEvents(calID, formattedEvents)
+        .catch(err => console.error("events insert failed", err));
     } catch(error) {
       console.error('error storing calendar: ', error);
     }
