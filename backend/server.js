@@ -292,7 +292,7 @@ app.get("/api/events", async (req, res) => {
 
 app.get('/api/email-send-test', async(req,res) => {
   try {
-    await email.groupRequest("sgreenvoss@gmail.com", "stellag",
+    email.groupRequest("sgreenvoss@gmail.com", "stellag",
       "test_from", "testusername"
     );
     res.json({success: true, message: "email send"});
