@@ -7,6 +7,7 @@ const db = require("./db/index");
 const session = require('express-session');
 const url = require('url');
 const pgSession = require('connect-pg-simple')(session);
+const email = require('./emailer');
 
 // .env config
 require('dotenv').config({
@@ -129,8 +130,7 @@ app.get('/auth/google', async (req, res) => {
     // Enable incremental authorization. Recommended as a best practice.
     include_granted_scopes: true,
     // Include the state parameter to reduce the risk of CSRF attacks.
-    state: state,
-    prompt:"consent"
+    state: state
   });
   res.redirect(authorizationUrl);
 });
@@ -267,8 +267,10 @@ app.get("/api/events", async (req, res) => {
     try {
       await db.addCalendar(req.session.userId, calendar.summary);
       console.log("add calendar returned without error.");
-      db.addEvents(db.getCalendarID(req.session.userId), formattedEvents)
-        .catch(err => console.error("events insert failed", err));
+      const calID = db.getCalendarID(req.session.userId);
+      console.log("calendar id is", calID);
+      // db.addEvents(db.getCalendarID(req.session.userId), formattedEvents)
+      //   .catch(err => console.error("events insert failed", err));
     } catch(error) {
       console.error('error storing calendar: ', error);
     }
@@ -286,6 +288,12 @@ app.get("/api/events", async (req, res) => {
     res.status(500).json({ error: "Failed to fetch events" });
   }
 });
+
+app.get('/api/email-send-test', async(req,res) => {
+  await email.groupRequest("sgreenvoss@gmail.com", "stellag",
+    "test from", "testusername"
+  );
+})
 
 app.get('/api/users/search', async(req, res) => {
   const {q} = req.query;
