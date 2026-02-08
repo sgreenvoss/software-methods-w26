@@ -260,7 +260,9 @@ app.get("/api/events", async (req, res) => {
       return {
         title: event.summary || "No Title",
         start: start,
-        end: end
+        end: end,
+        // for stella/the db.addEvents function:
+        event_id: event.id
       };
     });
     // TODO: add a check to see if their calendar is already in the db
