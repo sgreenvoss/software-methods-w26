@@ -72,6 +72,32 @@ const addCalendar = async(user_id, calendar_name="primary") => {
     return result.rows[0]
 }
 
+const getCalendarID = async(user_id) => {
+    const result = await pool.query(
+        `SELECT calendar_id FROM calendar
+        WHERE user_id IS ($1)`,
+        [user_id]
+    );
+    return result.rows[0];
+}
+
+const addEvents = async(cal_id, events) => {
+    // this might not work - need to test.
+    events.array.forEach(element => {
+        pool.query(
+            `INSERT INTO cal_event (calendar_id, priority, event_start, event_end, event_name)
+            VALUES ($1, $2, $3, $4, $5)`,
+            [
+                cal_id,
+                1, // for testing purposes
+                element.start,
+                element.end,
+                element.title
+            ]
+        );
+    });
+}
+
 const getUserByID = async(user_id) => {
     const result = await pool.query(
         `SELECT google_id, refresh_token, access_token, token_expiry FROM person WHERE user_id = $1`, [user_id]
@@ -124,5 +150,7 @@ module.exports = {
     getNameByID,
     insertUpdateUser,
     searchFor,
-    addCalendar
+    addCalendar,
+    addEvents,
+    getCalendarID
 }
