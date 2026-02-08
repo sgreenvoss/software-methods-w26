@@ -59,12 +59,11 @@ const insertUpdateUser = async(google_id, email, first_name, last_name, username
     return result.rows[0].user_id;
 }
 
-const addCalendar = async(calendar_id, user_id, calendar_name="primary") => {
+const addCalendar = async(user_id, calendar_name="primary") => {
     const result = await pool.query(
-        `INSERT INTO calendar (gcal_id, user_id, calendar_name)
-        VALUES ($1, $2, $3)`,
+        `INSERT INTO calendar (user_id, calendar_name)
+        VALUES ($1, $2)`,
         [
-            calendar_id,
             user_id,
             calendar_name
         ]
