@@ -1,4 +1,4 @@
-import {Resend} from 'resend';
+const {Resend} = require('resend');
 const resend = new Resend(process.env.RESEND_API_KEY);
 
 function groupRequest(user_email, user_name, from_name, from_username)  {
