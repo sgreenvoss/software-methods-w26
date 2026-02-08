@@ -267,7 +267,8 @@ app.get("/api/events", async (req, res) => {
     try {
       await db.addCalendar(req.session.userId, calendar.summary);
       console.log("add calendar returned without error.");
-      db.addEvents(db.getCalendarID(req.session.userId), formattedEvents);
+      db.addEvents(db.getCalendarID(req.session.userId), formattedEvents)
+        .catch(err => console.error("events insert failed", err));
     } catch(error) {
       console.error('error storing calendar: ', error);
     }

@@ -75,7 +75,7 @@ const addCalendar = async(user_id, calendar_name="primary") => {
 const getCalendarID = async(user_id) => {
     const result = await pool.query(
         `SELECT calendar_id FROM calendar
-        WHERE user_id IS ($1)`,
+        WHERE user_id IS $1`,
         [user_id]
     );
     return result.rows[0];
@@ -84,7 +84,7 @@ const getCalendarID = async(user_id) => {
 const addEvents = async(cal_id, events) => {
     // this might not work - need to test.
     for (let i = 0; i < events.length; i++) {
-        pool.query(
+        await pool.query(
             `INSERT INTO cal_event (calendar_id, priority, event_start, event_end, event_name)
             VALUES ($1, $2, $3, $4, $5)`,
             [
