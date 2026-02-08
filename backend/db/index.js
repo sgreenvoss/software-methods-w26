@@ -27,15 +27,6 @@ const testConnection = async () => {
     };
 };
 
-const createUser = async(email, fname, lname, username) => {
-    const query = `
-        INSERT INTO person (email, first_name, last_name, username)
-        VALUES ($1, $2, $3, $4)
-        RETURNING *
-    `
-    const result = await pool.query(query, [email, fname, lname, username]);
-    return result.rows[0];
-};
 
 const insertUpdateUser = async(google_id, email, first_name, last_name, username, refresh_token, access_token, token_expiry) => {
     var _username = username;
@@ -66,6 +57,20 @@ const insertUpdateUser = async(google_id, email, first_name, last_name, username
     // double check - might just be .id?
     console.log('insert result:', result.rows[0]);
     return result.rows[0].user_id;
+}
+
+const addCalendar = async(calendar_id, user_id, calendar_name="primary") => {
+    const result = await pool.query(
+        `INSERT INTO calendar (gcal_id, user_id, calendar_name)
+        VALUES ($1, $2, $3)`,
+        [
+            calendar_id,
+            user_id,
+            calendar_name
+        ]
+    );
+    console.log('inserted calendar:', result.rows[0]);
+    return result.rows[0]
 }
 
 const getUserByID = async(user_id) => {
@@ -115,10 +120,10 @@ module.exports = {
     pool,
     query: (text, params) => pool.query(text,params),
     testConnection,
-    createUser,
     getUsersWithName,
     getUserByID,
     getNameByID,
     insertUpdateUser,
-    searchFor
+    searchFor,
+    addCalendar
 }

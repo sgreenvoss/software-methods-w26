@@ -193,7 +193,7 @@ app.get('/oauth2callback', async (req, res) => {
 
   } catch (authErr) {
     console.error("Login failed", authErr);
-    res.redirect('/login fail');
+    res.redirect('/login'); // was /login fail - should we make that?
   }
 });
 
@@ -207,6 +207,8 @@ app.get('/test-session', (req, res) => {
 });
 
 app.get("/api/events", async (req, res) => {
+  // TODO: add a way to pick which calendar to use
+  // TODO: have the database cache the next month or so of events
   console.log('Session ID:', req.sessionID);
   console.log('Session data:', req.session);
   console.log('userid:', req.session.userId);
@@ -261,7 +263,8 @@ app.get("/api/events", async (req, res) => {
         end: end
       };
     });
-  
+    // TODO: add a check to see if their calendar is already in the db
+    db.addCalendar(response.calendarId, req.userId, response.id);
     res.json(formattedEvents);
 
   } catch (error) {
@@ -280,7 +283,7 @@ app.get("/api/events", async (req, res) => {
 app.get('/api/users/search', async(req, res) => {
   const {q} = req.query;
   try {
-    const users = db.searchFor(q);
+    const users = await db.searchFor(q);
     res.json(users.rows);
   } catch(error) {
     console.error('search error: ', error);
