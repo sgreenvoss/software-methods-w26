@@ -83,19 +83,19 @@ const getCalendarID = async(user_id) => {
 
 const addEvents = async(cal_id, events) => {
     // this might not work - need to test.
-    events.array.forEach(element => {
+    for (let i = 0; i < events.length; i++) {
         pool.query(
             `INSERT INTO cal_event (calendar_id, priority, event_start, event_end, event_name)
             VALUES ($1, $2, $3, $4, $5)`,
             [
                 cal_id,
                 1, // for testing purposes
-                element.start,
-                element.end,
-                element.title
+                events[i].start,
+                events[i].end,
+                events[i].title
             ]
         );
-    });
+    };
 }
 
 const getUserByID = async(user_id) => {
