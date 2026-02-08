@@ -95,7 +95,7 @@ const addEvents = async(cal_id, events) => {
                 events[i].start,
                 events[i].end,
                 events[i].title,
-                events[i].id
+                events[i].event_id
             ]
         );
     };

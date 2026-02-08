@@ -291,10 +291,16 @@ app.get("/api/events", async (req, res) => {
 });
 
 app.get('/api/email-send-test', async(req,res) => {
-  email.groupRequest("sgreenvoss@gmail.com", "stellag",
-    "test_from", "testusername"
-  );
-})
+  try {
+    await email.groupRequest("sgreenvoss@gmail.com", "stellag",
+      "test_from", "testusername"
+    );
+    res.json({success: true, message: "email send"});
+  } catch (error) {
+    console.error("route error: ", error);
+    res.status(500).json({error: error.message});
+  }
+});
 
 app.get('/api/users/search', async(req, res) => {
   const {q} = req.query;
