@@ -1,18 +1,8 @@
-const nodemailer = require('nodemailer');
-
-const transporter = nodemailer.createTransport({
-  host: 'smtp.gmail.com',
-  port: 465,
-  secure: true,
-  auth: {
-    user:process.env.GMAIL_USER,
-    pass:process.env.GMAIL_APP_PASSWORD
-  },
-  family: 4
-});
+const { Resend } = require('resend');
+const resend = new Resend(process.env.RESEND_API_KEY);
 
 const groupRequest = async(user_email, user_name, from_name, from_username) => {
-    await transporter.sendMail({
+    await resend.emails.send({
         from: process.env.GMAIL_USER,
         to: user_email,
         subject: `Want to join ${from_name}'s group?`,
