@@ -51,7 +51,7 @@ const insertUpdateUser = async(google_id, email, first_name, last_name, username
             _username,
             refresh_token,
             access_token,
-            new Date(token_expiry)
+            token_expiry
         ]
     );
     // double check - might just be .id?
