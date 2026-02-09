@@ -151,7 +151,7 @@ const updateTokens = async(id, access, refresh, expiry) => {
             refresh_token = $2,
             access_token = $3,
             token_expiry = $4,
-            updated_at = NOW()
+            updated_at = EXTRACT(EPOCH FROM NOW())::BIGINT * 1000
         WHERE user_id = $1
     `;
     await pool.query(query, [
