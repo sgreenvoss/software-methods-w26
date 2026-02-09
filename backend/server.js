@@ -221,7 +221,7 @@ async function ensureValidToken(req) {
     console.log('this is user:', user);
     oauth2Client.setCredentials(user) // this prob wont work
     const {credentials} = await oauth2Client.refreshAccessToken();
-    await db.updateTokens(req.session.userId, credentials.access_token, credentials.refresh_token, credentials.expiry_date);
+    await db.updateTokens(req.session.userId, credentials.access_token, credentials.expiry_date);
   }
 }
 

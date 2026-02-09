@@ -38,7 +38,6 @@ const insertUpdateUser = async(google_id, email, first_name, last_name, username
         VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
         ON CONFLICT (google_id)
         DO UPDATE SET 
-            refresh_token = $6,
             access_token = $7,
             token_expiry = $8,
             updated_at = EXTRACT(EPOCH FROM NOW())::BIGINT * 1000
@@ -144,19 +143,17 @@ const searchFor = async(search) => {
     return result;
 }
 
-const updateTokens = async(id, access, refresh, expiry) => {
+const updateTokens = async(id, access, expiry) => {
     const query = `
         UPDATE person 
             SET 
-            refresh_token = $2,
-            access_token = $3,
-            token_expiry = $4,
+            access_token = $2,
+            token_expiry = $3,
             updated_at = EXTRACT(EPOCH FROM NOW())::BIGINT * 1000
         WHERE user_id = $1
     `;
     await pool.query(query, [
         id,
-        refresh,
         access,
         expiry
     ]);
