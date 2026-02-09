@@ -10,9 +10,9 @@ CREATE TABLE person (
     google_id      VARCHAR UNIQUE,
     refresh_token  TEXT,
     access_token   TEXT,
-    token_expiry   TIMESTAMP,
+    token_expiry   BIGINT,
     created_at     TIMESTAMP,
-    updated_at     TIMESTAMP
+    updated_at     BIGINT
 );
 
 -- =========================
