@@ -7,6 +7,8 @@ const db = require("./db/index");
 const session = require('express-session');
 const url = require('url');
 const pgSession = require('connect-pg-simple')(session);
+const email = require('./emailer');
+const { oauth2 } = require('googleapis/build/src/apis/oauth2');
 
 // .env config
 require('dotenv').config({
@@ -43,10 +45,6 @@ app.use(session({
   }
 }));
 
-// Serve frontend in development mode
-// if (process.env.NODE_ENV !== "production") {
-//   app.use(express.static(path.join(__dirname, "..", "frontend"), { index: false }));
-// }
 
 app.use(express.static(path.join(__dirname, "..", "frontend"), { index: false }));
 
@@ -80,16 +78,7 @@ app.get('/login', (req, res) => {
   res.sendFile(path.join(__dirname, "..", "frontend", "login.html"));
 });
 
-// app.get('/login', (req, res) => {
-//   // If already logged in, send them to the app
-//   if (req.session.tokens) {
-//     return res.redirect('/');
-//   }
-//   res.sendFile(path.join(__dirname, "..", "frontend", "login.html"));
-// });
-
-// check if user is logged in or not
-
+// ===================API=====================
 app.get('/api/me', async (req, res) => {
   if (req.session.userId) {
     const person_info = await db.getUserByID(req.session.userId);
@@ -142,8 +131,7 @@ app.get('/auth/google', async (req, res) => {
     // Enable incremental authorization. Recommended as a best practice.
     include_granted_scopes: true,
     // Include the state parameter to reduce the risk of CSRF attacks.
-    state: state,
-    prompt:"consent"
+    state: state
   });
   res.redirect(authorizationUrl);
 });
@@ -169,6 +157,8 @@ app.get('/oauth2callback', async (req, res) => {
     const {data: userInfo} = await oauth2.userinfo.get();
 
     console.log('in the callback, username is ' + req.session.pending_username);
+
+    console.log("expiry date is", tokens.expiry_date);
 
     // need to include groups ids
     const userId = await db.insertUpdateUser(
@@ -205,8 +195,8 @@ app.get('/oauth2callback', async (req, res) => {
     res.redirect("/");
 
   } catch (authErr) {
-    console.error("Login failed", authErr);
-    res.redirect('/login fail');
+    console.log("authorization error: ", authErr);
+    res.redirect('/login'); // was /login fail - should we make that?
   }
 });
 
@@ -219,11 +209,30 @@ app.get('/test-session', (req, res) => {
   });
 });
 
+async function ensureValidToken(req) {
+  const user = await db.getUserByID(req.session.userId);
+  if (!user | !user.access_token) {
+    throw new Error('no user or user tokens')
+  }
+  const now = Date.now();
+  const fiveMins = 5 * 60 * 1000;
+  if (!user.expiry_date || now >= user.expiry_date - fiveMins) {
+    console.log("refreshing tokens...");
+    console.log('this is user:', user);
+    oauth2Client.setCredentials(user) // this prob wont work
+    const {credentials} = await oauth2Client.refreshAccessToken();
+    await db.updateTokens(req.session.userId, credentials.access_token, credentials.expiry_date);
+  }
+}
+
 app.get("/api/events", async (req, res) => {
+  // TODO: add a way to pick which calendar to use
+  // TODO: have the database cache the next month or so of events
   console.log('Session ID:', req.sessionID);
   console.log('Session data:', req.session);
   console.log('userid:', req.session.userId);
   console.log('isAuthenticated:', req.session.isAuthenticated);
+  await ensureValidToken(req);
   // Check if user is logged in
   if (!req.session.userId || !req.session.isAuthenticated) {
     return res.status(401).json({ error: "User not authenticated" });
@@ -271,10 +280,21 @@ app.get("/api/events", async (req, res) => {
       return {
         title: event.summary || "No Title",
         start: start,
-        end: end
+        end: end,
+        // for stella/the db.addEvents function:
+        event_id: event.id
       };
     });
-  
+    // TODO: add a check to see if their calendar is already in the db
+    try {
+      await db.addCalendar(req.session.userId, calendar.summary);
+      const calID = await db.getCalendarID(req.session.userId);
+      console.log("calendar id is", calID);
+      db.addEvents(calID.calendar_id, formattedEvents)
+        .catch(err => console.error("events insert failed", err));
+    } catch(error) {
+      console.error('error storing: ', error);
+    }
     res.json(formattedEvents);
 
   } catch (error) {
@@ -287,6 +307,29 @@ app.get("/api/events", async (req, res) => {
     }
     
     res.status(500).json({ error: "Failed to fetch events" });
+  }
+});
+
+app.get('/api/email-send-test', async(req,res) => {
+  try {
+    email.groupRequest("sgreenvoss@gmail.com", "stellag",
+      "test_from", "testusername"
+    );
+    res.json({success: true, message: "email send"});
+  } catch (error) {
+    console.error("route error: ", error);
+    res.status(500).json({error: error.message});
+  }
+});
+
+app.get('/api/users/search', async(req, res) => {
+  const {q} = req.query;
+  try {
+    const users = await db.searchFor(q);
+    res.json(users.rows);
+  } catch(error) {
+    console.error('search error: ', error);
+    res.status(500).json({error: 'Search failed'});
   }
 });
 
