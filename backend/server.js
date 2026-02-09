@@ -8,6 +8,7 @@ const session = require('express-session');
 const url = require('url');
 const pgSession = require('connect-pg-simple')(session);
 const email = require('./emailer');
+const { oauth2 } = require('googleapis/build/src/apis/oauth2');
 
 // .env config
 require('dotenv').config({
@@ -192,7 +193,6 @@ app.get('/oauth2callback', async (req, res) => {
     res.redirect("/");
 
   } catch (authErr) {
-    console.error("Login failed", authErr);
     res.redirect('/login'); // was /login fail - should we make that?
   }
 });
@@ -206,6 +206,22 @@ app.get('/test-session', (req, res) => {
   });
 });
 
+async function ensureValidToken(req) {
+  const user = await db.getUserByID(req.session.userId);
+  if (!user | !user.access_token) {
+    throw new Error('no user or user tokens')
+  }
+  const now = Date.now();
+  const fiveMins = 5 * 60 * 1000;
+  if (!user.expiry_date || now >= user.expiry_date - fiveMins) {
+    console.log("refreshing tokens...");
+    console.log('this is user:', user);
+    oauth2Client.setCredentials(user) // this prob wont work
+    const {credentials} = await oauth2Client.refreshAccessToken();
+    await db.updateTokens(req.session.userId, credentials.access_token, credentials.refresh_token, credentials.expiry_date);
+  }
+}
+
 app.get("/api/events", async (req, res) => {
   // TODO: add a way to pick which calendar to use
   // TODO: have the database cache the next month or so of events
@@ -213,6 +229,7 @@ app.get("/api/events", async (req, res) => {
   console.log('Session data:', req.session);
   console.log('userid:', req.session.userId);
   console.log('isAuthenticated:', req.session.isAuthenticated);
+  await ensureValidToken(req);
   // Check if user is logged in
   if (!req.session.userId || !req.session.isAuthenticated) {
     return res.status(401).json({ error: "User not authenticated" });

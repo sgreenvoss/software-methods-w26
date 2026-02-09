@@ -144,6 +144,24 @@ const searchFor = async(search) => {
     return result;
 }
 
+const updateTokens = async(id, access, refresh, expiry) => {
+    const query = `
+        UPDATE person 
+            SET 
+            refresh_token = $2,
+            access_token = $3,
+            token_expiry = $4,
+            updated_at = NOW()
+        WHERE user_id = $1
+    `;
+    await pool.query(query, [
+        id,
+        refresh,
+        access,
+        expiry
+    ]);
+}
+
 module.exports = {
     pool,
     query: (text, params) => pool.query(text,params),
@@ -155,5 +173,6 @@ module.exports = {
     searchFor,
     addCalendar,
     addEvents,
-    getCalendarID
+    getCalendarID,
+    updateTokens
 }
