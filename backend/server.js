@@ -193,6 +193,7 @@ app.get('/oauth2callback', async (req, res) => {
     res.redirect("/");
 
   } catch (authErr) {
+    console.log("authorization error: ", authErr);
     res.redirect('/login'); // was /login fail - should we make that?
   }
 });
