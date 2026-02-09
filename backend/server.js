@@ -158,6 +158,8 @@ app.get('/oauth2callback', async (req, res) => {
 
     console.log('in the callback, username is ' + req.session.pending_username);
 
+    console.log("expiry date is", tokens.expiry_date);
+
     // need to include groups ids
     const userId = await db.insertUpdateUser(
       userInfo.id,
