@@ -16,6 +16,13 @@ async function initApp() {
   }
 
   console.log("welcome!");
+  
+  document.getElementById("create-group-btn").onclick = async () => {
+    console.log("create group button click");
+    const res = await apiPost("/group/creation?group_name=stellatestgroup", {});
+    console.log("create group result is ", res);
+  };
+
   renderCalendar();
 }
 
@@ -43,10 +50,4 @@ function showGroups() {
 document.getElementById("logoutBtn").onclick = () => {
   window.location.href = "/logout";
   // window.location.href = "https://scheduler-backend-9b29.onrender.com/logout";
-};
-
-document.getElementById("create-group-btn").onclick = async () => {
-  console.log("create group button click");
-  const res = await apiPost("/group/creation?group_name=stellatestgroup", {});
-  console.log("create group result is ", res);
 };
