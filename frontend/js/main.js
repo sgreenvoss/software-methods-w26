@@ -25,7 +25,6 @@ document.getElementById("calendarBtn").onclick = showCalendar;
 document.getElementById("groupsBtn").onclick = showGroups;
 
 
-
 function showCalendar() {
   console.log("Switching to calendar view");
   document.getElementById("calendar").hidden = false;
@@ -35,19 +34,21 @@ function showCalendar() {
 
 function showGroups() {
   console.log("Switching to groups view");
-
-  document.getElementById("create-group-btn").onclick = () => {
-    console.log("create group button click");
-    const res = apiPost("/group/creation?group_name=stellatestgroup", 0);
-    console.log("create group result is ", res);
-  }
-  
   document.getElementById("calendar").hidden = true;
   document.getElementById("groups").hidden = false;
   renderGroups();
 }
 
+
 document.getElementById("logoutBtn").onclick = () => {
   window.location.href = "/logout";
   // window.location.href = "https://scheduler-backend-9b29.onrender.com/logout";
+};
+
+window.onload = () => {
+  document.getElementById("create-group-btn").onclick = async () => {
+    console.log("create group button click");
+    const res = await apiPost("/group/creation?group_name=stellatestgroup", {});
+    console.log("create group result is ", res);
+  };
 };
