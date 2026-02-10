@@ -143,6 +143,12 @@ const searchFor = async(search) => {
     return result;
 }
 
+/**
+ * Updates a user's access token and token expiry in the person table
+ * @param {bigint} id user_id in the database
+ * @param {text} access access token
+ * @param {bigint} expiry token expiry date (as epoch)
+ */
 const updateTokens = async(id, access, expiry) => {
     const query = `
         UPDATE person 
@@ -159,6 +165,22 @@ const updateTokens = async(id, access, expiry) => {
     ]);
 }
 
+/**
+ * Creates a new group in the table f_group.
+ * @param {string} g_name name of the group
+ * @returns {bigint} group id
+ */
+const createGroup = async(g_name) => {
+    const query = `
+        INSERT INTO f_group (group_name)
+        VALUE $1
+        RETURNING group_name`;
+    const result = await pool.query(query, [
+        g_name
+    ]);
+    return result;
+}
+
 module.exports = {
     pool,
     query: (text, params) => pool.query(text,params),
@@ -171,5 +193,6 @@ module.exports = {
     addCalendar,
     addEvents,
     getCalendarID,
-    updateTokens
+    updateTokens,
+    createGroup
 }

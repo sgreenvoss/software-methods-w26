@@ -18,8 +18,11 @@ invitee
     user can now view available times
 */
 const { randomUUID } = require("crypto");
+const db = require("./db/index");
 
 async function createGroupId() {
+  // on the db end the group id is an automatically generated int - 
+  // is there a security reason to use this instead? 
   const groupId = randomUUID();
   // ensure groupId is unique in database
   // generate a new id if not unique
@@ -31,8 +34,11 @@ app.post("/group/creation", async (req, res) => {
   if (!req.session.user) {
     return res.status(401).json({ error: "Unauthorized" });
   }
+  const {group_name} = req.query;
+  console.log("group name is ", group_name);
   // create group id
-  const groupId = await createGroupId();
+  const groupId = db.createGroup(group_name); //await createGroupId();
+  console.log(groupId);
   // store group id in database with creator's user id
 });
 
