@@ -1,6 +1,10 @@
 import { renderGroups } from "./groups/groupsView.js";
 import { renderCalendar } from "./calendar/calendarController.js";
-import { getCurrentUser } from "./auth.js"
+import { getCurrentUser } from "./auth.js";
+
+// putting this in here just for groups - could build
+// a specific group frontend file to prevent bloat
+import {apiPost} from "./api/api.js";
 
 console.log("Frontend loaded");
 
@@ -22,6 +26,8 @@ document.getElementById("groupsBtn").onclick = showGroups;
 
 document.getElementById("create-group-btn").onclick = () => {
   console.log("create group button click");
+  const res = apiPost("/group/creation?group_name=stellatestgroup", 0);
+  console.log("create group result is ", res);
 }
 
 function showCalendar() {

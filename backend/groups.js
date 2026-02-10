@@ -45,7 +45,7 @@ module.exports = function(app) {
 
   app.get("/user/groups", async (req, res) => {
     // ensure user is logged in
-    if (!req.session.user) {
+    if (!req.session.userId || !req.session.isAuthenticated) {
       return res.status(401).json({ error: "Unauthorized" });
     }
     // query database for groups that include user's id
