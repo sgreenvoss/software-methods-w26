@@ -19,6 +19,7 @@ invitee
 */
 const { randomUUID } = require("crypto");
 const db = require("./db/index");
+const { getgroups } = require("process");
 
 module.exports = function(app) {
   async function createGroupId() {
@@ -38,10 +39,10 @@ module.exports = function(app) {
       }
       const {group_name} = req.query;
       console.log("group name is ", group_name);
-      // create group id
+      // store group id in database with creator's user id
       const group_id = await db.createGroup(group_name); //await createGroupId();
       console.log(group_id);
-      // store group id in database with creator's user id
+      await db.addUserToGroup(group_id, req.session.userId);
       return res.status(201).json({
         success: true,
         groupId: group_id,
@@ -55,11 +56,22 @@ module.exports = function(app) {
 
   app.get("/user/groups", async (req, res) => {
     // ensure user is logged in
-    if (!req.session.userId || !req.session.isAuthenticated) {
-      return res.status(401).json({ error: "Unauthorized" });
+    try{
+      if (!req.session.userId || !req.session.isAuthenticated) {
+        return res.status(401).json({ error: "Unauthorized" });
+      }
+      // query database for groups that include user's id
+      // return list of groups to frontend
+      const groups = await db.getGroupsByUID(req.session.userId);
+      return res.status(201).json({
+        success:true,
+        groups:groups
+      });
+    } catch(error) {
+      console.error("error fetching groups:", error);
+      return res.status(500).json({error: "failed getting groups from db"});
     }
-    // query database for groups that include user's id
-    // return list of groups to frontend
+
   });
 
   app.post("/group/invite", async (req, res) => {

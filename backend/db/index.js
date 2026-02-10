@@ -181,6 +181,25 @@ const createGroup = async(g_name) => {
     return result.rows[0];
 }
 
+const addUserToGroup = async(group_id, user_id) => {
+    const query = `
+        INSERT INTO group_match (group_id, user_id)
+        VALUES ($1, $2)`;
+    await pool.query(query, [
+        group_id,
+        user_id
+    ]);
+}
+
+const getGroupsByUID = async(user_id) => {
+    const query = `
+        SELECT f_group.group_name FROM f_group
+        JOIN group_match ON group_match.group_id = f_group.group_id
+        WHERE group_match.user_id = ($1);`;
+    const result = await pool.query(query, [user_id]);
+    return result.rows;
+}
+
 module.exports = {
     pool,
     query: (text, params) => pool.query(text,params),
@@ -194,5 +213,7 @@ module.exports = {
     addEvents,
     getCalendarID,
     updateTokens,
-    createGroup
+    createGroup,
+    addUserToGroup,
+    getGroupsByUID
 }
