@@ -31,16 +31,26 @@ module.exports = function(app) {
   }
 
   app.post("/group/creation", async (req, res) => {
-    // ensure user is logged in
-    if (!req.session.userId || !req.session.isAuthenticated) {
-      return res.status(401).json({ error: "Unauthorized" });
+    try {
+      // ensure user is logged in
+      if (!req.session.userId || !req.session.isAuthenticated) {
+        return res.status(401).json({ error: "Unauthorized" });
+      }
+      const {group_name} = req.query;
+      console.log("group name is ", group_name);
+      // create group id
+      const group_id = await db.createGroup(group_name); //await createGroupId();
+      console.log(group_id);
+      // store group id in database with creator's user id
+      return res.status(201).json({
+        success: true,
+        groupId: group_id,
+        groupName: group_name
+      });
+    } catch(error) {
+      console.error("error creating group: ", error);
+      return res.status(500).json({error: "Failed to create group"});
     }
-    const {group_name} = req.query;
-    console.log("group name is ", group_name);
-    // create group id
-    const groupId = db.createGroup(group_name); //await createGroupId();
-    console.log(groupId);
-    // store group id in database with creator's user id
   });
 
   app.get("/user/groups", async (req, res) => {
