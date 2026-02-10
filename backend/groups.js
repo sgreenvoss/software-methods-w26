@@ -20,66 +20,68 @@ invitee
 const { randomUUID } = require("crypto");
 const db = require("./db/index");
 
-async function createGroupId() {
-  // on the db end the group id is an automatically generated int - 
-  // is there a security reason to use this instead? 
-  const groupId = randomUUID();
-  // ensure groupId is unique in database
-  // generate a new id if not unique
-  return groupId;
-}
-
-app.post("/group/creation", async (req, res) => {
-  // ensure user is logged in
-  if (!req.session.user) {
-    return res.status(401).json({ error: "Unauthorized" });
+module.exports = function(app) {
+  async function createGroupId() {
+    // on the db end the group id is an automatically generated int - 
+    // is there a security reason to use this instead? 
+    const groupId = randomUUID();
+    // ensure groupId is unique in database
+    // generate a new id if not unique
+    return groupId;
   }
-  const {group_name} = req.query;
-  console.log("group name is ", group_name);
-  // create group id
-  const groupId = db.createGroup(group_name); //await createGroupId();
-  console.log(groupId);
-  // store group id in database with creator's user id
-});
 
-app.get("/user/groups", async (req, res) => {
-  // ensure user is logged in
-  if (!req.session.user) {
-    return res.status(401).json({ error: "Unauthorized" });
-  }
-  // query database for groups that include user's id
-  // return list of groups to frontend
-});
+  app.post("/group/creation", async (req, res) => {
+    // ensure user is logged in
+    if (!req.session.user) {
+      return res.status(401).json({ error: "Unauthorized" });
+    }
+    const {group_name} = req.query;
+    console.log("group name is ", group_name);
+    // create group id
+    const groupId = db.createGroup(group_name); //await createGroupId();
+    console.log(groupId);
+    // store group id in database with creator's user id
+  });
 
-app.post("/group/invite", async (req, res) => {
-  // ensure user is logged in
-  if (!req.session.user) {
-    return res.status(401).json({ error: "Unauthorized" });
-  }
-  // get group id and invitee email from request body
-  // verify that user is a member of the group
-  // generate invitation link with group id to display on frontend
-});
+  app.get("/user/groups", async (req, res) => {
+    // ensure user is logged in
+    if (!req.session.user) {
+      return res.status(401).json({ error: "Unauthorized" });
+    }
+    // query database for groups that include user's id
+    // return list of groups to frontend
+  });
 
-app.post("/group/respond-invitation", async (req, res) => {
-  // ensure user is logged in
-  if (!req.session.user) {
-    return res.status(401).json({ error: "Unauthorized" });
-  }
-  // get group id and response (accept/reject) from request body
-  // if accept:
-  //   add group id to user's list of groups in database
-  //   add user id to group's list of members in database
-  // if reject:
-  //   do not add user to group
-});
+  app.post("/group/invite", async (req, res) => {
+    // ensure user is logged in
+    if (!req.session.user) {
+      return res.status(401).json({ error: "Unauthorized" });
+    }
+    // get group id and invitee email from request body
+    // verify that user is a member of the group
+    // generate invitation link with group id to display on frontend
+  });
 
-app.post("/group/leave", async (req, res) => {
-  // ensure user is logged in
-  if (!req.session.user) {
-    return res.status(401).json({ error: "Unauthorized" });
-  }
-  // get group id from request body
-  // remove user id from group's list of members in database
-  // remove group id from user's list of groups in database
-});
+  app.post("/group/respond-invitation", async (req, res) => {
+    // ensure user is logged in
+    if (!req.session.user) {
+      return res.status(401).json({ error: "Unauthorized" });
+    }
+    // get group id and response (accept/reject) from request body
+    // if accept:
+    //   add group id to user's list of groups in database
+    //   add user id to group's list of members in database
+    // if reject:
+    //   do not add user to group
+  });
+
+  app.post("/group/leave", async (req, res) => {
+    // ensure user is logged in
+    if (!req.session.user) {
+      return res.status(401).json({ error: "Unauthorized" });
+    }
+    // get group id from request body
+    // remove user id from group's list of members in database
+    // remove group id from user's list of groups in database
+  });
+};

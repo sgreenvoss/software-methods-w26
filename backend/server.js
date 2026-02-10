@@ -1,4 +1,3 @@
-// requirements
 const express = require('express');
 const { google } = require('googleapis');
 const crypto = require('crypto');
@@ -8,7 +7,7 @@ const session = require('express-session');
 const url = require('url');
 const pgSession = require('connect-pg-simple')(session);
 const email = require('./emailer');
-const { oauth2 } = require('googleapis/build/src/apis/oauth2');
+const groupModule = require("./groups");
 
 // .env config
 require('dotenv').config({
@@ -45,7 +44,7 @@ app.use(session({
   }
 }));
 
-
+groupModule(app);
 app.use(express.static(path.join(__dirname, "..", "frontend"), { index: false }));
 
 const oauth2Client = new google.auth.OAuth2(
