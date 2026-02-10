@@ -32,7 +32,7 @@ module.exports = function(app) {
 
   app.post("/group/creation", async (req, res) => {
     // ensure user is logged in
-    if (!req.session.user) {
+    if (!req.session.userId || !req.session.isAuthenticated) {
       return res.status(401).json({ error: "Unauthorized" });
     }
     const {group_name} = req.query;
