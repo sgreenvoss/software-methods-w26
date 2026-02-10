@@ -45,10 +45,8 @@ document.getElementById("logoutBtn").onclick = () => {
   // window.location.href = "https://scheduler-backend-9b29.onrender.com/logout";
 };
 
-window.onload = () => {
-  document.getElementById("create-group-btn").onclick = async () => {
-    console.log("create group button click");
-    const res = await apiPost("/group/creation?group_name=stellatestgroup", {});
-    console.log("create group result is ", res);
-  };
+document.getElementById("create-group-btn").onclick = async () => {
+  console.log("create group button click");
+  const res = await apiPost("/group/creation?group_name=stellatestgroup", {});
+  console.log("create group result is ", res);
 };
