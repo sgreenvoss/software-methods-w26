@@ -1,10 +1,4 @@
-// =================== 1. CONFIG MUST BE FIRST ===================
-require('dotenv').config();
-
-console.log("Database URL Check:", process.env.DATABASE_URL ? "Found it!" : "It is UNDEFINED");
-console.log("ENV:", process.env.NODE_ENV);
-
-// =================== 2. NOW LOAD LIBRARIES ===================
+// requirements
 const express = require('express');
 const { google } = require('googleapis');
 const crypto = require('crypto');
@@ -14,14 +8,19 @@ const session = require('express-session');
 const url = require('url');
 const pgSession = require('connect-pg-simple')(session);
 const email = require('./emailer');
-const groupModule = require("./groups");
-const availabilityModule = require("./availability");
+const { oauth2 } = require('googleapis/build/src/apis/oauth2');
 
+// .env config
+require('dotenv').config({
+  path: process.env.NODE_ENV === 'production' ? '.env.production' : '.env.development'
+});
+console.log("Database URL Check:", process.env.DATABASE_URL ? "Found it!" : "It is UNDEFINED");
 
-// =================== 3. APP SETUP ===================
+console.log("ENV:", process.env.NODE_ENV);
+console.log("Frontend URL:", process.env.FRONTEND_URL);
+
 const frontend = process.env.FRONTEND_URL;
 const app = express();
-// ... rest of your code
 
 const isProduction = process.env.NODE_ENV === 'production';
 
