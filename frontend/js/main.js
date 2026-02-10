@@ -17,11 +17,11 @@ async function initApp() {
 
   console.log("welcome!");
   
-  document.getElementById("create-group-btn").onclick = async () => {
-    console.log("create group button click");
-    const res = await apiPost("/group/creation?group_name=stellatestgroup", {});
-    console.log("create group result is ", res);
-  };
+  // document.getElementById("create-group-btn").onclick = async () => {
+  //   console.log("create group button click");
+  //   const res = await apiPost("/group/creation?group_name=stellatestgroup", {});
+  //   console.log("create group result is ", res);
+  // };
 
   renderCalendar();
 }

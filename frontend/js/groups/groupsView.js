@@ -1,17 +1,24 @@
-// replace mockGroups with await apiGet("/groups")
+import {apiPost} from "../api/api.js";
+import {apiGet} from "../api/api.js"
+// import { mockGroups } from "./groupsMock.js";
 
-import { mockGroups } from "./groupsMock.js";
-
-export function renderGroups() {
-
-  console.log("Rendering groups:", mockGroups);
-
+export async function renderGroups() {
   const container = document.getElementById("groups");
-  container.innerHTML = `
-    <h2>My Groups</h2>
-    <button id="create-group-btn">+ Create New Group</button>`
+  container.innerHTML = `<h2>My Groups</h2>`
 
-  mockGroups.forEach(group => {
+  const createGroup = document.createElement("button");
+    createGroup.textContent = "+ Create New Group"
+    createGroup.onclick = async () => {
+      console.log("create group button click");
+      const res = await apiPost("/group/creation?group_name=stellatestgroup", {});
+      console.log("create group result is ", res);
+    }
+  
+  container.appendChild(createGroup);
+
+  const groups = await apiGet('/user/groups');
+    
+  groups.groups.forEach(group => {
     const row = document.createElement("div");
     row.className = "group-row";
 

@@ -170,6 +170,8 @@ const updateTokens = async(id, access, expiry) => {
  * @param {string} g_name name of the group
  * @returns {bigint} group id
  */
+
+
 const createGroup = async(g_name) => {
     const query = `
         INSERT INTO f_group (group_name)
@@ -178,7 +180,7 @@ const createGroup = async(g_name) => {
     const result = await pool.query(query, [
         g_name
     ]);
-    return result.rows[0];
+    return result.rows[0].group_id; // Garertt changed this line
 }
 
 const addUserToGroup = async(group_id, user_id) => {

@@ -6,7 +6,7 @@ export async function apiGet(path) {
 }
 
 export async function apiPost(path, data) {
-  const response = await fetch("https://scheduler-backend-9b2i.onrender.com" + path, {
+  const response = await fetch(path, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     credentials: "include",
