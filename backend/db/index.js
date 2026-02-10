@@ -27,15 +27,6 @@ const testConnection = async () => {
     };
 };
 
-const createUser = async(email, fname, lname, username) => {
-    const query = `
-        INSERT INTO person (email, first_name, last_name, username)
-        VALUES ($1, $2, $3, $4)
-        RETURNING *
-    `
-    const result = await pool.query(query, [email, fname, lname, username]);
-    return result.rows[0];
-};
 
 const insertUpdateUser = async(google_id, email, first_name, last_name, username, refresh_token, access_token, token_expiry) => {
     var _username = username;
@@ -47,10 +38,9 @@ const insertUpdateUser = async(google_id, email, first_name, last_name, username
         VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
         ON CONFLICT (google_id)
         DO UPDATE SET 
-            refresh_token = $6,
             access_token = $7,
             token_expiry = $8,
-            updated_at = NOW()
+            updated_at = EXTRACT(EPOCH FROM NOW())::BIGINT * 1000
         RETURNING user_id`,
         [   
             google_id,
@@ -60,12 +50,54 @@ const insertUpdateUser = async(google_id, email, first_name, last_name, username
             _username,
             refresh_token,
             access_token,
-            new Date(token_expiry)
+            token_expiry
         ]
     );
     // double check - might just be .id?
     console.log('insert result:', result.rows[0]);
     return result.rows[0].user_id;
+}
+
+const addCalendar = async(user_id, calendar_name="primary") => {
+    const result = await pool.query(
+        `INSERT INTO calendar (user_id, calendar_name)
+        VALUES ($1, $2)
+        ON CONFLICT DO NOTHING`,
+        [
+            user_id,
+            calendar_name
+        ]
+    );
+    console.log('inserted calendar:', result.rows[0]);
+    return result.rows[0]
+}
+
+const getCalendarID = async(user_id) => {
+    const result = await pool.query(
+        `SELECT calendar_id FROM calendar
+        WHERE user_id = $1`,
+        [user_id]
+    );
+    return result.rows[0];
+}
+
+const addEvents = async(cal_id, events) => {
+    for (let i = 0; i < events.length; i++) {
+        // TODO: consider the logic for doing nothing -> might want to update instead? 
+        await pool.query(
+            `INSERT INTO cal_event (calendar_id, priority, event_start, event_end, event_name, gcal_event_id)
+            VALUES ($1, $2, $3, $4, $5, $6)
+            ON CONFLICT DO NOTHING`,
+            [
+                cal_id,
+                1, // for testing purposes
+                events[i].start,
+                events[i].end,
+                events[i].title,
+                events[i].event_id
+            ]
+        );
+    };
 }
 
 const getUserByID = async(user_id) => {
@@ -100,13 +132,44 @@ const getNameByID = async(id) => {
     return result;
 }
 
+const searchFor = async(search) => {
+    // regex to search for usernames that start
+    // with the user's search
+    const result = await pool.query(
+        `SELECT user_id, username FROM person 
+        WHERE username ILIKE $1 LIMIT 10`,
+        [`${search}%`]
+    );
+    return result;
+}
+
+const updateTokens = async(id, access, expiry) => {
+    const query = `
+        UPDATE person 
+            SET 
+            access_token = $2,
+            token_expiry = $3,
+            updated_at = EXTRACT(EPOCH FROM NOW())::BIGINT * 1000
+        WHERE user_id = $1
+    `;
+    await pool.query(query, [
+        id,
+        access,
+        expiry
+    ]);
+}
+
 module.exports = {
     pool,
     query: (text, params) => pool.query(text,params),
     testConnection,
-    createUser,
     getUsersWithName,
     getUserByID,
     getNameByID,
-    insertUpdateUser
+    insertUpdateUser,
+    searchFor,
+    addCalendar,
+    addEvents,
+    getCalendarID,
+    updateTokens
 }
