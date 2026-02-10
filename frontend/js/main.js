@@ -24,11 +24,7 @@ initApp();
 document.getElementById("calendarBtn").onclick = showCalendar;
 document.getElementById("groupsBtn").onclick = showGroups;
 
-document.getElementById("create-group-btn").onclick = () => {
-  console.log("create group button click");
-  const res = apiPost("/group/creation?group_name=stellatestgroup", 0);
-  console.log("create group result is ", res);
-}
+
 
 function showCalendar() {
   console.log("Switching to calendar view");
@@ -39,6 +35,13 @@ function showCalendar() {
 
 function showGroups() {
   console.log("Switching to groups view");
+
+  document.getElementById("create-group-btn").onclick = () => {
+    console.log("create group button click");
+    const res = apiPost("/group/creation?group_name=stellatestgroup", 0);
+    console.log("create group result is ", res);
+  }
+  
   document.getElementById("calendar").hidden = true;
   document.getElementById("groups").hidden = false;
   renderGroups();
