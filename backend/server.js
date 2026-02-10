@@ -1,4 +1,10 @@
-// requirements
+// =================== 1. CONFIG MUST BE FIRST ===================
+require('dotenv').config();
+
+console.log("Database URL Check:", process.env.DATABASE_URL ? "Found it!" : "It is UNDEFINED");
+console.log("ENV:", process.env.NODE_ENV);
+
+// =================== 2. NOW LOAD LIBRARIES ===================
 const express = require('express');
 const { google } = require('googleapis');
 const crypto = require('crypto');
@@ -12,17 +18,10 @@ const groupModule = require("./groups");
 const availabilityModule = require("./availability");
 
 
-// .env config
-require('dotenv').config({
-  path: process.env.NODE_ENV === 'production' ? '.env.production' : '.env.development'
-});
-console.log("Database URL Check:", process.env.DATABASE_URL ? "Found it!" : "It is UNDEFINED");
-
-console.log("ENV:", process.env.NODE_ENV);
-console.log("Frontend URL:", process.env.FRONTEND_URL);
-
+// =================== 3. APP SETUP ===================
 const frontend = process.env.FRONTEND_URL;
 const app = express();
+// ... rest of your code
 
 const isProduction = process.env.NODE_ENV === 'production';
 
