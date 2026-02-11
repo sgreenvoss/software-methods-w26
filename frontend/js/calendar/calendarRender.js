@@ -76,6 +76,7 @@ export async function renderCalendarGrid(container, weekStart, rawEvents) {
             visualHeight = Math.max(1, visualHeight);
             eventDiv.style.height = `${visualHeight}px`;
             eventDiv.style.top = `${startMins}px`;
+            if (event.isAllDay) eventDiv.style.opacity = "60%";
 
             if (event.isAllDay) eventDiv.classList.add("all-day-event")
             cell.appendChild(eventDiv);
@@ -113,6 +114,7 @@ function processEvents(rawEvents) {
         start: new Date(current),
         end: new Date(effectiveEnd),
         id: event.event_id,
+        isAllDay: (effectiveEnd - current) >= 24 * 60 * 60 * 1000,
         isEndOfDay: effectiveEnd.getTime() === nextDayStart.getTime()
       });
 

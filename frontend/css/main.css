@@ -29,11 +29,17 @@ button {
 #groupsBtn {
   background-color: #3498db;
   color: white;
+  width: 100%;
+}
+
+#logout {
+  text-align: right;
 }
 
 #calendarBtn {
   background-color: #2ecc71;
   color: white;
+  width: 100%;
 }
 
 /* 4. Hover effect for feedback */
