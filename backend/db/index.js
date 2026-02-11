@@ -195,7 +195,7 @@ const addUserToGroup = async(group_id, user_id) => {
 
 const getGroupsByUID = async(user_id) => {
     const query = `
-        SELECT f_group.group_name FROM f_group
+        SELECT * FROM f_group
         JOIN group_match ON group_match.group_id = f_group.group_id
         WHERE group_match.user_id = ($1);`;
     const result = await pool.query(query, [user_id]);
