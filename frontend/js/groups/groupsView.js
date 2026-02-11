@@ -12,13 +12,7 @@ export async function renderGroups() {
     createGroupBtn.textContent = "+ Create New Group"
     createGroupBtn.onclick = async () => {
 
-      createNewGroup();
-
-      // console.log("create group button click");
-      // const res = await apiPost("/group/creation?group_name=stellatestgroup", {});
-      // console.log("create group result is ", res);
-
-
+      await createNewGroup();
     }
   
   container.appendChild(createGroupBtn);
@@ -33,21 +27,22 @@ export async function renderGroups() {
     name.textContent = group.group_name;
 
     const viewBtn = document.createElement("button");
+    viewBtn.id = "viewBtn"
     viewBtn.textContent = "View";
     viewBtn.onclick = () => {
       console.log("View group", group.group_id);
     };
 
     const leaveBtn = document.createElement("button");
+    leaveBtn.id = "leaveBtn"
     leaveBtn.textContent = "Leave";
-    leaveBtn.onclick = () => {
+    leaveBtn.onclick = async () => {
       console.log("leaving group", group.group_id);
-      apiPost("/group/leave", {groupId : group.group_id});
+      await apiPost("/group/leave", {groupId : group.group_id});
+      renderGroups();
     };
 
-    row.appendChild(name);
-    row.appendChild(viewBtn);
-    row.appendChild(leaveBtn);
+    row.append(name, viewBtn, leaveBtn);
 
     container.appendChild(row);
   });

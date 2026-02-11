@@ -1,4 +1,5 @@
 import {apiPost} from "../api/api.js";
+import { renderGroups } from "./groupsView.js";
 
 export function createNewGroup() {
   // 1. Create the Modal Background
@@ -117,9 +118,9 @@ export function createNewGroup() {
         }
       }
 
-      // Close modal and reload page (or re-render groups)
+      // Close modal and re-render groups
       modal.remove();
-      window.location.reload(); 
+      renderGroups(); //isn't working
     } catch (err) {
       console.error(err);
       alert("Failed to create group. Check console.");
@@ -141,4 +142,5 @@ export function createNewGroup() {
 
   // Add to DOM
   document.body.appendChild(modal);
+
 }
