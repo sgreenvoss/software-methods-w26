@@ -108,6 +108,7 @@ module.exports = function(app) {
       return res.status(404).json({error: "No group to leave identified"});
     }
     db.leaveGroup(req.session.userId, groupId);
+    return res.status(201).json({success:true});
     // get group id from request body
     // remove user id from group's list of members in database
     // remove group id from user's list of groups in database
