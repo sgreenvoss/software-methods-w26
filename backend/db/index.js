@@ -202,6 +202,38 @@ const getGroupsByUID = async(user_id) => {
     return result.rows;
 }
 
+const getUIDByGroupID = async(group_id) => {
+    const query = `
+        SELECT user_id FROM group_match
+        WHERE group_id = ($1)`;
+    const res = await pool.query(query, [group_id]);
+    return res;
+}
+
+const deleteGroup = async(group_id) => {
+    const query = `DELETE FROM f_group WHERE group_id = ($1)`;
+    await pool.query(query, [group_id]);
+}
+
+const leaveGroup = async(user_id, group_id) => {
+    try {
+        const query = `
+            DELETE FROM group_match 
+            WHERE group_id = ($1) AND user_id = ($2)`;
+        await pool.query(query, [group_id, user_id]);
+        
+        const members = await getUIDByGroupID(group_id); 
+        console.log("members of that group remaining: ", members);
+
+        if (!members.rows[0]) {
+            console.log("no more members, deleting this group.");
+            await deleteGroup(group_id);
+        }
+    } catch (error) {
+        console.error(error);
+    }
+}
+
 module.exports = {
     pool,
     query: (text, params) => pool.query(text,params),
@@ -217,5 +249,6 @@ module.exports = {
     updateTokens,
     createGroup,
     addUserToGroup,
-    getGroupsByUID
+    getGroupsByUID,
+    leaveGroup
 }
