@@ -42,7 +42,7 @@ export async function renderGroups() {
     leaveBtn.textContent = "Leave";
     leaveBtn.onclick = () => {
       console.log("leaving group", group.group_id);
-      apiPost("/group/leave", group.group_id);
+      apiPost("/group/leave", {groupId : group.group_id});
     };
 
     row.appendChild(name);
