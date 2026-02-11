@@ -99,18 +99,24 @@ module.exports = function(app) {
 
   app.post("/group/leave", async (req, res) => {
     // ensure user is logged in
-    if (!req.session.userId || !req.session.isAuthenticated) {
-      return res.status(401).json({ error: "Unauthorized" });
-    }
-    const {groupId} = req.body;
+    try {
+      if (!req.session.userId || !req.session.isAuthenticated) {
+        return res.status(401).json({ error: "Unauthorized" });
+      }
+      const {groupId} = req.body;
 
-    if (!groupId) {
-      return res.status(404).json({error: "No group to leave identified"});
+      if (!groupId) {
+        return res.status(400).json({error: "No group to leave identified"});
+      }
+      db.leaveGroup(req.session.userId, groupId);
+      return res.status(201).json({success:true});
+      // get group id from request body
+      // remove user id from group's list of members in database
+      // remove group id from user's list of groups in database
+
+    } catch (error) {
+      console.error("error leaving group ", error);
+      return res.status(400).json({error: "something went wrong leaving group."});
     }
-    db.leaveGroup(req.session.userId, groupId);
-    return res.status(201).json({success:true});
-    // get group id from request body
-    // remove user id from group's list of members in database
-    // remove group id from user's list of groups in database
   });
-};
+}
