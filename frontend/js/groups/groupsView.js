@@ -42,7 +42,12 @@ export async function renderGroups() {
       renderGroups();
     };
 
-    row.append(name, viewBtn, leaveBtn);
+    const btnGroup = document.createElement("div");
+    btnGroup.appendChild(viewBtn);
+    btnGroup.appendChild(leaveBtn);
+
+    row.appendChild(name);
+    row.appendChild(btnGroup);
 
     container.appendChild(row);
   });
