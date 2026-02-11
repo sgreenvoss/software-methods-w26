@@ -41,6 +41,7 @@ export async function renderGroups() {
     const leaveBtn = document.createElement("button");
     leaveBtn.textContent = "Leave";
     leaveBtn.onclick = () => {
+      console.log("leaving group", group.group_id);
       apiPost("/group/leave", group.group_id);
     };
 

@@ -104,6 +104,7 @@ module.exports = function(app) {
         return res.status(401).json({ error: "Unauthorized" });
       }
       const {groupId} = req.body;
+      console.log("this is the groupid:", groupId);
 
       if (!groupId) {
         return res.status(400).json({error: "No group to leave identified"});
