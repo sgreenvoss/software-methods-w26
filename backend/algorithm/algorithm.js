@@ -60,14 +60,14 @@ function overlaps(aStart, aEnd, bStart, bEnd) {
  *
  * This is deliberately "pure": no DB, no API calls, no queries.
  * The SDS describes availability as computed from fetched calendar events,
- * transiently sorted/merged in memory. :contentReference[oaicite:8]{index=8}
+
  *
  * @param {Object} args
  * @param {number} args.windowStartMs - inclusive
  * @param {number} args.windowEndMs - exclusive
  * @param {ParticipantSnapshot[]} args.participants
  * @param {number} [args.granularityMinutes=DEFAULT_G_MINUTES]
- * @param {string} [args.priority=BlockingLevel.B3] - accepted, ignored in MVP
+ * @param {string} [args.priority=BlockingLevel.B1] - min blocking level; B1=strict, B3=lenient
  * @returns {AvailabilityBlock[]}
  */
 export function computeAvailabilityBlocks({
@@ -75,7 +75,7 @@ export function computeAvailabilityBlocks({
   windowEndMs,
   participants,
   granularityMinutes = DEFAULT_G_MINUTES,
-  priority = BlockingLevel.B3, // accepted; unused in MVP
+  priority = BlockingLevel.B1,
 }) {
   if (!Number.isFinite(windowStartMs) || !Number.isFinite(windowEndMs)) {
     throw new Error("windowStartMs/windowEndMs must be numbers (epoch ms).");
@@ -91,6 +91,15 @@ export function computeAvailabilityBlocks({
   if (!Number.isFinite(blockMs) || blockMs <= 0) {
     throw new Error("granularityMinutes must be a positive number.");
   }
+
+  const blockingOrder = {
+    [BlockingLevel.B1]: 1,
+    [BlockingLevel.B2]: 2,
+    [BlockingLevel.B3]: 3,
+  };
+
+  const priorityKey = blockingOrder[priority] ? priority : BlockingLevel.B1;
+  const minPriorityValue = blockingOrder[priorityKey];
 
   // Preprocess: for each user, clamp events to window and merge overlaps.
   /** @type {Map<UserId, {startMs:number,endMs:number}[]>} */
@@ -115,8 +124,10 @@ export function computeAvailabilityBlocks({
       const endMs = Math.min(e, windowEndMs);
       if (endMs <= startMs) continue;
 
-      // MVP ignores ev.blockingLevel and ignores `priority`
-      // Later: use priority to treat some events as "soft busy".
+      const levelKey = blockingOrder[ev.blockingLevel] ? ev.blockingLevel : BlockingLevel.B3;
+      const levelValue = blockingOrder[levelKey];
+      if (levelValue < minPriorityValue) continue;
+
       clamped.push({ startMs, endMs });
     }
 
