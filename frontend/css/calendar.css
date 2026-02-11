@@ -6,7 +6,7 @@
 
 .calendar-cell {
   position: relative;
-  min-height: 60px;
+  min-height: 60px; 
   border: 1px solid #eee;
   /* width: 100%; */
 }
@@ -19,7 +19,7 @@
   color: white;
   font-size: 12px;
 
-  padding: 4px;
+  padding: 4px; /*for displaying title*/
   z-index: 10;
   border-radius: 4px;
   overflow: hidden;

@@ -46,7 +46,7 @@ CREATE TABLE group_match (
 -- =========================
 CREATE TABLE calendar (
     calendar_id   BIGINT PRIMARY KEY,
-    gcal_id       VARCHAR,
+    user_id       BIGINT,
     calendar_name VARCHAR
 );
 
