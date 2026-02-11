@@ -2,9 +2,16 @@
   "name": "algorithm",
   "version": "1.0.0",
   "description": "",
-  "main": "index.js",
+  "main": "./index.cjs",
+  "exports": {
+    ".": {
+      "import": "./index.js",
+      "require": "./index.cjs"
+    }
+  },
   "scripts": {
-    "test": "jest"
+    "test": "jest",
+    "render-proof": "node ./render_proof.cjs"
   },
   "keywords": [],
   "author": "",

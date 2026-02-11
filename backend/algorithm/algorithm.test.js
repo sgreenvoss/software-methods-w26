@@ -14,8 +14,8 @@ import {
   computeAvailabilityBlocksAllViews,
   toSingleViewBlocks,
   DEFAULT_G_MINUTES,
-} from "./algorithm";
-import { BlockingLevel } from "./types/algorithm_types";
+} from "./algorithm.js";
+import { BlockingLevel } from "./types/algorithm_types.js";
 
 /** @typedef {import("./types/algorithm_types.js").ParticipantSnapshot} ParticipantSnapshot */
 

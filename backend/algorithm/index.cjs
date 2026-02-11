@@ -12,6 +12,18 @@ async function computeAvailabilityBlocks(args) {
   return mod.computeAvailabilityBlocks(args);
 }
 
+async function computeAvailabilityBlocksAllViews(args) {
+  const mod = await loadAlgorithm();
+  return mod.computeAvailabilityBlocksAllViews(args);
+}
+
+async function toSingleViewBlocks(blocksMulti, chosen) {
+  const mod = await loadAlgorithm();
+  return mod.toSingleViewBlocks(blocksMulti, chosen);
+}
+
 module.exports = {
   computeAvailabilityBlocks,
+  computeAvailabilityBlocksAllViews,
+  toSingleViewBlocks,
 };
