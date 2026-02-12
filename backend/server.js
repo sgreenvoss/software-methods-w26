@@ -131,7 +131,9 @@ app.get('/auth/google', async (req, res) => {
     // Enable incremental authorization. Recommended as a best practice.
     include_granted_scopes: true,
     // Include the state parameter to reduce the risk of CSRF attacks.
-    state: state
+    state: state,
+    // Include consent to force refresh token
+    prompt: 'consent'
   });
   res.redirect(authorizationUrl);
 });
@@ -211,17 +213,52 @@ app.get('/test-session', (req, res) => {
 
 async function ensureValidToken(req) {
   const user = await db.getUserByID(req.session.userId);
-  if (!user | !user.access_token) {
-    throw new Error('no user or user tokens')
+  
+  if (!user || !user.access_token) {
+    throw new Error('no user or user tokens');
   }
+
   const now = Date.now();
   const fiveMins = 5 * 60 * 1000;
-  if (!user.expiry_date || now >= user.expiry_date - fiveMins) {
-    console.log("refreshing tokens...");
-    console.log('this is user:', user);
-    oauth2Client.setCredentials(user) // this prob wont work
-    const {credentials} = await oauth2Client.refreshAccessToken();
-    await db.updateTokens(req.session.userId, credentials.access_token, credentials.expiry_date);
+  
+  // FIX 1: Use 'token_expiry' (from DB) instead of 'expiry_date'
+  // Convert to Number because DB might return it as a string
+  const expiryDate = user.token_expiry ? Number(user.token_expiry) : 0;
+
+  // FIX 2: Check if expiryDate is valid before doing math
+  if (!expiryDate || now >= expiryDate - fiveMins) {
+    console.log("Token expired or missing expiry. Refreshing...");
+    console.log('User refresh token status:', user.refresh_token ? 'Present' : 'NULL');
+
+    if (!user.refresh_token) {
+      // If we need to refresh but have no token, we must fail gracefully
+      // or rely on the caller to redirect to login.
+      throw new Error('Access token expired and no refresh token available.');
+    }
+
+    // FIX 3: Manually map the DB fields to what Google expects
+    oauth2Client.setCredentials({
+      refresh_token: user.refresh_token,
+      access_token: user.access_token,
+      expiry_date: expiryDate
+    });
+
+    const { credentials } = await oauth2Client.refreshAccessToken();
+    
+    // Update DB with new tokens
+    await db.updateTokens(
+        req.session.userId, 
+        credentials.access_token, 
+        credentials.expiry_date
+    );
+    console.log("Tokens refreshed successfully.");
+  } else {
+    // Token is still valid, just set credentials so the next call works
+    oauth2Client.setCredentials({
+      refresh_token: user.refresh_token,
+      access_token: user.access_token,
+      expiry_date: expiryDate
+    });
   }
 }
 
