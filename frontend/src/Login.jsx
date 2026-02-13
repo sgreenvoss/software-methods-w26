@@ -1,5 +1,7 @@
 import React, { useState } from 'react';
+import './css/login.css';
 
+// handles login
 export default function Login() {
     const [username, setUsername] = useState('');
     const [error, setError] = useState('');
@@ -7,8 +9,8 @@ export default function Login() {
     console.log("loading login page");
     
     const handleLogin = () => {
-        if (!username || username.length > 12) {
-            setError('Username must be 1-12 characters');
+        if (!username) {
+            setError('Please enter username.');
             return;
         }
         window.location.href = `/auth/google?username=${encodeURIComponent(username)}`;
@@ -16,6 +18,7 @@ export default function Login() {
 
     return (
         <>
+        <div className="login-container">
           <header>
             <p id="logo">Social Scheduler</p>
             <p id="beta">beta</p>
@@ -29,7 +32,6 @@ export default function Login() {
                 name="username"
                 value={username}
                 onChange={(e) => setUsername(e.target.value)}
-                maxLength="12"
             />
             {error && <p style={{color: 'red'}}>{error}</p>}
           </section>
@@ -37,6 +39,7 @@ export default function Login() {
           <section id="auth">
             <button id="loginBtn" onClick={handleLogin}>Continue with Google</button>
           </section>
+        </div>
         </>
     );
 }

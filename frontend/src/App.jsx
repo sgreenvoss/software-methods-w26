@@ -1,7 +1,9 @@
-import React, { useState, useEffect } from 'react'
-import { apiGet } from './api.js'
-import Login from './Login.jsx'
+import React, { useState, useEffect } from 'react';
+import { apiGet } from './api.js';
+import Login from './Login.jsx';
+import Main from './Main.jsx';
 
+// determines which page to serve
 export default function App() {
     // states
     const [loading, setLoading] = useState(true);
@@ -31,6 +33,6 @@ export default function App() {
     if (user === null) {
         return <Login />
     } else {
-        return <h1>Welcome, {user.username}!</h1>
+        return <Main />
     }
 }
