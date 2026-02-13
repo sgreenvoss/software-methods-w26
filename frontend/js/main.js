@@ -4,7 +4,7 @@ import { getCurrentUser } from "./auth.js";
 
 // putting this in here just for groups - could build
 // a specific group frontend file to prevent bloat
-import {apiPost} from "./api/api.js";
+import {apiPost} from "../src/api.js";
 
 console.log("Frontend loaded");
 

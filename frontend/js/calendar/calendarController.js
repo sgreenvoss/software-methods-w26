@@ -1,6 +1,6 @@
 import { renderCalendarGrid } from "./calendarRender.js";
 import { renderAvailability } from "./availabilityRender.js";
-import { apiGet } from "../api/api.js";
+import { apiGet } from "../../src/api.js";
 
 let currentWeekStart = getStartOfWeek(new Date());
 

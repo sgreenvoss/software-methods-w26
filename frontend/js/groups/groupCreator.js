@@ -1,4 +1,4 @@
-import {apiPost} from "../api/api.js";
+import {apiPost} from "../../src/api.js";
 import { renderGroups } from "./groupsView.js";
 
 export function createNewGroup() {

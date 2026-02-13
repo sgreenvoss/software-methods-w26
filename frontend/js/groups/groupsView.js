@@ -1,5 +1,5 @@
-import {apiPost} from "../api/api.js";
-import {apiGet} from "../api/api.js"
+import {apiPost} from "../../src/api.js";
+import {apiGet} from "../../src/api.js"
 import {createNewGroup} from "./groupCreator.js"
 
 // import { mockGroups } from "./groupsMock.js";

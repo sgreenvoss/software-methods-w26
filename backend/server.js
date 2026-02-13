@@ -45,7 +45,7 @@ app.use(session({
 }));
 
 groupModule(app);
-app.use(express.static(path.join(__dirname, "..", "frontend"), { index: false }));
+app.use(express.static(path.join(__dirname, "..", "frontend", "build")));
 
 const oauth2Client = new google.auth.OAuth2(
   process.env.GOOGLE_CLIENT_ID,
@@ -67,14 +67,14 @@ const PORT = process.env.PORT || 3000;
 
 app.get('/', (req, res) => {
   if (typeof req.session.userId !== "undefined") {
-    res.sendFile(path.join(__dirname, "..", "frontend", "index.html"));
+    res.sendFile(path.join(__dirname, "..", "frontend", "build", "index.html"));
   } else {
     res.redirect('/login');
   }
 });
 
 app.get('/login', (req, res) => {
-  res.sendFile(path.join(__dirname, "..", "frontend", "login.html"));
+  res.sendFile(path.join(__dirname, "..", "frontend", "build", "index.html"));
 });
 
 // ===================API=====================
@@ -370,7 +370,16 @@ app.get('/api/users/search', async(req, res) => {
   }
 });
 
+
+app.get('*', (req, res) => {
+  // Serve React app for all unmatched routes
+  if (req.session.userId) {
+    res.sendFile(path.join(__dirname, "..", "frontend", "build", "index.html"));
+  } else {
+    res.redirect('/login');
+  }
+});
+
 app.listen(PORT, async () => {
   console.log(`Server running on port ${PORT}`);
-  
 });
