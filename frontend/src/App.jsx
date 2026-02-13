@@ -12,7 +12,10 @@ export default function App() {
         const checkUser = async () => {
             try {
                 const data = await apiGet('/api/me');
-                console.log('API response:', data);
+                if (data.user) {
+                    console.log(data.user.username);
+                    console.log(data.user.email);
+                }
                 setUser(data.user);
                 setLoading(false); 
             } catch (error) {
@@ -25,7 +28,7 @@ export default function App() {
 
     // check if we have to load
     // either go to login or to homepage
-    if (!user) {
+    if (user === null) {
         return <Login />
     } else {
         return <h1>Welcome, {user.username}!</h1>

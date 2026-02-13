@@ -79,12 +79,14 @@ app.get('/login', (req, res) => {
 
 // ===================API=====================
 app.get('/api/me', async (req, res) => {
+
   if (req.session.userId) {
     const person_info = await db.getUserByID(req.session.userId);
-    res.json(person_info);
+    console.log('User info from DB:', person_info); 
+    res.json({ user: person_info });
   }
   else {
-    res.json("");
+    res.json({ user: null });
   }
 }) 
 
@@ -370,7 +372,7 @@ app.get('/api/users/search', async(req, res) => {
   }
 });
 
-
+// Catch-all route for React Router - must be after all API routes
 app.get('*', (req, res) => {
   // Serve React app for all unmatched routes
   if (req.session.userId) {

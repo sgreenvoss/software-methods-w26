@@ -102,7 +102,7 @@ const addEvents = async(cal_id, events) => {
 
 const getUserByID = async(user_id) => {
     const result = await pool.query(
-        `SELECT google_id, refresh_token, access_token, token_expiry FROM person WHERE user_id = $1`, [user_id]
+        `SELECT user_id, username, email, first_name, last_name, google_id, refresh_token, access_token, token_expiry FROM person WHERE user_id = $1`, [user_id]
     );
     return result.rows[0];
 }
