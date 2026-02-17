@@ -1,4 +1,5 @@
 const { Pool } = require('pg');
+
 require('dotenv').config({
   path: process.env.NODE_ENV === 'production' ? '.env.production' : '.env.development'
 });
@@ -76,6 +77,7 @@ const getCalendarID = async(user_id) => {
 const addEvents = async(cal_id, events) => {
     for (let i = 0; i < events.length; i++) {
         // TODO: consider the logic for doing nothing -> might want to update instead? 
+        // added event id to query, some function is server expected it
         await pool.query(
             `INSERT INTO cal_event (calendar_id, priority, event_start, event_end, event_name, gcal_event_id)
             VALUES ($1, $2, $3, $4, $5, $6)
