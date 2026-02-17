@@ -8,7 +8,9 @@ const session = require('express-session');
 const url = require('url');
 const pgSession = require('connect-pg-simple')(session);
 const email = require('./emailer');
-const { oauth2 } = require('googleapis/build/src/apis/oauth2');
+const groupModule = require("./groups");
+const availabilityModule = require("./availability");
+
 
 // .env config
 require('dotenv').config({
@@ -27,7 +29,8 @@ const isProduction = process.env.NODE_ENV === 'production';
 app.use(express.json());
 app.set('trust proxy', 1);
 
-
+console.log("DEBUG: My DB Host is:", process.env.DB_HOST);
+console.log("DEBUG: My DB URL is:", process.env.DATABASE_URL);
 app.use(session({
   store: new pgSession({
     pool:db.pool,
@@ -46,6 +49,7 @@ app.use(session({
 }));
 
 groupModule(app);
+availabilityModule(app);
 app.use(express.static(path.join(__dirname, "..", "frontend", "build")));
 
 const oauth2Client = new google.auth.OAuth2(

@@ -19,9 +19,7 @@
  * That lines up with “petition priority” pretty directly.
  */
 
-import { DEFAULT_G_MINUTES, BlockingLevel } from "./types/algorithm_types.js";
-
-export { DEFAULT_G_MINUTES, BlockingLevel } from "./types/algorithm_types.js";
+const { DEFAULT_G_MINUTES, BlockingLevel } = require("./types/algorithm_types.js");
 
 /** @typedef {import("./types/algorithm_types.js").UserId} UserId */
 /** @typedef {import("./types/algorithm_types.js").ParticipantSnapshot} ParticipantSnapshot */
@@ -120,12 +118,11 @@ function overlaps(aStart, aEnd, bStart, bEnd) {
  * @param {string} [args.priority=BlockingLevel.B1]
  * @returns {AvailabilityBlock[]}
  */
-export function computeAvailabilityBlocks({
+function computeAvailabilityBlocks({
   windowStartMs,
   windowEndMs,
   participants,
   granularityMinutes = DEFAULT_G_MINUTES,
-  priority = BlockingLevel.B1,
   priority = BlockingLevel.B1,
 }) {
   // Basic validation: fail loud so bugs don't silently ship.
@@ -143,6 +140,7 @@ export function computeAvailabilityBlocks({
   if (!Number.isFinite(blockMs) || blockMs <= 0) {
     throw new Error("granularityMinutes must be a positive number.");
   }
+  const minPriorityValue = blockingOrder[normalizeBlockingLevel(priority)];
 
   // Preprocess: for each user, clamp events to window and merge overlaps.
   /** @type {Map<UserId, {startMs:number,endMs:number}[]>} */
@@ -260,7 +258,7 @@ export function computeAvailabilityBlocks({
  * @param {number} [args.granularityMinutes=DEFAULT_G_MINUTES]
  * @returns {AvailabilityBlockMulti[]}
  */
-export function computeAvailabilityBlocksAllViews({
+function computeAvailabilityBlocksAllViews({
   windowStartMs,
   windowEndMs,
   participants,
@@ -444,7 +442,7 @@ export function computeAvailabilityBlocksAllViews({
  * @param {"B1"|"B2"|"B3"} chosen
  * @returns {AvailabilityBlock[]}
  */
-export function toSingleViewBlocks(blocksMulti, chosen) {
+function toSingleViewBlocks(blocksMulti, chosen) {
   if (!Array.isArray(blocksMulti)) {
     throw new Error("blocksMulti must be an array.");
   }
@@ -458,3 +456,11 @@ export function toSingleViewBlocks(blocksMulti, chosen) {
     ...b.views[key],
   }));
 }
+
+module.exports = {
+  computeAvailabilityBlocks,
+  computeAvailabilityBlocksAllViews,
+  toSingleViewBlocks,
+  DEFAULT_G_MINUTES,
+  BlockingLevel
+};
