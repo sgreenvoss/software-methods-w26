@@ -326,7 +326,7 @@ app.get("/api/events", async (req, res) => {
     });
     // TODO: add a check to see if their calendar is already in the db
     try {
-      await db.addCalendar(req.session.userId, calendar.summary);
+      await db.addCalendar(req.session.userId, 'primary');
       const calID = await db.getCalendarID(req.session.userId);
       console.log("calendar id is", calID);
       db.addEvents(calID.calendar_id, formattedEvents)

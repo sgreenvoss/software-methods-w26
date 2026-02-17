@@ -86,8 +86,6 @@ export async function renderCalendarGrid(container, weekStart, rawEvents) {
       grid.appendChild(cell);
     });
 }
-
-
   container.appendChild(grid);
 }
 
