@@ -1,6 +1,4 @@
 const { Pool } = require('pg');
-const randomBigInt = () => Math.floor(Math.random() * Number.MAX_SAFE_INTEGER);
-
 
 require('dotenv').config({
   path: process.env.NODE_ENV === 'production' ? '.env.production' : '.env.development'
@@ -54,13 +52,11 @@ const insertUpdateUser = async(google_id, email, first_name, last_name, username
 }
 
 const addCalendar = async(user_id, calendar_name="primary") => {
-    // added cal id to query, didnt work otherwise
     const result = await pool.query(
-        `INSERT INTO calendar (calendar_id, user_id, calendar_name)
-        VALUES ($1, $2, $3)
+        `INSERT INTO calendar (user_id, calendar_name)
+        VALUES ($1, $2)
         ON CONFLICT DO NOTHING`,
         [
-            randomBigInt(), // cal id will be random big int
             user_id,
             calendar_name
         ]
@@ -83,11 +79,10 @@ const addEvents = async(cal_id, events) => {
         // TODO: consider the logic for doing nothing -> might want to update instead? 
         // added event id to query, some function is server expected it
         await pool.query(
-            `INSERT INTO cal_event (event_id, calendar_id, priority, event_start, event_end, event_name, gcal_event_id)
-            VALUES ($1, $2, $3, $4, $5, $6, $7)
+            `INSERT INTO cal_event (calendar_id, priority, event_start, event_end, event_name, gcal_event_id)
+            VALUES ($1, $2, $3, $4, $5, $6)
             ON CONFLICT DO NOTHING`,
             [
-                randomBigInt(), // made event id some random big int
                 cal_id,
                 1, // for testing purposes
                 events[i].start,
