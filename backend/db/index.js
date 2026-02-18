@@ -33,10 +33,11 @@ const testConnection = async () => {
  * @returns user_id
  */
 const insertUpdateUser = async(google_id, email, first_name, last_name, username, refresh_token, access_token, token_expiry) => {
-    var _username;
+    var _username = username;
     if (!username) {
         _username = "New user!";
     }
+    // need to check if username matches (maybe)
     const result = await pool.query( `
         INSERT INTO person (google_id, email, first_name, last_name, username, refresh_token, access_token, token_expiry)
         VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
