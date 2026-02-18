@@ -1,10 +1,12 @@
 {
   "name": "scheduling-app",
   "version": "1.0.0",
-  "proxy": "http://localhost:8080",  
+  "proxy": "http://localhost:8080",
   "scripts": {
     "start": "react-scripts start",
-    "build": "react-scripts build"
+    "build": "react-scripts build",
+    "test": "react-scripts test",
+    "eject": "react-scripts eject"
   },
   "dependencies": {
     "@headlessui/react": "^2.2.9",

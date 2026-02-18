@@ -1,6 +1,11 @@
 import React, { useState } from 'react';
-import Calendar from './components/Calendar/Calendar';
+import CustomCalendar from './components/Calendar/CustomCalendar';
 import Groups from './components/Groups/Groups';
+import './css/main.css';
+import './css/calendar.css';
+import './css/availability.css';
+import './css/groups.css';
+import './css/groupsModal.css';
 
 // main page, displays option for group view or personal calendar view
 export default function Main() {
@@ -18,7 +23,7 @@ export default function Main() {
             <button onClick={() => setView('groups')} id="groupsBtn">Group View</button>
             <button onClick={handleLogout} id="logoutBtn">Logout</button>
 
-            {view === 'calendar' ? <Calendar /> : <Groups />}
+            {view === 'calendar' ? <CustomCalendar /> : <Groups />}
         </div>
     )
 }

@@ -1,0 +1,76 @@
+#groups {
+  max-width: 800px;
+  margin: 20px auto;
+  padding: 20px;
+  font-family: 'Courier New', Courier, monospace;
+  background-color: #f9f9fb;
+  border-radius: 12px;
+  box-shadow: 0 4px 6px rgba(0, 0, 0, 0.05);
+}
+
+/* The Individual Group Row */
+.group-row {
+  display: flex;
+  align-items: center; /* Vertically center text and buttons */
+  justify-content: space-between; /* Pushes name to left, buttons to right */
+  background-color: white;
+  padding: 15px 20px;
+  margin-bottom: 10px;
+  border-radius: 8px;
+  border: 1px solid #e1e8ed;
+  transition: transform 0.2s, box-shadow 0.2s;
+}
+
+.group-row:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+}
+
+/* The Group Name text */
+.group-row span {
+  font-weight: 600;
+  color: #2d3436;
+  font-size: 1.1rem;
+}
+
+/* Button Container (to keep buttons together on the right) */
+.group-row div {
+  display: flex;
+  gap: 10px; /* Space between View and Leave buttons */
+  border-radius: 6px;
+  overflow: hidden; /* This makes the corners look like one unit */
+
+}
+
+button:active {
+  transform: scale(0.98);
+}
+
+
+/* Create Group Button (at the top) */
+#groups > button {
+  background-color: #00b894;
+  color: white;
+  margin-bottom: 20px;
+  width: 100%;
+  font-size: 1rem;
+}
+
+#leaveBtn {
+  background-color: #fab1a0;
+  color: #d63031;
+}
+#leaveBtn:hover {
+  background-color: #ff7675;
+  color: white;
+}
+
+#viewBtn {
+  background-color: #0984e3;
+  color: white;
+}
+
+.group-row {
+  font-weight: bold;
+  font-size: 20px;
+}
