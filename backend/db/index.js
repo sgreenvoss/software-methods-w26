@@ -21,10 +21,21 @@ const testConnection = async () => {
 };
 
 
+/**
+ * @param {*} google_id 
+ * @param {*} email 
+ * @param {*} first_name 
+ * @param {*} last_name 
+ * @param {*} username if the user is new, the username will be set to the string "New user!" 
+ * @param {*} refresh_token 
+ * @param {*} access_token 
+ * @param {bigint} token_expiry 
+ * @returns user_id
+ */
 const insertUpdateUser = async(google_id, email, first_name, last_name, username, refresh_token, access_token, token_expiry) => {
-    var _username = username;
+    var _username;
     if (!username) {
-        _username = first_name; // temp fix
+        _username = "New user!";
     }
     const result = await pool.query( `
         INSERT INTO person (google_id, email, first_name, last_name, username, refresh_token, access_token, token_expiry)
@@ -46,8 +57,6 @@ const insertUpdateUser = async(google_id, email, first_name, last_name, username
             token_expiry
         ]
     );
-    // double check - might just be .id?
-    console.log('insert result:', result.rows[0]);
     return result.rows[0].user_id;
 }
 
@@ -74,7 +83,7 @@ const getCalendarID = async(user_id) => {
     return result.rows[0];
 }
 
-const addEvents = async(cal_id, events) => {
+const addEvents = async(cal_id, events, priority=1) => {
     for (let i = 0; i < events.length; i++) {
         // TODO: consider the logic for doing nothing -> might want to update instead? 
         // added event id to query, some function is server expected it
@@ -84,7 +93,7 @@ const addEvents = async(cal_id, events) => {
             ON CONFLICT DO NOTHING`,
             [
                 cal_id,
-                1, // for testing purposes
+                priority, // for testing purposes
                 events[i].start,
                 events[i].end,
                 events[i].title,
@@ -96,16 +105,12 @@ const addEvents = async(cal_id, events) => {
 
 const getUserByID = async(user_id) => {
     const result = await pool.query(
-        `SELECT user_id, username, email, first_name, last_name, google_id, refresh_token, access_token, token_expiry FROM person WHERE user_id = $1`, [user_id]
+        `SELECT user_id, username, email, first_name, last_name, google_id, refresh_token, access_token, token_expiry 
+        FROM person 
+        WHERE user_id = $1`, [user_id]
     );
     return result.rows[0];
 }
-
-// TODO: get userwithID
-// get groups from user
-// get users from group
-// check if user already in db
-// get stored events from a user
 
 const getUsersWithName = async(name) => {
     console.log('running q');
@@ -164,8 +169,6 @@ const updateTokens = async(id, access, expiry) => {
  * @param {string} g_name name of the group
  * @returns {bigint} group id
  */
-
-
 const createGroup = async(g_name) => {
     const query = `
         INSERT INTO f_group (group_name)
@@ -228,6 +231,23 @@ const leaveGroup = async(user_id, group_id) => {
     }
 }
 
+/**
+ * 
+ * @param {bigint} user_id unique user id. NOT their google id.
+ * @param {string} new_username new username the user wants. Note that this is not checking for proper length or encoding. 
+ */
+const updateUsername = async(user_id, new_username) => {
+    try {
+        const query = `
+            UPDATE person
+            SET username = ($1)
+            WHERE user_id = ($2)`;
+        await pool.query(query, [new_username, user_id]);
+    } catch (error) {
+        console.error(error);
+    }
+}
+
 module.exports = {
     pool,
     query: (text, params) => pool.query(text,params),
@@ -244,5 +264,6 @@ module.exports = {
     createGroup,
     addUserToGroup,
     getGroupsByUID,
-    leaveGroup
+    leaveGroup,
+    updateUsername
 }
