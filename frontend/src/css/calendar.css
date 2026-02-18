@@ -1,0 +1,49 @@
+.calendar-grid {
+  display: grid;
+  grid-template-columns: 80px repeat(7, 1fr);
+  width: 100%;
+}
+
+.calendar-cell {
+  position: relative;
+  min-height: 60px; 
+  border: 1px solid #eee;
+  /* width: 100%; */
+}
+
+.calendar-event {
+  position: absolute; /* Allows event to cross cell borders*/
+  width: 80%;
+
+  background-color: cornflowerblue;
+  color: white;
+  font-size: 12px;
+
+  padding: 4px; /*for displaying title*/
+  z-index: 10;
+  border-radius: 4px;
+  overflow: hidden;
+  box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+}
+
+.day-header {
+  text-align: center;
+  font-weight: bold;
+}
+
+.time-label {
+  text-align: right;
+  padding-right: 5px;
+}
+
+.calendar-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 10px;
+}
+
+.calendar-header button {
+  padding: 4px 10px;
+  cursor: pointer;
+}
