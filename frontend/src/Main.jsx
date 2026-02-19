@@ -1,11 +1,7 @@
 import React, { useState } from 'react';
-import CustomCalendar from './components/Calendar/CustomCalendar';
+import Calendar from './components/Calendar/CustomCalendar';
 import Groups from './components/Groups/Groups';
 import './css/main.css';
-import './css/calendar.css';
-import './css/availability.css';
-import './css/groups.css';
-import './css/groupsModal.css';
 
 // main page, displays option for group view or personal calendar view
 export default function Main() {
@@ -19,11 +15,20 @@ export default function Main() {
     // displays two buttons that will bring up either Calendar or Group
     return (
         <div>
-            <button onClick={() => setView('calendar')} id="calBtn">Calendar View</button>
-            <button onClick={() => setView('groups')} id="groupsBtn">Group View</button>
-            <button onClick={handleLogout} id="logoutBtn">Logout</button>
+            <section id="logout">
+                <button onClick={handleLogout} id="logoutBtn">Logout</button>
+            </section>
+            <header>
+                <p id="logo">Social Schedule</p>
+                <p id="beta">beta</p>
+            </header>
 
-            {view === 'calendar' ? <CustomCalendar /> : <Groups />}
+            <header>
+                <button onClick={() => setView('groups')} id="groupsBtn">Group View</button>
+                <button onClick={() => setView('calendar')} id="calendarBtn">Calendar View</button>
+            </header>
+
+            {view === 'calendar' ? <Calendar /> : <Groups />}
         </div>
     )
 }

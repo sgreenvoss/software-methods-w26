@@ -1,65 +1,88 @@
 import React, { useState, useEffect } from 'react';
-import { apiGet, apiPost } from '../../api';
-import CreateGroupModal  from './GroupCreator';
+import { apiGet, apiPost } from '../../api.js';
+import GroupCreatorModal from './GroupCreator.jsx';
+import '../../css/groups.css';
+import '../../css/groupsModal.css';
 
-// Main groups view
 export default function Groups() {
-    const [view, setView] = useState('list');
     const [groups, setGroups] = useState([]);
+    const [showModal, setShowModal] = useState(false);
+    const [loading, setLoading] = useState(true);
 
+    // Function to fetch groups (replaces the initial apiGet)
     const fetchGroups = async () => {
         try {
-            const data = await apiGet('/user/groups');
-            setGroups(data['groups']);
+            const response = await apiGet('/user/groups');
+            if (response && response.groups) {
+                setGroups(response.groups);
+            }
         } catch (error) {
-            console.error('Error fetching groups:', error);
+            console.error("Failed to fetch groups", error);
+        } finally {
+            setLoading(false);
         }
     };
 
-    // update server + view when user leaves group
-    const handleLeaveGroup = async (groupId) => {
-        try {
-            const response = await apiPost('/group/leave', { groupId: groupId });
-            fetchGroups();
-        } catch (error) {
-            console.error('Error fetching groups:', error);
-        }
-    }
-
-    // for creating a new group, need to update list
-    const handleGroupCreated = () => {
-        setView('list');
-        fetchGroups();
-    }
-
-    // get existing groups for user on load
+    // Load groups when component mounts
     useEffect(() => {
         fetchGroups();
     }, []);
 
+    const handleLeaveGroup = async (groupId) => {
+        console.log("leaving group", groupId);
+        try {
+            await apiPost("/group/leave", { groupId: groupId });
+            // Refresh list after leaving
+            fetchGroups();
+        } catch (error) {
+            console.error("Failed to leave group", error);
+        }
+    };
+
+    const handleCreateSuccess = () => {
+        setShowModal(false);
+        fetchGroups(); // Re-fetch list to show the new group
+    };
 
     return (
-        <div>
-            <button onClick={() => setView('creategroupmodal')}>Create New Group</button>
-            {groups.map(group => (
-                <div key={group.group_id}>
-                    <h3>{group.group_name}</h3>
-                    <button onClick={() => {setSelectedGroup(group); setView('calendar'); }}>
-                        View
-                    </button>
-                    <button onClick={() => handleLeaveGroup(group.group_id)}>
-                        Leave
-                    </button>
+        // ID "groups" is crucial for matching css/groups.css selectors
+        <section id="groups">
+            <h2>My Groups</h2>
+
+            <button onClick={() => setShowModal(true)}>
+                + Create New Group
+            </button>
+
+            {loading ? <p>Loading...</p> : null}
+
+            {groups.map((group) => (
+                <div key={group.group_id} className="group-row">
+                    <span>{group.group_name}</span>
+                    
+                    <div>
+                        <button 
+                            id="viewBtn" 
+                            onClick={() => console.log("View group", group.group_id)}
+                        >
+                            View
+                        </button>
+                        <button 
+                            id="leaveBtn" 
+                            onClick={() => handleLeaveGroup(group.group_id)}
+                        >
+                            Leave
+                        </button>
+                    </div>
                 </div>
             ))}
 
-            {view === 'creategroupmodal' && (
-                <CreateGroupModal 
-                isOpen={view === 'creategroupmodal'}
-                onClose={() => setView('list')}
-                onGroupCreated={handleGroupCreated}
+            {/* Conditionally render the modal */}
+            {showModal && (
+                <GroupCreatorModal 
+                    onClose={() => setShowModal(false)} 
+                    onGroupCreated={handleCreateSuccess} 
                 />
             )}
-        </div>
+        </section>
     );
 }
