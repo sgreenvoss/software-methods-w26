@@ -1,7 +1,7 @@
-import React, { useState, useEffect } from 'react';
-import { apiGet, apiPost } from './api'; // Ensure apiPost is imported
-import CustomCalendar from './components/Calendar/CustomCalendar';
+import React, { useState } from 'react';
+import Calendar from './components/Calendar/CustomCalendar';
 import Groups from './components/Groups/Groups';
+import './css/main.css';
 
 export default function Main() {
     const [view, setView] = useState('calendar');
@@ -45,23 +45,20 @@ export default function Main() {
     console.log("2. Main.jsx current selectedGroupId:", selectedGroupId);
     return (
         <div>
-            <nav className="main-nav">
-                <button onClick={() => setView('calendar')}>My Calendar</button>
-                <button onClick={() => setView('groups')}>Group View</button>
-                <button onClick={() => handleLogout()}>Logout</button> 
-            </nav>
+            <section id="logout">
+                <button onClick={handleLogout} id="logoutBtn">Logout</button>
+            </section>
+            <header>
+                <p id="logo">Social Schedule</p>
+                <p id="beta">beta</p>
+            </header>
 
-            {view === 'calendar' ? (
-                <CustomCalendar groupId={selectedGroupId} /> 
-            ) : (
-                <Groups 
-                    groups={groupsList} 
-                    setSelectedGroup={setSelectedGroupId}
-                    refreshGroups={fetchGroups} 
-                    // Fixed: We need to pass fetchGroups so Groups can call it after creating/leaving a group fix 02-20 1.1
-                    setMainView={setView}
-                />
-            )}
+            <header>
+                <button onClick={() => setView('groups')} id="groupsBtn">Group View</button>
+                <button onClick={() => setView('calendar')} id="calendarBtn">Calendar View</button>
+            </header>
+
+            {view === 'calendar' ? <Calendar /> : <Groups />}
         </div>
     );
 }

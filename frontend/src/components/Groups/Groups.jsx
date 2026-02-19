@@ -1,66 +1,88 @@
-import React, { useState } from 'react';
-import { apiPost } from '../../api';
-import CreateGroupModal from './GroupCreator';
+import React, { useState, useEffect } from 'react';
+import { apiGet, apiPost } from '../../api.js';
+import GroupCreatorModal from './GroupCreator.jsx';
+import '../../css/groups.css';
+import '../../css/groupsModal.css';
 
-// We add 'refreshGroups' to the props so the child can tell the parent to update
-    // added setView fix 02-20 1.2
-    // changed to setMainView fix 02-20 1.4
-export default function Groups({ setSelectedGroup, groups = [], refreshGroups, setMainView }) {
-    const safeGroups = Array.isArray(groups) ? groups : [];
-    const [view, setView] = useState('list');
+export default function Groups() {
+    const [groups, setGroups] = useState([]);
+    const [showModal, setShowModal] = useState(false);
+    const [loading, setLoading] = useState(true);
 
-    const handleLeaveGroup = async (groupId) => {
+    // Function to fetch groups (replaces the initial apiGet)
+    const fetchGroups = async () => {
         try {
-            await apiPost('/group/leave', { groupId: groupId });
-            // Instead of fetchGroups(), we call the prop from Main.jsx
-            if (refreshGroups) refreshGroups(); 
-        } catch (error) {
-            console.error('Error leaving group:', error);
-        }
-    }
-
-// Adjust the call to match your groups.js backend
-    const handleGroupCreation = async (name) => {
-        try {
-            // Your backend uses req.query, so the name goes in the URL
-            const response = await apiPost(`/group/creation?group_name=${name}`);
-            if (response.success) {
-                refreshGroups(); // Refresh the list in Main.jsx
+            const response = await apiGet('/user/groups');
+            if (response && response.groups) {
+                setGroups(response.groups);
             }
         } catch (error) {
-            console.error("Group creation failed", error);
+            console.error("Failed to fetch groups", error);
+        } finally {
+            setLoading(false);
         }
     };
 
-    // DELETE: useEffect(() => { fetchGroups(); }, []);
-    // DELETE: const fetchGroups = async () => { ... }
+    // Load groups when component mounts
+    useEffect(() => {
+        fetchGroups();
+    }, []);
+
+    const handleLeaveGroup = async (groupId) => {
+        console.log("leaving group", groupId);
+        try {
+            await apiPost("/group/leave", { groupId: groupId });
+            // Refresh list after leaving
+            fetchGroups();
+        } catch (error) {
+            console.error("Failed to leave group", error);
+        }
+    };
+
+    const handleCreateSuccess = () => {
+        setShowModal(false);
+        fetchGroups(); // Re-fetch list to show the new group
+    };
 
     return (
-        <div className="groups-container">
-            <button onClick={() => setView('creategroupmodal')}>Create New Group</button>
-            {groups.map(group => (
-                <div key={group.group_id} className="group-item">
-                    <h3>{group.group_name}</h3>
-                    <button onClick={() => {
-                        console.log("RAW GROUP OBJECT:", group);
-                        setSelectedGroup(group.group_id);
-                        setMainView('calendar'); // Switch to calendar view after selecting a group fix 02-20 1.4
-                    }}>
-                        View Availability
-                    </button>
-                    <button onClick={() => handleLeaveGroup(group.group_id)}>
-                        Leave
-                    </button>
+        // ID "groups" is crucial for matching css/groups.css selectors
+        <section id="groups">
+            <h2>My Groups</h2>
+
+            <button onClick={() => setShowModal(true)}>
+                + Create New Group
+            </button>
+
+            {loading ? <p>Loading...</p> : null}
+
+            {groups.map((group) => (
+                <div key={group.group_id} className="group-row">
+                    <span>{group.group_name}</span>
+                    
+                    <div>
+                        <button 
+                            id="viewBtn" 
+                            onClick={() => console.log("View group", group.group_id)}
+                        >
+                            View
+                        </button>
+                        <button 
+                            id="leaveBtn" 
+                            onClick={() => handleLeaveGroup(group.group_id)}
+                        >
+                            Leave
+                        </button>
+                    </div>
                 </div>
             ))}
 
-            {view === 'creategroupmodal' && (
-                <CreateGroupModal 
-                    isOpen={view === 'creategroupmodal'}
-                    onClose={() => setView('list')}
-                    onGroupCreated={handleGroupCreation}
+            {/* Conditionally render the modal */}
+            {showModal && (
+                <GroupCreatorModal 
+                    onClose={() => setShowModal(false)} 
+                    onGroupCreated={handleCreateSuccess} 
                 />
             )}
-        </div>
+        </section>
     );
 }
