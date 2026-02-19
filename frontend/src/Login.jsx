@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import './css/login.css';
-
+const BACKEND_URL = process.env.REACT_APP_BACKEND_URL || ''; // Gemini assisted fix for local deployment
 // handles login
 export default function Login() {
     const [username, setUsername] = useState('');
@@ -13,7 +13,8 @@ export default function Login() {
             setError('Please enter username.');
             return;
         }
-        window.location.href = `/auth/google?username=${encodeURIComponent(username)}`;
+        // Gemini assisted fix for local deployment
+        window.location.href = `${BACKEND_URL}/auth/google?username=${encodeURIComponent(username)}`;
     };
 
     return (

@@ -1,5 +1,7 @@
+const BACKEND_URL = process.env.REACT_APP_BACKEND_URL || 'http://localhost:8080';
+
 export async function apiGet(path) {
-  const response = await fetch(path, {
+  const response = await fetch(BACKEND_URL + path, {
     credentials: "include"
   });
 
@@ -13,7 +15,7 @@ export async function apiGet(path) {
 }
 
 export async function apiPost(path, data) {
-  const response = await fetch(path, {
+  const response = await fetch(BACKEND_URL + path, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     credentials: "include",

@@ -18,7 +18,7 @@ invitee
     user can now view available times
 */
 const { randomUUID } = require("crypto");
-const db = require("./db/index");
+const db = require("../db/index");
 const { getgroups } = require("process");
 
 module.exports = function(app) {

@@ -1,12 +1,13 @@
 const express = require('express');
+const cors = require('cors'); // gemini assisted fix for CORS issues
 const { google } = require('googleapis');
 const crypto = require('crypto');
 const path = require("path");
-const db = require("./db/index");
+const db = require("../db/index");
 const session = require('express-session');
 const url = require('url');
 const pgSession = require('connect-pg-simple')(session);
-const email = require('./emailer');
+const email = require('./emailer'); 
 const groupModule = require("./groups");
 
 // .env config
@@ -20,7 +21,11 @@ console.log("Frontend URL:", process.env.FRONTEND_URL);
 
 const frontend = process.env.FRONTEND_URL;
 const app = express();
-
+//Gemini assisted fix
+app.use(cors({
+  origin: 'http://localhost:3000',
+  credentials: true
+}));
 const isProduction = process.env.NODE_ENV === 'production';
 
 app.use(express.json());
