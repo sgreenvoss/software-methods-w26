@@ -94,9 +94,28 @@ app.post('/api/create-username', async (req, res) => {
   /*
   const username = req.body.username
   db.updateUsername(req.session.userId, username) 
+  checks for uniqueness in db
   */
+  // ensure user is already authenticated
   const username = req.body.username;
-  db.updateUsername(req.session.userId, username);
+  if (!req.session.userId) {
+      return res.json({ success: false, error: 'Not authenticated' });
+  }
+
+  // backend checks if username is valid
+  const usernameRegex = /^[a-zA-Z0-9_.]{4,16}$/;
+  if (!usernameRegex.test(username)) {
+      return res.json({ success: false, error: 'Username invalid' });
+  }
+
+  // ensure username is unique
+  const duplicate = await db.checkUsernameExists(username);
+  if (!duplicate) {
+    await db.updateUsername(req.session.userId, username);
+    res.json({ success: true });
+  } else {
+    res.json( {success: false, error: 'Username already taken'} );
+  }
 });
 
 app.get('/logout', (req, res) => {
