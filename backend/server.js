@@ -3,12 +3,17 @@ const cors = require('cors'); // gemini assisted fix for CORS issues
 const { google } = require('googleapis');
 const crypto = require('crypto');
 const path = require("path");
+// Local imports for DB and email and groups
 const db = require("../db/index");
 const session = require('express-session');
 const url = require('url');
 const pgSession = require('connect-pg-simple')(session);
 const email = require('./emailer'); 
 const groupModule = require("./groups");
+
+// Algoritihm inports
+const { fetchAndMapGroupEvents } = require('./algorithm/algorithm_adapter');
+const { computeAvailabilityBlocksAllViews } = require('./algorithm/algorithm');
 
 // .env config
 require('dotenv').config({
@@ -377,6 +382,17 @@ app.get('/api/users/search', async(req, res) => {
   }
 });
 
+// ALGORITHM ROUTE: SEE docs/AVAILABILITY_ARCHITECTURE.md for documentation of how this works and what files have been changed.
+  // availability_service.js
+  // availability_adapter.js
+  // availability_controller.js
+  // algorithm.js
+  // algolrithm_types.js
+const availabilityController = require('./availability_controller');
+// This one line tells Express: 
+// "When someone hits this URL, hand the request over to the Controller"
+app.get('/api/groups/:groupId/availability', availabilityController.getAvailability);
+
 // Catch-all route for React Router - must be after all API routes
 app.get('*', (req, res) => {
   // Serve React app for all unmatched routes
@@ -390,3 +406,5 @@ app.get('*', (req, res) => {
 app.listen(PORT, async () => {
   console.log(`Server running on port ${PORT}`);
 });
+
+

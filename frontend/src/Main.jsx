@@ -1,29 +1,64 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
+import { apiGet, apiPost } from './api'; // Ensure apiPost is imported
 import CustomCalendar from './components/Calendar/CustomCalendar';
 import Groups from './components/Groups/Groups';
-import './css/main.css';
-import './css/calendar.css';
-import './css/availability.css';
-import './css/groups.css';
-import './css/groupsModal.css';
 
-// main page, displays option for group view or personal calendar view
 export default function Main() {
     const [view, setView] = useState('calendar');
+    const [selectedGroupId, setSelectedGroupId] = useState(null);
+    const [groupsList, setGroupsList] = useState([]); 
 
-    // send request for logout
-    const handleLogout = () => {
-        window.location.href = '/logout';
-    }
+    // 1. Move fetchGroups INSIDE so it can see setGroupsList
+    const fetchGroups = async () => {
+        try {
+            // 1. Hit your ACTUAL endpoint
+            const response = await apiGet('/user/groups'); 
+            
+            // 2. Your backend returns { success: true, groups: [...] }
+            // We need to extract the groups array specifically.
+            if (response && response.success && Array.isArray(response.groups)) {
+                setGroupsList(response.groups);
+            } else {
+                setGroupsList([]);
+            }
+        } catch (err) {
+            console.error("Groups fetch failed", err);
+            setGroupsList([]);
+        }
+    };
 
-    // displays two buttons that will bring up either Calendar or Group
+    // 2. Move handleLogout INSIDE
+    const handleLogout = async () => {
+        try {
+            await apiPost('/api/logout'); 
+            window.location.href = '/login'; 
+        } catch (err) {
+            window.location.href = '/login'; 
+        }
+    };
+
+    // 3. Effect calls the internal function
+    useEffect(() => {
+        fetchGroups();
+    }, []);
+
     return (
         <div>
-            <button onClick={() => setView('calendar')} id="calBtn">Calendar View</button>
-            <button onClick={() => setView('groups')} id="groupsBtn">Group View</button>
-            <button onClick={handleLogout} id="logoutBtn">Logout</button>
+            <nav className="main-nav">
+                <button onClick={() => setView('calendar')}>My Calendar</button>
+                <button onClick={() => setView('groups')}>Group View</button>
+                <button onClick={() => handleLogout()}>Logout</button> 
+            </nav>
 
-            {view === 'calendar' ? <CustomCalendar /> : <Groups />}
+            {view === 'calendar' ? (
+                <CustomCalendar groupId={selectedGroupId} /> 
+            ) : (
+                <Groups 
+                    groups={groupsList} 
+                    setSelectedGroup={setSelectedGroupId}
+                    refreshGroups={fetchGroups} 
+                />
+            )}
         </div>
-    )
+    );
 }

@@ -10,7 +10,7 @@ function getStartOfWeek(date) {
   return d;
 }
 
-export default function CustomCalendar() {
+export default function CustomCalendar({ groupId }) {
   // --- STATE (The "Controller" Data) ---
   const [weekStart, setWeekStart] = useState(getStartOfWeek(new Date()));
   const [rawEvents, setRawEvents] = useState([]);
@@ -21,16 +21,39 @@ export default function CustomCalendar() {
     const fetchEvents = async () => {
       setLoading(true);
       try {
-        const data = await apiGet('/api/events');
-        setRawEvents(data);
+        if (groupId) {
+          // 1. Fetch group availability for the currently viewed week
+          const startMs = weekStart.getTime();
+          const endMs = startMs + (7 * 24 * 60 * 60 * 1000); // 7 days later
+          
+          const data = await apiGet(`/api/groups/${groupId}/availability?windowStartMs=${startMs}&windowEndMs=${endMs}&granularityMinutes=15`);
+          
+          if (data && data.ok && data.availability) {
+            // 2. Disguise the availability blocks as standard events for your UI
+            const heatmapEvents = data.availability.map((block, i) => ({
+              title: `Avail: ${block.count}`,
+              start: block.start,
+              end: block.end,
+              event_id: `avail-${i}`
+            }));
+            setRawEvents(heatmapEvents);
+          } else {
+            setRawEvents([]);
+          }
+        } else {
+          // Default: Fetch personal events
+          const data = await apiGet('/api/events');
+          setRawEvents(data || []);
+        }
       } catch (error) {
         console.error('Error fetching events:', error);
       } finally {
         setLoading(false);
       }
     };
+    
     fetchEvents();
-  }, []);
+  }, [groupId, weekStart]); // Adding weekStart ensures it refetches if you click Prev/Next week
 
   const handlePrevWeek = () => {
     const newDate = new Date(weekStart);

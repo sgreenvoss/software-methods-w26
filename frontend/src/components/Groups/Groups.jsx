@@ -1,51 +1,46 @@
-import React, { useState, useEffect } from 'react';
-import { apiGet, apiPost } from '../../api';
-import CreateGroupModal  from './GroupCreator';
+import React, { useState } from 'react';
+import { apiPost } from '../../api';
+import CreateGroupModal from './GroupCreator';
 
-// Main groups view
-export default function Groups() {
+// We add 'refreshGroups' to the props so the child can tell the parent to update
+export default function Groups({ setSelectedGroup, groups = [], refreshGroups }) {
+    const safeGroups = Array.isArray(groups) ? groups : [];
     const [view, setView] = useState('list');
-    const [groups, setGroups] = useState([]);
 
-    const fetchGroups = async () => {
+    const handleLeaveGroup = async (groupId) => {
         try {
-            const data = await apiGet('/user/groups');
-            setGroups(data['groups']);
+            await apiPost('/group/leave', { groupId: groupId });
+            // Instead of fetchGroups(), we call the prop from Main.jsx
+            if (refreshGroups) refreshGroups(); 
         } catch (error) {
-            console.error('Error fetching groups:', error);
+            console.error('Error leaving group:', error);
+        }
+    }
+
+// Adjust the call to match your groups.js backend
+    const handleGroupCreation = async (name) => {
+        try {
+            // Your backend uses req.query, so the name goes in the URL
+            const response = await apiPost(`/group/creation?group_name=${name}`);
+            if (response.success) {
+                refreshGroups(); // Refresh the list in Main.jsx
+            }
+        } catch (error) {
+            console.error("Group creation failed", error);
         }
     };
 
-    // update server + view when user leaves group
-    const handleLeaveGroup = async (groupId) => {
-        try {
-            const response = await apiPost('/group/leave', { groupId: groupId });
-            fetchGroups();
-        } catch (error) {
-            console.error('Error fetching groups:', error);
-        }
-    }
-
-    // for creating a new group, need to update list
-    const handleGroupCreated = () => {
-        setView('list');
-        fetchGroups();
-    }
-
-    // get existing groups for user on load
-    useEffect(() => {
-        fetchGroups();
-    }, []);
-
+    // DELETE: useEffect(() => { fetchGroups(); }, []);
+    // DELETE: const fetchGroups = async () => { ... }
 
     return (
-        <div>
+        <div className="groups-container">
             <button onClick={() => setView('creategroupmodal')}>Create New Group</button>
             {groups.map(group => (
-                <div key={group.group_id}>
+                <div key={group.group_id} className="group-item">
                     <h3>{group.group_name}</h3>
-                    <button onClick={() => {setSelectedGroup(group); setView('calendar'); }}>
-                        View
+                    <button onClick={() => setSelectedGroup(group.group_id)}>
+                        View Availability
                     </button>
                     <button onClick={() => handleLeaveGroup(group.group_id)}>
                         Leave
@@ -55,9 +50,9 @@ export default function Groups() {
 
             {view === 'creategroupmodal' && (
                 <CreateGroupModal 
-                isOpen={view === 'creategroupmodal'}
-                onClose={() => setView('list')}
-                onGroupCreated={handleGroupCreated}
+                    isOpen={view === 'creategroupmodal'}
+                    onClose={() => setView('list')}
+                    onGroupCreated={handleGroupCreation}
                 />
             )}
         </div>
