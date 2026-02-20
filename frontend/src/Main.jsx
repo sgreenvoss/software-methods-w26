@@ -42,6 +42,7 @@ export default function Main() {
         fetchGroups();
     }, []);
 
+    console.log("2. Main.jsx current selectedGroupId:", selectedGroupId);
     return (
         <div>
             <nav className="main-nav">
@@ -57,6 +58,8 @@ export default function Main() {
                     groups={groupsList} 
                     setSelectedGroup={setSelectedGroupId}
                     refreshGroups={fetchGroups} 
+                    // Fixed: We need to pass fetchGroups so Groups can call it after creating/leaving a group fix 02-20 1.1
+                    setMainView={setView}
                 />
             )}
         </div>

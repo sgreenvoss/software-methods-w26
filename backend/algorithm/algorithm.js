@@ -116,7 +116,7 @@ function overlaps(aStart, aEnd, bStart, bEnd) {
  * @param {number} args.windowEndMs
  * @param {ParticipantSnapshot[]} args.participants
  * @param {number} [args.granularityMinutes=DEFAULT_G_MINUTES]
- * @param {string} [args.priority=BlockingLevel.B1] - min blocking level; B1=strict, B3=lenient
+ * @param {string} [args.priority=BlockingLevel.B3] - min blocking level; B1=lenient, B2=flexible, B3=strict
  * @returns {AvailabilityBlock[]}
  */
 function computeAvailabilityBlocks({
@@ -124,10 +124,10 @@ function computeAvailabilityBlocks({
   windowEndMs,
   participants,
   granularityMinutes = DEFAULT_G_MINUTES,
-  priority = BlockingLevel.B1,
+  priority = BlockingLevel.B3,
 }) {
   // Define the missing threshold value based on the chosen priority
-  const minPriorityValue = blockingOrder[priority] || blockingOrder[BlockingLevel.B1];
+  const minPriorityValue = blockingOrder[priority] || blockingOrder[BlockingLevel.B3];
 
   // Basic validation: fail loud so bugs don't silently ship.
   if (!Number.isFinite(windowStartMs) || !Number.isFinite(windowEndMs)) {
