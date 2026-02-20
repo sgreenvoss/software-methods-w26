@@ -3,17 +3,10 @@ import './css/login.css';
 
 // handles login
 export default function Login() {
-    const [username, setUsername] = useState('');
     const [error, setError] = useState('');
     
-    console.log("loading login page");
-    
     const handleLogin = () => {
-        if (!username) {
-            setError('Please enter username.');
-            return;
-        }
-        window.location.href = `/auth/google?username=${encodeURIComponent(username)}`;
+        window.location.href = `/auth/google`;
     };
 
     return (
@@ -26,13 +19,6 @@ export default function Login() {
 
           <section id="signUp">
             <label htmlFor="username">Username:</label>
-            <input 
-                type="text" 
-                id="username" 
-                name="username"
-                value={username}
-                onChange={(e) => setUsername(e.target.value)}
-            />
             {error && <p style={{color: 'red'}}>{error}</p>}
           </section>
 
