@@ -11,10 +11,10 @@ export default function Main() {
     // 1. Move fetchGroups INSIDE so it can see setGroupsList
     const fetchGroups = async () => {
         try {
-            // 1. Hit your ACTUAL endpoint
+            // 1. Hit the ACTUAL endpoint
             const response = await apiGet('/user/groups'); 
             
-            // 2. Your backend returns { success: true, groups: [...] }
+            // 2. The backend returns { success: true, groups: [...] }
             // We need to extract the groups array specifically.
             if (response && response.success && Array.isArray(response.groups)) {
                 setGroupsList(response.groups);
