@@ -1,7 +1,3 @@
-require('dotenv').config({
-  path: process.env.NODE_ENV === 'production' ? '.env.production' : '.env.development'
-});
-
 export async function apiGet(path) {
   const response = await fetch(process.env.BACKEND_URL + path, {
     credentials: "include"
