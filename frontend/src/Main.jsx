@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import Calendar from './components/Calendar/CustomCalendar';
 import Groups from './components/Groups/Groups';
 import './css/main.css';
+import {apiGet, apiPost} from './api';
 
 export default function Main() {
     const [view, setView] = useState('calendar');
