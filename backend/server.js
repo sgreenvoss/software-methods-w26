@@ -4,19 +4,16 @@ const { google } = require('googleapis');
 const crypto = require('crypto');
 const path = require("path");
 // Local imports for DB and email and groups
-const db = require("../db/index");
+const db = require("./db/index");
 const session = require('express-session');
 const url = require('url');
 const pgSession = require('connect-pg-simple')(session);
 const email = require('./emailer'); 
 const groupModule = require("./groups");
 
-<<<<<<< HEAD
 // Algoritihm inports
 const { fetchAndMapGroupEvents } = require('./algorithm/algorithm_adapter');
 const { computeAvailabilityBlocksAllViews } = require('./algorithm/algorithm');
-=======
->>>>>>> origin/main
 // Load the .env file, determine whether on production or local dev
 require('dotenv').config({
   path: process.env.NODE_ENV === 'production' ? '.env.production' : '.env.development'
