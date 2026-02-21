@@ -7,7 +7,7 @@
 .calendar-cell {
   position: relative;
   min-height: 60px; 
-  border: 1px solid #eee;
+  border: 1px solid #e5e5e5;
   /* width: 100%; */
 }
 
@@ -15,7 +15,7 @@
   position: absolute; /* Allows event to cross cell borders*/
   width: 80%;
 
-  background-color: cornflowerblue;
+  /* background-color: cornflowerblue; */
   color: white;
   font-size: 12px;
 

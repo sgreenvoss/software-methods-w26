@@ -72,6 +72,18 @@ export default function Groups() {
                         >
                             Leave
                         </button>
+                        <button 
+                            id="availBtn" 
+                            onClick={() => console.log("View availability for group", group.group_id)}
+                        >
+                            Calendar
+                        </button>
+                        <button 
+                            id="petitionBtn" 
+                            onClick={() => console.log("Create petition for group", group.group_id)}
+                        >
+                            Petition
+                        </button>
                     </div>
                 </div>
             ))}

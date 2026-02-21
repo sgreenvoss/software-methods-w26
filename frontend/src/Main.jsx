@@ -1,13 +1,20 @@
 import React, { useState, useEffect } from 'react';
 import Calendar from './components/Calendar/CustomCalendar';
 import Groups from './components/Groups/Groups';
+import EventSidebar from './components/Calendar/EventSidebar';
 import './css/main.css';
 import {apiGet, apiPost} from './api';
 
 export default function Main() {
-    const [view, setView] = useState('calendar');
     const [selectedGroupId, setSelectedGroupId] = useState(null);
     const [groupsList, setGroupsList] = useState([]); 
+    // const [view, setView] = useState('calendar'); -- old 
+    
+    const [isGroupsSidebarOpen, setIsGroupsSidebarOpen] = useState(false);
+    const [isEventSidebarOpen, setIsEventSidebarOpen] = useState(false);
+
+    // live draft preview of event being created/edited.
+    const [draftEvent, setDraftEvent] = useState(null);
 
     // 1. Move fetchGroups INSIDE so it can see setGroupsList
     const fetchGroups = async () => {
@@ -32,9 +39,9 @@ export default function Main() {
     const handleLogout = async () => {
         try {
             await apiPost('/api/logout'); 
-            window.location.href = '/login'; 
+            window.location.href = '/logout'; 
         } catch (err) {
-            window.location.href = '/login'; 
+            window.location.href = '/logout'; 
         }
     };
 
@@ -44,8 +51,19 @@ export default function Main() {
     }, []);
 
     console.log("2. Main.jsx current selectedGroupId:", selectedGroupId);
+
+    
+    // Toggle the sidebar open/closed
+    const toggleGroupsSidebar = () => {
+        setIsGroupsSidebarOpen(!isGroupsSidebarOpen);
+    }
+    const toggleEventSidebar = () => {
+        setIsEventSidebarOpen(!isEventSidebarOpen);
+    }
+
+    // displays two buttons that will bring up either Calendar or Group
     return (
-        <div>
+        <div id="app-wrapper">
             <section id="logout">
                 <button onClick={handleLogout} id="logoutBtn">Logout</button>
             </section>
@@ -54,12 +72,65 @@ export default function Main() {
                 <p id="beta">beta</p>
             </header>
 
-            <header>
+            {/* <header>
                 <button onClick={() => setView('groups')} id="groupsBtn">Group View</button>
                 <button onClick={() => setView('calendar')} id="calendarBtn">Calendar View</button>
-            </header>
+            </header> */}
+            
+            <section id="sidebarToggle">
+                <button 
+                    onClick={() => {
+                        toggleGroupsSidebar();
+                        if (isEventSidebarOpen) setIsEventSidebarOpen(false);
+                    }} 
+                    id="groupsBtn"
+                    className={isGroupsSidebarOpen ? 'active-btn' : ''}
+                >
+                    {isGroupsSidebarOpen ? 'Hide Groups' : 'Show Groups'}
+                </button>
 
-            {view === 'calendar' ? <Calendar /> : <Groups />}
+                <button 
+                    onClick={() => {
+                        toggleEventSidebar();
+                        if (isGroupsSidebarOpen) setIsGroupsSidebarOpen(false);
+                    }} 
+                    id="eventBtn"
+                    className={isEventSidebarOpen ? 'active-btn' : ''}
+                >
+                    {isEventSidebarOpen ? 'Close Event' : 'Add Event'}
+                </button>
+            </section>
+
+            {/* {view === 'calendar' ? <Calendar /> : <Groups />} */}
+            <main className="main-layout">
+                {/* The Groups sidebar. */}
+                {isGroupsSidebarOpen && (
+                    <aside className="groups-sidebar">
+                        <Groups />
+                    </aside>
+                )}
+
+                {/* The Calendar always renders.*/}
+                <section className="calendar-main">
+                    <Calendar draftEvent={draftEvent}/>
+                </section>
+
+                {/* The Event sidebar, which is used for both creating and editing events. */}
+                {isEventSidebarOpen && (
+                    <aside className="event-sidebar">
+                        <EventSidebar 
+                            setDraftEvent={setDraftEvent} 
+                            onFinalize={() => {
+                                setIsEventSidebarOpen(false);
+                                setDraftEvent(null);
+                                // likely trigger a calendar refresh here
+                                <Calendar draftEvent={draftEvent}/>
+                            }}
+                        />
+                    </aside>
+                )}
+
+            </main>
         </div>
     );
 }

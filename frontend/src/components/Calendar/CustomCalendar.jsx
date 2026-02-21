@@ -10,7 +10,7 @@ function getStartOfWeek(date) {
   return d;
 }
 
-export default function CustomCalendar({ groupId }) {
+export default function CustomCalendar({ groupId, draftEvent }) {
   // --- STATE (The "Controller" Data) ---
   const [weekStart, setWeekStart] = useState(getStartOfWeek(new Date()));
   const [rawEvents, setRawEvents] = useState([]);
@@ -74,6 +74,15 @@ export default function CustomCalendar({ groupId }) {
 
   // --- PREPARING THE VIEW ---
   const events = processEvents(rawEvents);
+
+  if (draftEvent) {
+      events.push({
+          ...draftEvent,
+          isAllDay: false, // assuming typed events aren't all day for now
+          isEndOfDay: false
+      });
+  }
+
   const days = Array.from({ length: 7 }, (_, i) => {
     const d = new Date(weekStart);
     d.setDate(weekStart.getDate() + i);
@@ -115,11 +124,16 @@ export default function CustomCalendar({ groupId }) {
                     const startMins = event.start.getMinutes();
                     const duration = (event.end - event.start) / (1000 * 60);
 
-                    // Your precise visual logic
-                    let visualHeight = (duration / 30) + duration - 10;
+                    // precise visual logic
+                    // each grid line (hour) subtracts 2px to height, so add duration/30
+                    let visualHeight = (duration / 30) + duration - 10; // -10 to add padding between events 
                     const endsOnHour = event.end.getMinutes() === 0 && event.end.getSeconds() === 0;
                     if (!event.isEndOfDay && !endsOnHour) visualHeight -= 2;
 
+                    let backgroundColor = 'cornflowerblue';
+                    if (event.mode === 'blocking') backgroundColor = 'darkslategray';
+                    if (event.mode === 'petition') backgroundColor = 'peru';
+                    
                     return (
                       <div
                         key={idx}
@@ -127,7 +141,11 @@ export default function CustomCalendar({ groupId }) {
                         style={{
                           height: `${Math.max(1, visualHeight)}px`,
                           top: `${startMins}px`,
-                          opacity: event.isAllDay ? 0.6 : 1
+                          opacity: event.isAllDay || event.isPreview? 0.6 : 1,
+
+                          backgroundColor: backgroundColor,
+                          border: event.isPreview ? '2px dashed #333' : 'none'
+                          
                         }}
                       >
                         {event.title}
