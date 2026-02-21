@@ -15,7 +15,11 @@ const groupModule = require("./groups");
 const { fetchAndMapGroupEvents } = require('./algorithm/algorithm_adapter');
 const { computeAvailabilityBlocksAllViews } = require('./algorithm/algorithm');
 
-// .env config
+// Algoritihm inports
+const { fetchAndMapGroupEvents } = require('./algorithm/algorithm_adapter');
+const { computeAvailabilityBlocksAllViews } = require('./algorithm/algorithm');
+
+// Load the .env file, determine whether on production or local dev
 require('dotenv').config({
   path: process.env.NODE_ENV === 'production' ? '.env.production' : '.env.development'
 });
@@ -34,9 +38,9 @@ app.use(cors({
 const isProduction = process.env.NODE_ENV === 'production';
 
 app.use(express.json());
-app.set('trust proxy', 1);
+app.set('trust proxy', 1); // must be set to allow render to work.
 
-
+// creates a session, store in the "session" table in the db
 app.use(session({
   store: new pgSession({
     pool:db.pool,
@@ -54,7 +58,9 @@ app.use(session({
   }
 }));
 
+// use the modules
 groupModule(app);
+
 app.use(express.static(path.join(__dirname, "..", "frontend", "build")));
 
 const oauth2Client = new google.auth.OAuth2(
@@ -70,7 +76,6 @@ const scopes = [
 ];
 
 const PORT = process.env.PORT || 3000;
-
 
 // ===================PAGES========================
 
@@ -203,6 +208,11 @@ app.get('/oauth2callback', async (req, res) => {
       });
     });
 
+    // if there is a group token in the session, we should finish adding the user
+    // to their group.
+    if (req.session.pendingGroupToken) {
+      await groupModule.resolveGroupInvite(req);
+    }
     // Add a small delay to ensure DB write completes
     await new Promise(resolve => setTimeout(resolve, 100));
     console.log('session saved, redirecting.');
