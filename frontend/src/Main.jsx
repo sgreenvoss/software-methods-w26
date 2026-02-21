@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import Calendar from './components/Calendar/CustomCalendar';
 import Groups from './components/Groups/Groups';
 import './css/main.css';
