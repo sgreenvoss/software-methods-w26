@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { apiGet } from './api.js';
 import Login from './Login.jsx';
 import Main from './Main.jsx';
+import UsernameCreation from './UsernameCreation.jsx';
 
 // determines which page to serve
 export default function App() {
@@ -33,6 +34,8 @@ export default function App() {
     // either go to login or to homepage
     if (user === null) {
         return <Login />
+    } else if (user.username === "New user!") {
+        return <UsernameCreation />
     } else {
         return <Main />
     }

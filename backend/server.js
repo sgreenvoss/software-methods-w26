@@ -100,7 +100,44 @@ app.get('/api/me', async (req, res) => {
   else {
     res.json({ user: null });
   }
-}) 
+});
+
+app.post('/api/create-username', async (req, res) => {
+  /*
+  const username = req.body.username
+  db.updateUsername(req.session.userId, username) 
+  checks for uniqueness in db
+  */
+  // ensure user is already authenticated
+  const username = req.body.username;
+  if (!req.session.userId) {
+      return res.json({ success: false, error: 'Not authenticated' });
+  }
+
+  // backend checks if username is valid
+
+  const errs = [];
+  const usernameSize = /^.{4,16}$/;
+  const usernameSymbols = /^.[a-zA-Z0-9_.]+$/
+  if (!usernameSize.test(username)) {
+    errs.push('Username must be between 4-16 characters' );
+  }
+  if (!usernameSymbols.test(username)) {
+    errs.push('Username must only contain alphabetic letters, digits, and \'_\' and \'.\'');
+  }
+  if (errs > 0) {
+    res.json({ sucesss: false, errors: errs })
+  }
+
+  // ensure username is unique
+  const duplicate = await db.checkUsernameExists(username);
+  if (!duplicate) {
+    await db.updateUsername(req.session.userId, username);
+    res.json({ success: true });
+  } else {
+    res.json({ success: false, errors: ['Username already taken'] });
+  }
+});
 
 app.get('/logout', (req, res) => {
   req.session.destroy((err) => {
@@ -131,12 +168,10 @@ app.get('/health', (req, res) => {
 
 app.get('/auth/google', async (req, res) => {
 // Generate a secure random state value.
-  const username = req.query.username;
-  console.log('in first callback, username is ' + username);
+
   const state = crypto.randomBytes(32).toString('hex');
   // Store state in the session
   req.session.state = state;
-  req.session.pending_username = username;
 
   const authorizationUrl = oauth2Client.generateAuthUrl({
     access_type: 'offline',
@@ -172,8 +207,6 @@ app.get('/oauth2callback', async (req, res) => {
     const oauth2 = google.oauth2({version: 'v2', auth: oauth2Client});
     const {data: userInfo} = await oauth2.userinfo.get();
 
-    console.log('in the callback, username is ' + req.session.pending_username);
-
     console.log("expiry date is", tokens.expiry_date);
 
     // need to include groups ids
@@ -182,7 +215,7 @@ app.get('/oauth2callback', async (req, res) => {
       userInfo.email, 
       userInfo.given_name, 
       userInfo.family_name, 
-      req.session.pending_username,
+      null,
       tokens.refresh_token, 
       tokens.access_token, 
       tokens.expiry_date
@@ -192,7 +225,6 @@ app.get('/oauth2callback', async (req, res) => {
     req.session.isAuthenticated = true;
 
     delete req.session.state;
-    delete req.session.pending_username;
 
     await new Promise((resolve, reject) => {
       req.session.save((saveErr) => {

@@ -266,6 +266,14 @@ const updateUsername = async(user_id, new_username) => {
     }
 }
 
+const checkUsernameExists = async(username) => {
+    const result = await pool.query(
+        `SELECT user_id FROM person WHERE username = $1`,
+        [username]
+    );
+    return result.rows.length > 0; // returns true if exists
+}
+
 module.exports = {
     pool,
     query: (text, params) => pool.query(text,params),
@@ -284,5 +292,6 @@ module.exports = {
     getGroupsByUID,
     leaveGroup,
     updateUsername,
+    checkUsernameExists
     isUserInGroup
 }
