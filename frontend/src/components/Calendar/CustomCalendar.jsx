@@ -10,27 +10,55 @@ function getStartOfWeek(date) {
   return d;
 }
 
-export default function CustomCalendar() {
+export default function CustomCalendar({ groupId, draftEvent }) {
   // --- STATE (The "Controller" Data) ---
   const [weekStart, setWeekStart] = useState(getStartOfWeek(new Date()));
   const [rawEvents, setRawEvents] = useState([]);
   const [loading, setLoading] = useState(true);
 
   // --- ACTIONS (The "Controller" Logic) ---
+  console.log("3. CustomCalendar received groupId prop:", groupId);
   useEffect(() => {
     const fetchEvents = async () => {
       setLoading(true);
       try {
-        const data = await apiGet('/api/events');
-        setRawEvents(data);
+        if (groupId) {
+          // 1. Fetch group availability for the currently viewed week
+          const startMs = weekStart.getTime();
+          const ONEWEEK_MS = 7 * 24 * 60 * 60 * 1000;
+          const endMs = startMs + ONEWEEK_MS; // 7 days later
+
+          const response = await apiGet(`/api/groups/${groupId}/availability?windowStartMs=${startMs}&windowEndMs=${endMs}&granularityMinutes=15`); // URL HARDCODED FOR G=15 FIXME 02-20 3.0
+          
+          // PROOF OF CONCEPT Console.log, idk why it isn't displaying) 02-20 2.1
+          console.log("RAW AVAILABILITY DATA:", response); // Testing why blank availability view: fix 02-20 2.2
+          if (response && response.ok && response.availability) {
+            // 2. Disguise the availability blocks as standard events for your UI
+            const heatmapEvents = response.availability.map((block, i) => ({
+              title: `Avail: ${block.count}`,
+              start: block.start,
+              end: block.end,
+              event_id: `avail-${i}`
+            }));
+            setRawEvents(heatmapEvents);
+          } else {
+            setRawEvents([]);
+          }
+        } else {
+          // Default: Fetch personal events
+          const personalEvents = await apiGet('/api/events');
+          setRawEvents(personalEvents || []);
+        }
       } catch (error) {
-        console.error('Error fetching events:', error);
+        console.error('Failed to fetch calendar events:', error);
+        setRawEvents([]);
       } finally {
         setLoading(false);
       }
     };
+    
     fetchEvents();
-  }, []);
+  }, [groupId, weekStart]); // Adding weekStart ensures it refetches if you click Prev/Next week
 
   const handlePrevWeek = () => {
     const newDate = new Date(weekStart);
@@ -46,6 +74,15 @@ export default function CustomCalendar() {
 
   // --- PREPARING THE VIEW ---
   const events = processEvents(rawEvents);
+
+  if (draftEvent) {
+      events.push({
+          ...draftEvent,
+          isAllDay: false, // assuming typed events aren't all day for now
+          isEndOfDay: false
+      });
+  }
+
   const days = Array.from({ length: 7 }, (_, i) => {
     const d = new Date(weekStart);
     d.setDate(weekStart.getDate() + i);
@@ -87,11 +124,16 @@ export default function CustomCalendar() {
                     const startMins = event.start.getMinutes();
                     const duration = (event.end - event.start) / (1000 * 60);
 
-                    // Your precise visual logic
-                    let visualHeight = (duration / 30) + duration - 10;
+                    // precise visual logic
+                    // each grid line (hour) subtracts 2px to height, so add duration/30
+                    let visualHeight = (duration / 30) + duration - 10; // -10 to add padding between events 
                     const endsOnHour = event.end.getMinutes() === 0 && event.end.getSeconds() === 0;
                     if (!event.isEndOfDay && !endsOnHour) visualHeight -= 2;
 
+                    let backgroundColor = 'cornflowerblue';
+                    if (event.mode === 'blocking') backgroundColor = 'darkslategray';
+                    if (event.mode === 'petition') backgroundColor = 'peru';
+                    
                     return (
                       <div
                         key={idx}
@@ -99,7 +141,11 @@ export default function CustomCalendar() {
                         style={{
                           height: `${Math.max(1, visualHeight)}px`,
                           top: `${startMins}px`,
-                          opacity: event.isAllDay ? 0.6 : 1
+                          opacity: event.isAllDay || event.isPreview? 0.6 : 1,
+
+                          backgroundColor: backgroundColor,
+                          border: event.isPreview ? '2px dashed #333' : 'none'
+                          
                         }}
                       >
                         {event.title}

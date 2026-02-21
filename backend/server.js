@@ -1,15 +1,20 @@
 const express = require('express');
+const cors = require('cors'); // gemini assisted fix for CORS issues
 const { google } = require('googleapis');
 const crypto = require('crypto');
 const path = require("path");
+// Local imports for DB and email and groups
 const db = require("./db/index");
 const session = require('express-session');
 const url = require('url');
 const pgSession = require('connect-pg-simple')(session);
-const email = require('./emailer');
+const email = require('./emailer'); 
 const groupModule = require("./groups");
 
-// .env config
+// Algoritihm inports
+const { fetchAndMapGroupEvents } = require('./algorithm/algorithm_adapter');
+const { computeAvailabilityBlocksAllViews } = require('./algorithm/algorithm');
+// Load the .env file, determine whether on production or local dev
 require('dotenv').config({
   path: process.env.NODE_ENV === 'production' ? '.env.production' : '.env.development'
 });
@@ -20,13 +25,19 @@ console.log("Frontend URL:", process.env.FRONTEND_URL);
 
 const frontend = process.env.FRONTEND_URL;
 const app = express();
-
 const isProduction = process.env.NODE_ENV === 'production';
 
+if (!isProduction) {
+  app.use(cors({
+    origin: 'http://localhost:3000',
+    credentials: true
+  }));
+}
+
 app.use(express.json());
-app.set('trust proxy', 1);
+app.set('trust proxy', 1); // must be set to allow render to work.
 
-
+// creates a session, store in the "session" table in the db
 app.use(session({
   store: new pgSession({
     pool:db.pool,
@@ -44,7 +55,9 @@ app.use(session({
   }
 }));
 
+// use the modules
 groupModule(app);
+
 app.use(express.static(path.join(__dirname, "..", "frontend", "build")));
 
 const oauth2Client = new google.auth.OAuth2(
@@ -60,7 +73,6 @@ const scopes = [
 ];
 
 const PORT = process.env.PORT || 3000;
-
 
 // ===================PAGES========================
 
@@ -225,6 +237,11 @@ app.get('/oauth2callback', async (req, res) => {
       });
     });
 
+    // if there is a group token in the session, we should finish adding the user
+    // to their group.
+    if (req.session.pendingGroupToken) {
+      await groupModule.resolveGroupInvite(req);
+    }
     // Add a small delay to ensure DB write completes
     await new Promise(resolve => setTimeout(resolve, 100));
     console.log('session saved, redirecting.');
@@ -404,6 +421,17 @@ app.get('/api/users/search', async(req, res) => {
   }
 });
 
+// ALGORITHM ROUTE: SEE docs/AVAILABILITY_ARCHITECTURE.md for documentation of how this works and what files have been changed.
+  // availability_service.js
+  // availability_adapter.js
+  // availability_controller.js
+  // algorithm.js
+  // algolrithm_types.js
+const availabilityController = require('./availability_controller');
+// This one line tells Express: 
+// "When someone hits this URL, hand the request over to the Controller"
+app.get('/api/groups/:groupId/availability', availabilityController.getAvailability);
+
 // Catch-all route for React Router - must be after all API routes
 app.get('*', (req, res) => {
   // Serve React app for all unmatched routes
@@ -417,3 +445,5 @@ app.get('*', (req, res) => {
 app.listen(PORT, async () => {
   console.log(`Server running on port ${PORT}`);
 });
+
+

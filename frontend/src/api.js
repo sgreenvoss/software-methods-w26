@@ -1,4 +1,5 @@
 export async function apiGet(path) {
+  console.log("api getting path:", path);
   const response = await fetch(path, {
     credentials: "include"
   });

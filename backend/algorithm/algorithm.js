@@ -19,15 +19,14 @@
  * That lines up with “petition priority” pretty directly.
  */
 
-import { DEFAULT_G_MINUTES, BlockingLevel } from "./types/algorithm_types.js";
+// Trying to work with whatever module system backend is using (CommonJS or ESM). If this causes issues, we can adjust.
+const { DEFAULT_G_MINUTES, BlockingLevel } = require('./algorithm_types.js');
 
-export { DEFAULT_G_MINUTES, BlockingLevel } from "./types/algorithm_types.js";
-
-/** @typedef {import("./types/algorithm_types.js").UserId} UserId */
-/** @typedef {import("./types/algorithm_types.js").ParticipantSnapshot} ParticipantSnapshot */
-/** @typedef {import("./types/algorithm_types.js").AvailabilityBlock} AvailabilityBlock */
-/** @typedef {import("./types/algorithm_types.js").AvailabilityBlockMulti} AvailabilityBlockMulti */
-/** @typedef {import("./types/algorithm_types.js").AvailabilityView} AvailabilityView */
+/** @typedef {import("./algorithm_types.js").UserId} UserId */
+/** @typedef {import("./algorithm_types.js").ParticipantSnapshot} ParticipantSnapshot */
+/** @typedef {import("./algorithm_types.js").AvailabilityBlock} AvailabilityBlock */
+/** @typedef {import("./algorithm_types.js").AvailabilityBlockMulti} AvailabilityBlockMulti */
+/** @typedef {import("./algorithm_types.js").AvailabilityView} AvailabilityView */
 
 // Internal ordering so we can do threshold comparisons.
 // Lower number = "counts earlier" when we go more restrictive.
@@ -117,17 +116,19 @@ function overlaps(aStart, aEnd, bStart, bEnd) {
  * @param {number} args.windowEndMs
  * @param {ParticipantSnapshot[]} args.participants
  * @param {number} [args.granularityMinutes=DEFAULT_G_MINUTES]
- * @param {string} [args.priority=BlockingLevel.B1] - min blocking level; B1=strict, B3=lenient
+ * @param {string} [args.priority=BlockingLevel.B3] - min blocking level; B1=lenient, B2=flexible, B3=strict
  * @returns {AvailabilityBlock[]}
  */
-export function computeAvailabilityBlocks({
+function computeAvailabilityBlocks({
   windowStartMs,
   windowEndMs,
   participants,
   granularityMinutes = DEFAULT_G_MINUTES,
-  priority = BlockingLevel.B1,
-  priority = BlockingLevel.B1,
+  priority = BlockingLevel.B3,
 }) {
+  // Define the missing threshold value based on the chosen priority
+  const minPriorityValue = blockingOrder[priority] || blockingOrder[BlockingLevel.B3];
+
   // Basic validation: fail loud so bugs don't silently ship.
   if (!Number.isFinite(windowStartMs) || !Number.isFinite(windowEndMs)) {
     throw new Error("windowStartMs/windowEndMs must be numbers (epoch ms).");
@@ -260,7 +261,7 @@ export function computeAvailabilityBlocks({
  * @param {number} [args.granularityMinutes=DEFAULT_G_MINUTES]
  * @returns {AvailabilityBlockMulti[]}
  */
-export function computeAvailabilityBlocksAllViews({
+function computeAvailabilityBlocksAllViews({
   windowStartMs,
   windowEndMs,
   participants,
@@ -444,7 +445,7 @@ export function computeAvailabilityBlocksAllViews({
  * @param {"B1"|"B2"|"B3"} chosen
  * @returns {AvailabilityBlock[]}
  */
-export function toSingleViewBlocks(blocksMulti, chosen) {
+function toSingleViewBlocks(blocksMulti, chosen) {
   if (!Array.isArray(blocksMulti)) {
     throw new Error("blocksMulti must be an array.");
   }
@@ -458,3 +459,10 @@ export function toSingleViewBlocks(blocksMulti, chosen) {
     ...b.views[key],
   }));
 }
+
+// Trying to comply with whatever module system the backend is using (CommonJS or ESM).
+module.exports = {
+  computeAvailabilityBlocks,
+  computeAvailabilityBlocksAllViews,
+  toSingleViewBlocks
+};

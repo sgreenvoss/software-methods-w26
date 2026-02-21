@@ -15,6 +15,7 @@ export default function App() {
         const checkUser = async () => {
             try {
                 const data = await apiGet('/api/me');
+                console.log("we are here, the data is", data);
                 if (data.user) {
                     console.log(data.user.username);
                     console.log(data.user.email);

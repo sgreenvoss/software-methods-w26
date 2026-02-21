@@ -192,7 +192,8 @@ const createGroup = async(g_name) => {
 const addUserToGroup = async(group_id, user_id) => {
     const query = `
         INSERT INTO group_match (group_id, user_id)
-        VALUES ($1, $2)`;
+        VALUES ($1, $2)
+        ON CONFLICT DO NOTHING`;
     await pool.query(query, [
         group_id,
         user_id
@@ -214,6 +215,14 @@ const getUIDByGroupID = async(group_id) => {
         WHERE group_id = ($1)`;
     const res = await pool.query(query, [group_id]);
     return res;
+}
+
+const isUserInGroup = async(user_id, group_id) => {
+    const query = `
+        SELECT user_id FROM group_match
+        WHERE group_id = ($1) AND user_id = ($2)`;
+    const res = await pool.query(query, [group_id, user_id]);
+    return (res.rowCount > 0);
 }
 
 const deleteGroup = async(group_id) => {
@@ -284,4 +293,5 @@ module.exports = {
     leaveGroup,
     updateUsername,
     checkUsernameExists
+    isUserInGroup
 }

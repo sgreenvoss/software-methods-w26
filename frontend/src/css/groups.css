@@ -1,7 +1,7 @@
 #groups {
-  max-width: 800px;
-  margin: 20px auto;
-  padding: 20px;
+  width: 100%;
+  margin: 0;
+  padding: 10px;
   font-family: 'Courier New', Courier, monospace;
   background-color: #f9f9fb;
   border-radius: 12px;
@@ -17,7 +17,7 @@
   padding: 15px 20px;
   margin-bottom: 10px;
   border-radius: 8px;
-  border: 1px solid #e1e8ed;
+  border: 1px solid #e5e5e5;
   transition: transform 0.2s, box-shadow 0.2s;
 }
 
@@ -36,6 +36,7 @@
 /* Button Container (to keep buttons together on the right) */
 .group-row div {
   display: flex;
+  flex-direction: column;
   gap: 10px; /* Space between View and Leave buttons */
   border-radius: 6px;
   overflow: hidden; /* This makes the corners look like one unit */
@@ -66,7 +67,17 @@ button:active {
 }
 
 #viewBtn {
-  background-color: #0984e3;
+  background-color: #2ecc71;
+  color: white;
+}
+
+#availBtn {
+  background-color: #3498db;
+  color: white;
+}
+
+#petitonBtn {
+  background-color: #fd79a8;
   color: white;
 }
 
