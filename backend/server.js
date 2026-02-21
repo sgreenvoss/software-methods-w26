@@ -103,9 +103,18 @@ app.post('/api/create-username', async (req, res) => {
   }
 
   // backend checks if username is valid
-  const usernameRegex = /^[a-zA-Z0-9_.]{4,16}$/;
-  if (!usernameRegex.test(username)) {
-      return res.json({ success: false, error: 'Username invalid' });
+
+  const errs = [];
+  const usernameSize = /^.{4,16}$/;
+  const usernameSymbols = /^.[a-zA-Z0-9_.]+$/
+  if (!usernameSize.test(username)) {
+    errs.push('Username must be between 4-16 characters' );
+  }
+  if (!usernameSymbols.test(username)) {
+    errs.push('Username must only contain alphabetic letters, digits, and \'_\' and \'.\'');
+  }
+  if (errs > 0) {
+    res.json({ sucesss: false, errors: errs })
   }
 
   // ensure username is unique
@@ -114,7 +123,7 @@ app.post('/api/create-username', async (req, res) => {
     await db.updateUsername(req.session.userId, username);
     res.json({ success: true });
   } else {
-    res.json( {success: false, error: 'Username already taken'} );
+    res.json({ success: false, errors: ['Username already taken'] });
   }
 });
 

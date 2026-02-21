@@ -3,27 +3,36 @@ import { apiGet, apiPost } from './api.js';
 
 export default function UsernameCreation() {
     const [username, setUsername] = useState('');
-    const [error, setError] = useState('');
+    const [errors, setErrors] = useState([]);
 
     const handleSubmit = async (e) => {
         e.preventDefault();
-        const allowed = /^[A-Za-z0-9._]{4,16}$/
-        if (!allowed.test(username)) {
-            setError('Username invalid')
+
+        const usernameSize = /^.{4,16}$/;
+        const usernameSymbols = /^[a-zA-Z0-9_.]+$/
+
+        const errors = [];
+        if (!usernameSize.test(username)) {
+            errors.push('Username must be between 4-16 characters');
+        }
+        if (!usernameSymbols.test(username)) {
+            errors.push('Username must only contain alphabetic letters, digits, and \'_\' and \'.\'');
+        }
+        if (errors.length > 0) {
+            setErrors(errors);
             return;
         }
 
         try {
             const res = await apiPost('/api/create-username', { username });
-
             if (res.success) {
                 window.location.href = '/';
             } else {
-                setError(res.error);
+                setErrors(res.errors);
             }
         } catch (err) {
             console.error('Error:', err);
-            setError('An error occurred.');
+            setErrors(['An error occurred.']);
         }
     }
  
@@ -35,7 +44,9 @@ export default function UsernameCreation() {
                 <input onChange={(e) => setUsername(e.target.value)}/>
                 <button type="submit">Submit</button>
             </label>
-            {error && <p>{error}</p>}
+            {errors && errors.map((err, idx) => (
+                <p key={idx} style={{color: 'red'}}>{err}</p>
+            ))}
         </form>
         <ul>
             <li>Username must be between 4 and 16 characters long.</li>
