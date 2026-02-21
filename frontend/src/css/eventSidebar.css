@@ -1,0 +1,35 @@
+.event-sidebar-container {
+  align-items: center;
+  display: flex;
+  flex-direction: column;
+  padding: 20px;
+  background-color: #f4f5f7;
+  border-left: 1px solid #e5e5e5;
+}
+
+.mode-toggle {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 20px;
+}
+
+.event-sidebar-container label {
+  margin-right: 10px;
+  font-weight: bold;
+}
+
+#blockingBtn {
+  background-color: #6f6e76;
+  color: white;
+}
+
+#petitionBtn {
+  background-color:#ffa963;
+  color: white;
+}
+
+.submit-btn {
+    background-color: #00b894;
+    color: white;
+}
