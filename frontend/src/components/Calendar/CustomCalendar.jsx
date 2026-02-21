@@ -10,27 +10,55 @@ function getStartOfWeek(date) {
   return d;
 }
 
-export default function CustomCalendar() {
+export default function CustomCalendar({ groupId }) {
   // --- STATE (The "Controller" Data) ---
   const [weekStart, setWeekStart] = useState(getStartOfWeek(new Date()));
   const [rawEvents, setRawEvents] = useState([]);
   const [loading, setLoading] = useState(true);
 
   // --- ACTIONS (The "Controller" Logic) ---
+  console.log("3. CustomCalendar received groupId prop:", groupId);
   useEffect(() => {
     const fetchEvents = async () => {
       setLoading(true);
       try {
-        const data = await apiGet('/api/events');
-        setRawEvents(data);
+        if (groupId) {
+          // 1. Fetch group availability for the currently viewed week
+          const startMs = weekStart.getTime();
+          const ONEWEEK_MS = 7 * 24 * 60 * 60 * 1000;
+          const endMs = startMs + ONEWEEK_MS; // 7 days later
+
+          const response = await apiGet(`/api/groups/${groupId}/availability?windowStartMs=${startMs}&windowEndMs=${endMs}&granularityMinutes=15`); // URL HARDCODED FOR G=15 FIXME 02-20 3.0
+          
+          // PROOF OF CONCEPT Console.log, idk why it isn't displaying) 02-20 2.1
+          console.log("RAW AVAILABILITY DATA:", response); // Testing why blank availability view: fix 02-20 2.2
+          if (response && response.ok && response.availability) {
+            // 2. Disguise the availability blocks as standard events for your UI
+            const heatmapEvents = response.availability.map((block, i) => ({
+              title: `Avail: ${block.count}`,
+              start: block.start,
+              end: block.end,
+              event_id: `avail-${i}`
+            }));
+            setRawEvents(heatmapEvents);
+          } else {
+            setRawEvents([]);
+          }
+        } else {
+          // Default: Fetch personal events
+          const personalEvents = await apiGet('/api/events');
+          setRawEvents(personalEvents || []);
+        }
       } catch (error) {
-        console.error('Error fetching events:', error);
+        console.error('Failed to fetch calendar events:', error);
+        setRawEvents([]);
       } finally {
         setLoading(false);
       }
     };
+    
     fetchEvents();
-  }, []);
+  }, [groupId, weekStart]); // Adding weekStart ensures it refetches if you click Prev/Next week
 
   const handlePrevWeek = () => {
     const newDate = new Date(weekStart);

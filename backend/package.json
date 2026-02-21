@@ -1,6 +1,7 @@
 {
   "name": "social-scheduler-backend",
   "version": "1.0.0",
+  "proxy": "http://localhost:8080",
   "main": "server.js",
   "scripts": {
     "build": "cd ../frontend && npm install && npm run build",

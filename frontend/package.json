@@ -1,7 +1,6 @@
 {
   "name": "scheduling-app",
   "version": "1.0.0",
-  "proxy": "http://localhost:8080",
   "scripts": {
     "start": "react-scripts start",
     "build": "react-scripts build",
@@ -10,6 +9,7 @@
   },
   "dependencies": {
     "@headlessui/react": "^2.2.9",
+    "cors": "^2.8.6",
     "react": "^18.0.0",
     "react-big-calendar": "^1.19.4",
     "react-calendar": "^6.0.0",

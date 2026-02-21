@@ -3,16 +3,46 @@ import Calendar from './components/Calendar/CustomCalendar';
 import Groups from './components/Groups/Groups';
 import './css/main.css';
 
-// main page, displays option for group view or personal calendar view
 export default function Main() {
     const [view, setView] = useState('calendar');
+    const [selectedGroupId, setSelectedGroupId] = useState(null);
+    const [groupsList, setGroupsList] = useState([]); 
 
-    // send request for logout
-    const handleLogout = () => {
-        window.location.href = '/logout';
-    }
+    // 1. Move fetchGroups INSIDE so it can see setGroupsList
+    const fetchGroups = async () => {
+        try {
+            // 1. Hit your ACTUAL endpoint
+            const response = await apiGet('/user/groups'); 
+            
+            // 2. Your backend returns { success: true, groups: [...] }
+            // We need to extract the groups array specifically.
+            if (response && response.success && Array.isArray(response.groups)) {
+                setGroupsList(response.groups);
+            } else {
+                setGroupsList([]);
+            }
+        } catch (err) {
+            console.error("Groups fetch failed", err);
+            setGroupsList([]);
+        }
+    };
 
-    // displays two buttons that will bring up either Calendar or Group
+    // 2. Move handleLogout INSIDE
+    const handleLogout = async () => {
+        try {
+            await apiPost('/api/logout'); 
+            window.location.href = '/login'; 
+        } catch (err) {
+            window.location.href = '/login'; 
+        }
+    };
+
+    // 3. Effect calls the internal function
+    useEffect(() => {
+        fetchGroups();
+    }, []);
+
+    console.log("2. Main.jsx current selectedGroupId:", selectedGroupId);
     return (
         <div>
             <section id="logout">
@@ -30,5 +60,5 @@ export default function Main() {
 
             {view === 'calendar' ? <Calendar /> : <Groups />}
         </div>
-    )
+    );
 }

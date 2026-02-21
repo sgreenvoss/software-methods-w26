@@ -9,13 +9,16 @@
  *   - projection helper behavior
  */
 
-import {
-  computeAvailabilityBlocks,
-  computeAvailabilityBlocksAllViews,
-  toSingleViewBlocks,
-  DEFAULT_G_MINUTES,
-} from "./algorithm.js";
-import { BlockingLevel } from "./types/algorithm_types.js";
+const { 
+  computeAvailabilityBlocks, 
+  computeAvailabilityBlocksAllViews, 
+  toSingleViewBlocks 
+} = require('./algorithm.js');
+
+const { 
+  DEFAULT_G_MINUTES, 
+  BlockingLevel 
+} = require('./algorithm_types.js');
 
 /** @typedef {import("./types/algorithm_types.js").ParticipantSnapshot} ParticipantSnapshot */
 

@@ -10,7 +10,7 @@
  */
 
 /** Default block size (minutes) for "heatmap" blocks. */
-export const DEFAULT_G_MINUTES = 15;
+const DEFAULT_G_MINUTES = 15;
 
 /**
  * BlockingLevel is a PRIORITY / STRICTNESS label attached to each busy interval.
@@ -25,7 +25,7 @@ export const DEFAULT_G_MINUTES = 15;
  *   - A B2 petition cares about B2/B3 conflicts
  *   - A B1 petition cares about everything
  */
-export const BlockingLevel = Object.freeze({
+const BlockingLevel = Object.freeze({
   B1: "B1",
   B2: "B2",
   B3: "B3",
@@ -101,3 +101,9 @@ export const BlockingLevel = Object.freeze({
  * @property {number} endMs
  * @property {{B1: AvailabilityView, B2: AvailabilityView, B3: AvailabilityView}} views
  */
+
+
+module.exports = {
+  DEFAULT_G_MINUTES,
+  BlockingLevel
+};
