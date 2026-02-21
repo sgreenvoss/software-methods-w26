@@ -1,5 +1,6 @@
 export async function apiGet(path) {
   console.log("api getting path:", path);
+  console.log("fetchinf from exactly", process.env.BACKEND_URL + path);
   const response = await fetch(process.env.BACKEND_URL + path, {
     credentials: "include"
   });
