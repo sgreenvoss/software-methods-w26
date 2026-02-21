@@ -1,7 +1,9 @@
-const BACKEND_URL = process.env.BACKEND_URL || 'http://localhost:8080';
+require('dotenv').config({
+  path: process.env.NODE_ENV === 'production' ? '.env.production' : '.env.development'
+});
 
 export async function apiGet(path) {
-  const response = await fetch(BACKEND_URL + path, {
+  const response = await fetch(process.env.BACKEND_URL + path, {
     credentials: "include"
   });
 
@@ -15,7 +17,7 @@ export async function apiGet(path) {
 }
 
 export async function apiPost(path, data) {
-  const response = await fetch(BACKEND_URL + path, {
+  const response = await fetch(process.env.BACKEND_URL + path, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     credentials: "include",
