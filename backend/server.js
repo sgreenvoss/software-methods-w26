@@ -25,12 +25,14 @@ console.log("Frontend URL:", process.env.FRONTEND_URL);
 
 const frontend = process.env.FRONTEND_URL;
 const app = express();
-//Gemini assisted fix
-app.use(cors({
-  origin: 'http://localhost:3000',
-  credentials: true
-}));
 const isProduction = process.env.NODE_ENV === 'production';
+
+if (!isProduction) {
+  app.use(cors({
+    origin: 'http://localhost:3000',
+    credentials: true
+  }));
+}
 
 app.use(express.json());
 app.set('trust proxy', 1); // must be set to allow render to work.
