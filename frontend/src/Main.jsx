@@ -38,7 +38,7 @@ export default function Main() {
     // 2. Move handleLogout INSIDE
     const handleLogout = async () => {
         try {
-            await apiPost('/api/logout'); 
+            await apiPost('/logout'); 
             window.location.href = '/logout'; 
         } catch (err) {
             window.location.href = '/logout'; 

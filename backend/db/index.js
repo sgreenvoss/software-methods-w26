@@ -292,6 +292,6 @@ module.exports = {
     getGroupsByUID,
     leaveGroup,
     updateUsername,
-    checkUsernameExists
+    checkUsernameExists,
     isUserInGroup
 }
