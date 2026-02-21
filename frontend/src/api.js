@@ -1,7 +1,7 @@
 export async function apiGet(path) {
   console.log("api getting path:", path);
-  console.log("fetchinf from exactly", process.env.BACKEND_URL + path);
-  const response = await fetch(process.env.BACKEND_URL + path, {
+  console.log("fetchinf from exactly", process.env.REACT_APP_BACKEND_URL + path);
+  const response = await fetch(process.env.REACT_APP_BACKEND_URL + path, {
     credentials: "include"
   });
 
@@ -15,7 +15,7 @@ export async function apiGet(path) {
 }
 
 export async function apiPost(path, data) {
-  const response = await fetch(process.env.BACKEND_URL + path, {
+  const response = await fetch(process.env.REACT_APP_BACKEND_URL + path, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     credentials: "include",
