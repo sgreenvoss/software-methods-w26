@@ -20,15 +20,19 @@ invitee
 const { randomUUID } = require("crypto");
 const db = require("./db/index");
 const { getgroups } = require("process");
+const emailer = require("./emailer");
+const inviteToken = require("./inviteToken");
 
 module.exports = function(app) {
-  async function createGroupId() {
-    // on the db end the group id is an automatically generated int - 
-    // is there a security reason to use this instead? 
-    const groupId = randomUUID();
-    // ensure groupId is unique in database
-    // generate a new id if not unique
-    return groupId;
+  async function resolveGroupInvite(req) {
+    if (!req.session.pendingGroupToken) return null;
+    
+    const result = inviteToken.verifyInviteToken(req.session.pendingGroupToken);
+    if (!result.valid) return null;
+    
+    await db.addUserToGroup(result.groupId, req.session.userId);
+    delete req.session.pendingGroupToken;
+    return result.groupId;
   }
 
   app.post("/group/creation", async (req, res) => {
@@ -41,7 +45,6 @@ module.exports = function(app) {
       console.log("group name is ", group_name);
       // store group id in database with creator's user id
       const group_id = await db.createGroup(group_name); //await createGroupId();
-      console.log(group_id);
       await db.addUserToGroup(group_id, req.session.userId);
       return res.status(201).json({
         success: true,
@@ -76,25 +79,57 @@ module.exports = function(app) {
 
   app.post("/group/invite", async (req, res) => {
     // ensure user is logged in
-    if (!req.session.user) {
+    if (!req.session.userId || !req.session.isAuthenticated) {
       return res.status(401).json({ error: "Unauthorized" });
     }
-    // get group id and invitee email from request body
-    // verify that user is a member of the group
-    // generate invitation link with group id to display on frontend
+    try {
+      const groupId = req.body.group_id;
+      // verify that user is a member of the group
+      if (await db.isUserInGroup(req.session.userId, groupId)) {
+        // generate invitation link with group id to display on frontend
+        const date = Date.now() + 24 * 60 * 60 * 1000;
+        const token = inviteToken.createInviteToken({groupId, expiresAtMs: date});
+        let url = process.env.FRONTEND_URL + `/group/respond-invitation?q=${token}`;        
+        console.log("shareable link:", url);
+        return res.status(201).json({invite: url});
+      } else {
+        return res.status(401).json({error: "User is not a member of that group."});
+      }
+    } catch(error) {
+      console.error("error with inviting:", error);
+      return res.status(500).json({error: "failed creating invite link."});
+    }
   });
 
-  app.post("/group/respond-invitation", async (req, res) => {
-    // ensure user is logged in
-    if (!req.session.user) {
-      return res.status(401).json({ error: "Unauthorized" });
+  app.get("/group/respond-invitation", async (req, res) => {
+    // get token out of url, save in session.
+    const {q} = req.query;
+    const result = inviteToken.verifyInviteToken(q);
+    if (!result.valid) {
+      return res.status(401).json({error: "Bad invite token"});
     }
-    // get group id and response (accept/reject) from request body
-    // if accept:
-    //   add group id to user's list of groups in database
-    //   add user id to group's list of members in database
-    // if reject:
-    //   do not add user to group
+    req.session.pendingGroupToken = q;
+    // if user is not logged in, redirect to login, then go back here
+    if (!req.session.userId || !req.session.isAuthenticated) {
+      // i think here we should force a session save (because of the session loss issues with oauth)
+      await new Promise((resolve, reject) => {
+        req.session.save((saveErr) => {
+          if (saveErr) {
+            console.error("Session Save Error:", saveErr);
+            reject(saveErr);
+          } else {
+            resolve();
+          }
+        });
+      });
+      console.log("redirecting now");
+      return res.redirect('/login'); // TODO: redirect to a signup page
+    }
+    // if we hit here, the user already has an account.
+    // for now let's assume that clicking the link = accepting being
+    // in the group.
+    await resolveGroupInvite(req);
+    res.redirect('/');
   });
 
   app.post("/group/leave", async (req, res) => {
