@@ -14,7 +14,7 @@ export default function Login() {
             return;
         }
         // Gemini assisted fix for local deployment
-        window.location.href = `/auth/google?username=${encodeURIComponent(username)}`;
+        window.location.href = `${BACKEND_URL}/auth/google?username=${encodeURIComponent(username)}`;
     };
 
     return (
