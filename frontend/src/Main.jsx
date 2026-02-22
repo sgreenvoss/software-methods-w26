@@ -112,7 +112,7 @@ export default function Main() {
 
                 {/* The Calendar always renders.*/}
                 <section className="calendar-main">
-                    <Calendar draftEvent={draftEvent} selectedGroupId={selectedGroupId}/>
+                    <Calendar draftEvent={draftEvent} groupId={selectedGroupId}/>
                 </section>
 
                 {/* The Event sidebar, which is used for both creating and editing events. */}
