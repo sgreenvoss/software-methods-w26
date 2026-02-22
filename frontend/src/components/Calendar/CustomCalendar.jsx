@@ -37,10 +37,11 @@ export default function CustomCalendar({ groupId, draftEvent }) {
             console.log("response is okay!");
             const heatmapEvents = response.blocks.map((block, i) => ({
               title: `Avail: ${block.count}`,
-              start: block.start,
-              end: block.end,
+              start: block.startMs,
+              end: block.endMs,
               event_id: `avail-${i}`
             }));
+            console.log("here are the heatmap events", heatmapEvents);
             setRawEvents(heatmapEvents);
           } else {
             setRawEvents([]);
