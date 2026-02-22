@@ -62,7 +62,7 @@ export default function Groups() {
                     <div>
                         <button 
                             id="viewBtn" 
-                            onClick={() => console.log("View group", group.group_id)}
+                            onClick={() => props.onSelectGroup(group.id)}
                         >
                             View
                         </button>
