@@ -4,7 +4,7 @@ import GroupCreatorModal from './GroupCreator.jsx';
 import '../../css/groups.css';
 import '../../css/groupsModal.css';
 
-export default function Groups() {
+export default function Groups( {onSelectGroup} ) {
     const [groups, setGroups] = useState([]);
     const [showModal, setShowModal] = useState(false);
     const [loading, setLoading] = useState(true);
@@ -62,7 +62,7 @@ export default function Groups() {
                     <div>
                         <button 
                             id="viewBtn" 
-                            onClick={() => props.onSelectGroup(group.id)}
+                            onClick={() => onSelectGroup(group.group_id)}
                         >
                             View
                         </button>

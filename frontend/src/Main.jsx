@@ -106,7 +106,7 @@ export default function Main() {
                 {/* The Groups sidebar. */}
                 {isGroupsSidebarOpen && (
                     <aside className="groups-sidebar">
-                        <Groups onSelectGroup={(id) => setSelectedGroupId(id)}/>
+                        <Groups onSelectGroup={(id) => setSelectedGroupId(Number(id))}/>
                     </aside>
                 )}
 
