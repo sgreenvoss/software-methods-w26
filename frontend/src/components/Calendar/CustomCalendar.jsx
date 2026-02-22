@@ -33,7 +33,8 @@ export default function CustomCalendar({ groupId, draftEvent }) {
           // PROOF OF CONCEPT Console.log, idk why it isn't displaying) 02-20 2.1
           console.log("RAW AVAILABILITY DATA:", response); // Testing why blank availability view: fix 02-20 2.2
           if (response && response.ok && response.availability) {
-            // 2. Disguise the availability blocks as standard events for your UI
+            // 2. Disguise the availability blocks as standard events for UI
+            console.log("response is okay!");
             const heatmapEvents = response.availability.map((block, i) => ({
               title: `Avail: ${block.count}`,
               start: block.start,
@@ -165,6 +166,7 @@ export default function CustomCalendar({ groupId, draftEvent }) {
 // --- KEEP YOUR PROCESSING FUNCTIONS OUTSIDE THE COMPONENT ---
 // This keeps the "Business Logic" separate from the "View"
 function processEvents(rawEvents) {
+  console.log("in the processing events function");
   const processed = [];
   rawEvents.forEach(event => {
     let start = parseLocal(event.start);
@@ -189,6 +191,7 @@ function processEvents(rawEvents) {
       current = nextDayStart;
     }
   });
+  console.log("processed events:", processed);
   return processed;
 }
 
