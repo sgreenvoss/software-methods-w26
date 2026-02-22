@@ -40,13 +40,19 @@ const availabilityService = {
       participants,
       granularityMinutes: 15
     });
-
+    // FIX ATTEMPT: Match input contract for CustomCalendarView
+    // CustomCalendar expects: {start, end, count}
+    const formattedBlocks = rawBlocks.map(block => ({
+      start: new Date(block.startMs).toISOString(),
+      end: new Date(block.endMs).toISOString(),
+      count: block.views.B3
+    }));
     // Return the clean data to the controller
     return {
       groupId,
       windowStartMs,
       windowEndMs,
-      blocks
+      blocks : formattedBlocks
     };
   }
 };
