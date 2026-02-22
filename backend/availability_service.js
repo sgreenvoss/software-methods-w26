@@ -42,7 +42,7 @@ const availabilityService = {
     });
     // FIX ATTEMPT: Match input contract for CustomCalendarView
     // CustomCalendar expects: {start, end, count}
-    const formattedBlocks = rawBlocks.map(block => ({
+    const formattedBlocks = blocks.map(block => ({
       start: new Date(block.startMs).toISOString(),
       end: new Date(block.endMs).toISOString(),
       count: block.views.B3
