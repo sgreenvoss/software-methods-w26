@@ -7,9 +7,9 @@
 
 // Map DB priority integers to the algorithm's BlockingLevel strings
 const priorityMapping = {
-    1: "B1", // Strict
+    1: "B1", // Lax
     2: "B2", // Flexible
-    3: "B3"  // Lax
+    3: "B3"  // Strict
 };
 
 /**

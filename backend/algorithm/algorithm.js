@@ -288,10 +288,9 @@ function computeAvailabilityBlocksAllViews({
    * Key detail: we build lists via ROUTING rules, not by rerunning filters.
    * That way each event is clamped once and pushed to the views it affects.
    *
-   * Routing:
-   *   - B1 event impacts only B1 view
-   *   - B2 event impacts B1 and B2 views
-   *   - B3 event impacts B1, B2, and B3 views
+   * Routing: StrictView ALL events considered busy
+   *          FlexibleView ALL B2, B3 events considered busy
+   *          LenientView ALL B1, B2, B3 events considered busy
    *
    * @type {Map<UserId, {B1:{startMs:number,endMs:number}[],B2:{startMs:number,endMs:number}[],B3:{startMs:number,endMs:number}[]}>}
    */
@@ -301,7 +300,7 @@ function computeAvailabilityBlocksAllViews({
     const userId = p.userId;
     const rawEvents = Array.isArray(p.events) ? p.events : [];
 
-    const lists = { B1: [], B2: [], B3: [] };
+    const lists = { StrictView: [], FlexibleView: [], LenientView: [] }; // Fixing Priority. Naming conventions for clarity. 02-22 1.1
 
     for (const ev of rawEvents) {
       if (!ev) continue;
@@ -317,26 +316,30 @@ function computeAvailabilityBlocksAllViews({
 
       const level = normalizeBlockingLevel(ev.blockingLevel);
 
-      if (level === BlockingLevel.B1) {
-        lists.B1.push({ startMs, endMs });
-      } else if (level === BlockingLevel.B2) {
-        lists.B1.push({ startMs, endMs });
-        lists.B2.push({ startMs, endMs });
-      } else {
-        // B3
-        lists.B1.push({ startMs, endMs });
-        lists.B2.push({ startMs, endMs });
-        lists.B3.push({ startMs, endMs });
+      if (level === BlockingLevel.B3) {
+        // A B3 event is always busy for all views.
+        lists.StrictView.push({ startMs, endMs });
+        lists.FlexibleView.push({ startMs, endMs });
+        lists.LenientView.push({ startMs, endMs });
       }
+      else if (level === BlockingLevel.B2) {
+        // (Mediium Priority / Flexible) A B2 event counts as busy for StrictView and FlexibleView.
+        lists.StrictView.push({ startMs, endMs });
+        lists.FlexibleView.push({ startMs, endMs });
+      }
+      else {
+        // Only B1 events effect all views, so push to StrictView only
+        lists.StrictView.push({ startMs, endMs });
+      }
+      // Fixing Routing For Priority Level clarity. 02-22. 1.1
     }
-
     const merged = {
-      B1: mergeIntervals(lists.B1),
-      B2: mergeIntervals(lists.B2),
-      B3: mergeIntervals(lists.B3),
+      StrictView: mergeIntervals(lists.StrictView),
+      FlexibleView: mergeIntervals(lists.FlexibleView),
+      LenientView: mergeIntervals(lists.LenientView),
     };
 
-    if (merged.B1.length || merged.B2.length || merged.B3.length) {
+    if (merged.StrictView.length || merged.FlexibleView.length || merged.LenientView.length) {
       busyByUser.set(userId, merged);
     }
   }
@@ -346,7 +349,7 @@ function computeAvailabilityBlocksAllViews({
    * Same idea as the single-view function, just x3.
    */
   const idxByUser = new Map();
-  for (const p of participants) idxByUser.set(p.userId, { B1: 0, B2: 0, B3: 0 });
+  for (const p of participants) idxByUser.set(p.userId, { StrictView: 0, FlexibleView: 0, LenientView: 0 });
 
   /** @type {AvailabilityBlockMulti[]} */
   const out = [];
@@ -356,15 +359,15 @@ function computeAvailabilityBlocksAllViews({
     const blockEnd = Math.min(blockStart + blockMs, windowEndMs);
 
     const acc = {
-      B1: { freeUserIds: [], busyUserIds: [] },
-      B2: { freeUserIds: [], busyUserIds: [] },
-      B3: { freeUserIds: [], busyUserIds: [] },
+      StrictView: { freeUserIds: [], busyUserIds: [] },
+      FlexibleView: { freeUserIds: [], busyUserIds: [] },
+      LenientView: { freeUserIds: [], busyUserIds: [] },
     };
 
     for (const p of participants) {
       const userId = p.userId;
-      const merged = busyByUser.get(userId) || { B1: [], B2: [], B3: [] };
-      const idxs = idxByUser.get(userId) || { B1: 0, B2: 0, B3: 0 };
+      const merged = busyByUser.get(userId) || { StrictView: [], FlexibleView: [], LenientView: [] };
+      const idxs = idxByUser.get(userId) || { StrictView: 0, FlexibleView: 0, LenientView: 0 };
 
       const isBusyInView = (viewKey) => {
         const arr = merged[viewKey];
@@ -378,18 +381,18 @@ function computeAvailabilityBlocksAllViews({
         return overlaps(blockStart, blockEnd, it.startMs, it.endMs);
       };
 
-      const busyB1 = isBusyInView("B1");
-      const busyB2 = isBusyInView("B2");
-      const busyB3 = isBusyInView("B3");
+      const busyStrict = isBusyInView("StrictView");
+      const busyFlexible = isBusyInView("FlexibleView");
+      const busyLenient = isBusyInView("LenientView");
 
-      if (busyB1) acc.B1.busyUserIds.push(userId);
-      else acc.B1.freeUserIds.push(userId);
+      if (busyStrict) acc.StrictView.busyUserIds.push(userId);
+      else acc.StrictView.freeUserIds.push(userId);
 
-      if (busyB2) acc.B2.busyUserIds.push(userId);
-      else acc.B2.freeUserIds.push(userId);
+      if (busyFlexible) acc.FlexibleView.busyUserIds.push(userId);
+      else acc.FlexibleView.freeUserIds.push(userId);
 
-      if (busyB3) acc.B3.busyUserIds.push(userId);
-      else acc.B3.freeUserIds.push(userId);
+      if (busyLenient) acc.LenientView.busyUserIds.push(userId);
+      else acc.LenientView.freeUserIds.push(userId);
 
       idxByUser.set(userId, idxs);
     }
@@ -413,9 +416,9 @@ function computeAvailabilityBlocksAllViews({
       startMs: blockStart,
       endMs: blockEnd,
       views: {
-        B1: finalize("B1"),
-        B2: finalize("B2"),
-        B3: finalize("B3"),
+        StrictView: finalize("StrictView"),
+        FlexibleView: finalize("FlexibleView"),
+        LenientView: finalize("LenientView"),
       },
     });
   }
@@ -436,13 +439,13 @@ function computeAvailabilityBlocksAllViews({
  *
  * Input:
  *   - blocksMulti: AvailabilityBlockMulti[]
- *   - chosen: "B1" | "B2" | "B3" (defaults to B1 if invalid)
+ *   - chosen: "StrictView" | "FlexibleView" | "LenientView" (defaults to StrictView if invalid)
  *
  * Output:
  *   - AvailabilityBlock[] (exact same shape as computeAvailabilityBlocks)
  *
  * @param {AvailabilityBlockMulti[]} blocksMulti
- * @param {"B1"|"B2"|"B3"} chosen
+ * @param {"StrictView"|"FlexibleView"|"LenientView"} chosen
  * @returns {AvailabilityBlock[]}
  */
 function toSingleViewBlocks(blocksMulti, chosen) {
@@ -451,7 +454,7 @@ function toSingleViewBlocks(blocksMulti, chosen) {
   }
 
   // Defensive default: if chosen is wrong, go restrictive.
-  const key = blockingOrder[chosen] ? chosen : BlockingLevel.B1;
+  const key = blockingOrder[chosen] ? chosen : BlockingLevel.StrictView;
 
   return blocksMulti.map((b) => ({
     startMs: b.startMs,

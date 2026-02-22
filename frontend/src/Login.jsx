@@ -5,7 +5,9 @@ const BACKEND_URL = process.env.BACKEND_URL || ''; // Gemini assisted fix for lo
 export default function Login() {
     
     const handleLogin = () => {
-        window.location.href = `/auth/google`;
+        // fix localhost redirect issues with different frontend/backend ports
+        const baseURL = process.env.BACKEND_URL || '';
+        window.location.href = `${baseURL}/auth/google`;
     };
 
     return (

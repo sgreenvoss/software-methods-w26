@@ -34,6 +34,7 @@ const availabilityService = {
     }
 
     // 4. Ch. 7: MVC Separation - Delegate pure math to the Algorithm "Model"
+    console.log("DATA FED TO ALGORITHM:", JSON.stringify(participants, null, 2)); // Debug log to verify input format
     const blocks = computeAvailabilityBlocksAllViews({
       windowStartMs,
       windowEndMs,
@@ -45,7 +46,8 @@ const availabilityService = {
     const formattedBlocks = blocks.map(block => ({
       start: new Date(block.startMs).toISOString(),
       end: new Date(block.endMs).toISOString(),
-      count: block.views.B3
+      // Clarity 02-22 1.1: Using view names instead of B1/B2/B3 for clarity in the frontend
+      count: block.views.StrictView
     }));
     // Return the clean data to the controller
     return {
