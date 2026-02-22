@@ -31,11 +31,11 @@ export default function CustomCalendar({ groupId, draftEvent }) {
           const response = await apiGet(`/api/groups/${groupId}/availability?windowStartMs=${startMs}&windowEndMs=${endMs}&granularityMinutes=15`); // URL HARDCODED FOR G=15 FIXME 02-20 3.0
           
           // PROOF OF CONCEPT Console.log, idk why it isn't displaying) 02-20 2.1
-          console.log("RAW AVAILABILITY DATA:", response); // Testing why blank availability view: fix 02-20 2.2
-          if (response && response.ok && response.availability) {
+          console.log("RAW AVAILABILITY DATA:", response); // Changed to blocks rather than response.availability
+          if (response && response.ok && response.blocks) {
             // 2. Disguise the availability blocks as standard events for UI
             console.log("response is okay!");
-            const heatmapEvents = response.availability.map((block, i) => ({
+            const heatmapEvents = response.blocks.map((block, i) => ({
               title: `Avail: ${block.count}`,
               start: block.start,
               end: block.end,
