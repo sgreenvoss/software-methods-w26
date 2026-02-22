@@ -27,7 +27,7 @@ const availabilityController = {
       }
 
       const data = await availabilityService.getGroupAvailability(
-        groupId,
+        groupId.toString(),
         start,
         end
       );

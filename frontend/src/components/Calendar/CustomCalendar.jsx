@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { apiGet } from '../../api'; // Adjust path based on your folder structure
 import '../../css/calendar.css';
 
@@ -16,9 +16,14 @@ export default function CustomCalendar({ groupId, draftEvent }) {
   const [rawEvents, setRawEvents] = useState([]);
   const [loading, setLoading] = useState(true);
 
+  const renderCount = useRef(0);
+  renderCount.current++;
+  console.log("Render #", renderCount.current, "rawEvents length:", rawEvents.length);
+
   // --- ACTIONS (The "Controller" Logic) ---
   console.log("3. CustomCalendar received groupId prop:", groupId);
   useEffect(() => {
+    console.log("custom calendar use effect is being called now.");
     const fetchEvents = async () => {
       setLoading(true);
       try {
@@ -36,9 +41,9 @@ export default function CustomCalendar({ groupId, draftEvent }) {
             // 2. Disguise the availability blocks as standard events for UI
             console.log("response is okay!");
             const heatmapEvents = response.blocks.map((block, i) => ({
-              title: `Avail: ${block.count}`,
-              start: block.startMs,
-              end: block.endMs,
+              title: `Avail: ${block.count.availableCount}`,
+              start: block.start,
+              end: block.end,
               event_id: `avail-${i}`
             }));
             console.log("here are the heatmap events", heatmapEvents);
