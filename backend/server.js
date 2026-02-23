@@ -4,7 +4,7 @@ const { google } = require('googleapis');
 const crypto = require('crypto');
 const path = require("path");
 // Local imports for DB and email and groups
-const db = require("./db/index");
+const db = require("./db/dbInterface");
 const session = require('express-session');
 const url = require('url');
 const pgSession = require('connect-pg-simple')(session);
