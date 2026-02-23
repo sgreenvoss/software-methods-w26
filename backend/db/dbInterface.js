@@ -92,7 +92,7 @@ const getCalendarID = async(user_id) => {
     return result.rows[0];
 }
 
-const addEvents = async(cal_id, events, priority=1) => {
+const addEvents = async(cal_id, events, priority=3) => {
     for (let i = 0; i < events.length; i++) {
         // TODO: consider the logic for doing nothing -> might want to update instead? 
         // added event id to query, some function is server expected it
@@ -102,7 +102,7 @@ const addEvents = async(cal_id, events, priority=1) => {
             ON CONFLICT DO NOTHING`,
             [
                 cal_id,
-                priority, // for testing purposes
+                priority, // TODO: make this events[i].priority
                 events[i].start,
                 events[i].end,
                 events[i].title,
@@ -291,6 +291,8 @@ const checkUsernameExists = async(username) => {
     );
     return result.rows.length > 0; // returns true if exists
 }
+
+// STELLA TODO: changePriority
 
 module.exports = {
     pool,
