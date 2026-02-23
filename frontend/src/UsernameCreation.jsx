@@ -1,6 +1,5 @@
 import React, { useState, useEffect } from 'react';
 import { apiGet, apiPost } from './api.js';
-import './css/usernameCreation.css'
 
 export default function UsernameCreation() {
     const [username, setUsername] = useState('');
@@ -46,7 +45,7 @@ export default function UsernameCreation() {
                 <button type="submit">Submit</button>
             </label>
             {errors && errors.map((err, idx) => (
-                <p id='error' key={idx}>{err}</p>
+                <p key={idx} style={{color: 'red'}}>{err}</p>
             ))}
         </form>
         <ul>

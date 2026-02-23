@@ -118,15 +118,15 @@ app.post('/api/create-username', async (req, res) => {
 
   const errs = [];
   const usernameSize = /^.{4,16}$/;
-  const usernameSymbols = /^[a-zA-Z0-9_.]+$/
+  const usernameSymbols = /^.[a-zA-Z0-9_.]+$/
   if (!usernameSize.test(username)) {
     errs.push('Username must be between 4-16 characters' );
   }
   if (!usernameSymbols.test(username)) {
     errs.push('Username must only contain alphabetic letters, digits, and \'_\' and \'.\'');
   }
-  if (errs.length > 0) {
-    return res.json({ sucess: false, errors: errs })
+  if (errs > 0) {
+    res.json({ sucesss: false, errors: errs })
   }
 
   // ensure username is unique
