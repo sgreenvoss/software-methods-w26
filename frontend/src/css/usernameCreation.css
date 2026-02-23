@@ -1,0 +1,18 @@
+body {
+  font-family: 'Courier New', Courier, monospace;
+  background-color: #f4f5f7;
+  display: flex;
+}
+
+header {
+  display: flex;
+  justify-content: center; 
+  align-items: center;
+  gap: 20px;   
+}
+
+#error {
+    display: flex;
+    background-color: palegoldenrod;
+    color:red;
+}
