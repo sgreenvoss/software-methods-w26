@@ -112,6 +112,24 @@ const addEvents = async(cal_id, events, priority=1) => {
     };
 }
 
+/**
+ * This takes the calendar id and deletes the events
+ * under that calendar id that ended a week ago or more
+ * @param {*} cal_id 
+ */
+const cleanEvents = async(cal_id) => {
+    const week_ago = await pool.query(`SELECT NOW() - INTERVAL '1 week';`);
+    await pool.query(
+        `DELETE FROM cal_event 
+        WHERE calendar_id = ($1) 
+        AND event_end < ($2)`,
+        [   
+            cal_id,
+            week_ago
+        ]
+    );
+}
+
 const getUserByID = async(user_id) => {
     const result = await pool.query(
         `SELECT user_id, username, email, first_name, last_name, google_id, refresh_token, access_token, token_expiry 
@@ -293,5 +311,6 @@ module.exports = {
     leaveGroup,
     updateUsername,
     checkUsernameExists,
-    isUserInGroup
+    isUserInGroup,
+    cleanEvents
 }
