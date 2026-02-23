@@ -3,6 +3,8 @@ import { apiGet } from './api.js';
 import Login from './Login.jsx';
 import Main from './Main.jsx';
 import UsernameCreation from './UsernameCreation.jsx';
+import InviteHandler from './components/Groups/InviteHandler.jsx';
+
 
 // determines which page to serve
 export default function App() {

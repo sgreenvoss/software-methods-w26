@@ -1,5 +1,4 @@
 import React, { useState, useEffect } from 'react';
-import React, { useState, useEffect } from 'react';
 import { apiPost } from '../../api.js'; // Adjust path if needed based on your folder structure
 import '../../css/groupsModal.css';
 import '../../css/groups.css';
@@ -136,9 +135,6 @@ export default function GroupCreatorModal({ onClose, onGroupCreated }) {
                         ))}
                     </div>
 
-                    <button className="add-slot-btn" onClick={addUserSlot}>
-                        + Add another user
-                    </button>
                     <button className="add-slot-btn" onClick={addUserSlot}>
                         + Add another user
                     </button>

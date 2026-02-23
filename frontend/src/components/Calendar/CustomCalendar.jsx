@@ -47,7 +47,18 @@ export default function CustomCalendar({ groupId, draftEvent }) {
         } else {
           // Default: Fetch personal events
           const personalEvents = await apiGet('/api/events');
-          setRawEvents(personalEvents || []);
+          if (Array.isArray(personalEvents)) {
+            setRawEvents(personalEvents);
+          }
+          else if (personalEvents && personalEvents.error) {
+            console.warn("Backend rejected token:", personalEvents.error);
+            setRawEvents([]);
+            window.location.href = '/login'; // IDK
+          }
+          else {
+            console.warn("Unexpected data format for personal events recieved from api/events", personalEvents);
+            setRawEvents([]);
+          }
         }
       } catch (error) {
         console.error('Failed to fetch calendar events:', error);
@@ -165,6 +176,7 @@ export default function CustomCalendar({ groupId, draftEvent }) {
 // --- KEEP YOUR PROCESSING FUNCTIONS OUTSIDE THE COMPONENT ---
 // This keeps the "Business Logic" separate from the "View"
 function processEvents(rawEvents) {
+  if (!Array.isArray(rawEvents)) return [];
   const processed = [];
   rawEvents.forEach(event => {
     let start = parseLocal(event.start);

@@ -1,11 +1,11 @@
 import React, { useState } from 'react';
 import './css/login.css';
-const BACKEND_URL = process.env.BACKEND_URL || ''; // Gemini assisted fix for local deployment
 // handles login
 export default function Login() {
     
     const handleLogin = () => {
-        window.location.href = `/auth/google`;
+      const back_url = process.env.REACT_APP_BACKEND_URL || '';
+      window.location.href = `${back_url}/auth/google`;
     };
 
     return (

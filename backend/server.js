@@ -21,9 +21,9 @@ require('dotenv').config({
 console.log("Database URL Check:", process.env.DATABASE_URL ? "Found it!" : "It is UNDEFINED");
 
 console.log("ENV:", process.env.NODE_ENV);
-console.log("Frontend URL:", process.env.FRONTEND_URL);
+console.log("Frontend URL:", process.env.REACT_APP_FRONTEND_URL);
 
-const frontend = process.env.FRONTEND_URL;
+const frontend = process.env.REACT_APP_FRONTEND_URL || 'http://localhost:3000'; // Default to localhost if not set
 const app = express();
 const isProduction = process.env.NODE_ENV === 'production';
 
@@ -167,24 +167,45 @@ app.get('/health', (req, res) => {
 });
 
 app.get('/auth/google', async (req, res) => {
-// Generate a secure random state value.
+  console.log("\n--- STARTING OAUTH FLOW ---");
+  console.log("1. Reached /auth/google");
+  
+  try {
+    const state = crypto.randomBytes(32).toString('hex');
+    console.log("2. Generated state:", state);
+    
+    if (req.session) {
+      req.session.state = state;
+      console.log("3. Attempting to save session to DB...");
+      
+      await new Promise((resolve) => {
+        req.session.save((err) => {
+          if (err) console.error("Session Save Error pre-OAuth:", err);
+          console.log("4. Session saved successfully!");
+          resolve(); 
+        });
+      });
+    } else {
+      console.log("3. WARNING: No req.session found!");
+    }
 
-  const state = crypto.randomBytes(32).toString('hex');
-  // Store state in the session
-  req.session.state = state;
+    console.log("5. Generating Auth URL...");
+    const authorizationUrl = oauth2Client.generateAuthUrl({
+      access_type: 'offline',
+      scope: scopes, // Ensure 'scopes' is defined higher up in your file!
+      include_granted_scopes: true,
+      state: state,
+      prompt: 'consent'
+    });
+    
+    console.log("6. Sending Redirect command to Browser...");
+    res.redirect(authorizationUrl);
+    console.log("--- FINISHED OAUTH FLOW (Waiting on Google) ---\n");
 
-  const authorizationUrl = oauth2Client.generateAuthUrl({
-    access_type: 'offline',
-    prompt: 'consent',
-    scope: scopes,
-    // Enable incremental authorization. Recommended as a best practice.
-    include_granted_scopes: true,
-    // Include the state parameter to reduce the risk of CSRF attacks.
-    state: state,
-    // Include consent to force refresh token
-    prompt: 'consent'
-  });
-  res.redirect(authorizationUrl);
+  } catch (error) {
+    console.error("CRASH IN /AUTH/GOOGLE:", error);
+    res.status(500).send("Error generating auth URL");
+  }
 });
 
 app.get('/oauth2callback', async (req, res) => {
@@ -245,7 +266,7 @@ app.get('/oauth2callback', async (req, res) => {
     // Add a small delay to ensure DB write completes
     await new Promise(resolve => setTimeout(resolve, 100));
     console.log('session saved, redirecting.');
-    res.redirect("/");
+    res.redirect("frontend" + '/'); // Redirect to frontend home page after successful login  
 
   } catch (authErr) {
     console.log("authorization error: ", authErr);
@@ -262,7 +283,7 @@ app.get('/test-session', (req, res) => {
   });
 });
 
-async function ensureValidToken(req) {
+async function ensureValidToken(req, res) {
   const user = await db.getUserByID(req.session.userId);
   
   if (!user || !user.access_token) {
@@ -294,22 +315,42 @@ async function ensureValidToken(req) {
       expiry_date: expiryDate
     });
 
-    const { credentials } = await oauth2Client.refreshAccessToken();
-    
-    // Update DB with new tokens
-    await db.updateTokens(
-        req.session.userId, 
-        credentials.access_token, 
+    try {
+      // Attempt to refresh the token
+      const { credentials } = await oauth2Client.getAccessToken(); // This will trigger a refresh if needed
+      await db.updateTokens(
+        req.session.userId,
+        credentials.access_token,
         credentials.expiry_date
-    );
-    console.log("Tokens refreshed successfully.");
+      );
+      console.log("Token refreshed successfully.");
+      // Update client credentials with new ones
+      oauth2Client.setCredentials({credentials});
+      return true; // Indicate successful refresh for route
+
+    } catch (errRefresh) {
+        if (errRefresh.response && errRefresh.response.data && errRefresh.response.data.error === 'invalid_grant') {
+          console.warn("Google Refresh Token expired for user. Forcing re-authentication.", errRefresh);
+          // Destroy user's session so frontend knkows they are logged out
+          req.session.destroy((err) => {
+            if (err) console.error("Could not destroy session after refresh failure:", err);
+            return res.status(401).json({ error: "Session expired.  Please log in again." });
+          });
+          return false; // Stop execution don't keep trying to fetch events.
+        }
+        // If it is a different error, throw standard 500 error
+        console.error("Failed to fetch Google API data:", errRefresh);
+        res.status(500).json({ error: "Internal Server Error" });
+        return false;
+    }
   } else {
-    // Token is still valid, just set credentials so the next call works
+    // Token is still valid, just set credentials so next call works
     oauth2Client.setCredentials({
       refresh_token: user.refresh_token,
       access_token: user.access_token,
       expiry_date: expiryDate
     });
+    return true; // Token is valid, proceed with route
   }
 }
 
@@ -320,7 +361,25 @@ app.get("/api/events", async (req, res) => {
   console.log('Session data:', req.session);
   console.log('userid:', req.session.userId);
   console.log('isAuthenticated:', req.session.isAuthenticated);
-  await ensureValidToken(req);
+  try {
+    const isValid = await ensureValidToken(req, res);
+    if (!isValid) return;
+  } catch (tokenErr) {
+      // Check if google is token is dead or not (no expiration crashing backend)
+      if (tokenErr.response && tokenErr.response.data && tokenErr.response.data.error === 'invalid_grant') {
+        console.error("Refresh Token Expired. Forcing re-authentication.");
+
+        // Clear token from DB
+        await db.updateTokens(req.session.userId, null, null);
+
+        // Tell react user needs to log in again
+        return res.status(401).json({ error: "Session expired.  Please log in with Google Again." });
+      }
+      // If it's a different error log it
+      console.error("Failed to fetch events:", tokenErr);
+      return res.status(500).json({ error: "Internal Server Error" });
+  }
+  
   // Check if user is logged in
   if (!req.session.userId || !req.session.isAuthenticated) {
     return res.status(401).json({ error: "User not authenticated" });
