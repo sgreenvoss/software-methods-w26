@@ -209,6 +209,16 @@ app.get('/oauth2callback', async (req, res) => {
 
     console.log("expiry date is", tokens.expiry_date);
 
+    const calendar = google.calendar({ version: 'v3', auth: oauth2Client });
+    try {
+      await calendar.calendarList.list({ maxResults: 1 });
+    } catch (error) {
+      if (error.code === 403 || error.code === 401) {
+        return res.redirect('/login?error=calendar_permissions_required');
+      }
+      throw error;
+    }
+
     // need to include groups ids
     const userId = await db.insertUpdateUser(
       userInfo.id,
