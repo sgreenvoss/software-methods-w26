@@ -6,7 +6,7 @@
 
 const { fetchAndMapGroupEvents } = require('./algorithm/algorithm_adapter');
 const { computeAvailabilityBlocksAllViews } = require('./algorithm/algorithm');
-const db = require('./db/index.js');
+const db = require('./db/dbInterface.js');
 
 /**
  * High-level service to get group availability heatmap data.
