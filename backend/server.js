@@ -355,7 +355,7 @@ app.get("/api/events", async (req, res) => {
     const calendar = google.calendar({ version: 'v3', auth: oauth2Client });
     const calendarStart = new Date();
 
-    calendarStart.setDate(calendarStart.getDate() - 14);
+    calendarStart.setDate(calendarStart.getDate());
 
     const response = await calendar.events.list({
       calendarId: 'primary',
