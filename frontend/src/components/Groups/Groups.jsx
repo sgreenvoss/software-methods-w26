@@ -4,7 +4,7 @@ import GroupCreatorModal from './GroupCreator.jsx';
 import '../../css/groups.css';
 import '../../css/groupsModal.css';
 
-export default function Groups( {onSelectGroup} ) {
+export default function Groups( {onSelectGroup, refreshSignal = 0} ) {
     const [groups, setGroups] = useState([]);
     const [showModal, setShowModal] = useState(false);
     const [loading, setLoading] = useState(true);
@@ -27,10 +27,10 @@ export default function Groups( {onSelectGroup} ) {
         }
     };
 
-    // Load groups when component mounts
+    // Load groups when component mounts and when parent asks for a refresh.
     useEffect(() => {
         fetchGroups();
-    }, []);
+    }, [refreshSignal]);
 
     const handleLeaveGroup = async (groupId) => {
         console.log("leaving group", groupId);

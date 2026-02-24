@@ -3,6 +3,7 @@ const cors = require('cors'); // gemini assisted fix for CORS issues
 const { google } = require('googleapis');
 const crypto = require('crypto');
 const path = require("path");
+const cookieParser = require("cookie-parser");
 // Local imports for DB and email and groups
 const db = require("./db/dbInterface");
 const session = require('express-session');
@@ -35,6 +36,7 @@ if (!isProduction) {
 }
 
 app.use(express.json());
+app.use(cookieParser(process.env.SESSION_SECRET));
 app.set('trust proxy', 1); // must be set to allow render to work.
 
 // creates a session, store in the "session" table in the db
@@ -247,11 +249,6 @@ app.get('/oauth2callback', async (req, res) => {
       });
     });
 
-    // if there is a group token in the session, we should finish adding the user
-    // to their group.
-    if (req.session.pendingGroupToken) {
-      await groupModule.resolveGroupInvite(req);
-    }
     // Add a small delay to ensure DB write completes
     await new Promise(resolve => setTimeout(resolve, 100));
     console.log('session saved, redirecting.');
@@ -493,5 +490,4 @@ app.get('*', (req, res) => {
 app.listen(PORT, async () => {
   console.log(`Server running on port ${PORT}`);
 });
-
 
