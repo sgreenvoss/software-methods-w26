@@ -21,9 +21,9 @@ require('dotenv').config({
 console.log("Database URL Check:", process.env.DATABASE_URL ? "Found it!" : "It is UNDEFINED");
 
 console.log("ENV:", process.env.NODE_ENV);
-console.log("Frontend URL:", process.env.REACT_APP_FRONTEND_URL);
+console.log("Frontend URL:", process.env.FRONTEND_URL);
 
-const frontend = process.env.REACT_APP_FRONTEND_URL || 'http://localhost:3000'; // Default to localhost if not set
+const frontend = process.env.FRONTEND_URL;
 const app = express();
 const isProduction = process.env.NODE_ENV === 'production';
 
@@ -167,45 +167,24 @@ app.get('/health', (req, res) => {
 });
 
 app.get('/auth/google', async (req, res) => {
-  console.log("\n--- STARTING OAUTH FLOW ---");
-  console.log("1. Reached /auth/google");
-  
-  try {
-    const state = crypto.randomBytes(32).toString('hex');
-    console.log("2. Generated state:", state);
-    
-    if (req.session) {
-      req.session.state = state;
-      console.log("3. Attempting to save session to DB...");
-      
-      await new Promise((resolve) => {
-        req.session.save((err) => {
-          if (err) console.error("Session Save Error pre-OAuth:", err);
-          console.log("4. Session saved successfully!");
-          resolve(); 
-        });
-      });
-    } else {
-      console.log("3. WARNING: No req.session found!");
-    }
+// Generate a secure random state value.
 
-    console.log("5. Generating Auth URL...");
-    const authorizationUrl = oauth2Client.generateAuthUrl({
-      access_type: 'offline',
-      scope: scopes, // Ensure 'scopes' is defined higher up in your file!
-      include_granted_scopes: true,
-      state: state,
-      prompt: 'consent'
-    });
-    
-    console.log("6. Sending Redirect command to Browser...");
-    res.redirect(authorizationUrl);
-    console.log("--- FINISHED OAUTH FLOW (Waiting on Google) ---\n");
+  const state = crypto.randomBytes(32).toString('hex');
+  // Store state in the session
+  req.session.state = state;
 
-  } catch (error) {
-    console.error("CRASH IN /AUTH/GOOGLE:", error);
-    res.status(500).send("Error generating auth URL");
-  }
+  const authorizationUrl = oauth2Client.generateAuthUrl({
+    access_type: 'offline',
+    prompt: 'consent',
+    scope: scopes,
+    // Enable incremental authorization. Recommended as a best practice.
+    include_granted_scopes: true,
+    // Include the state parameter to reduce the risk of CSRF attacks.
+    state: state,
+    // Include consent to force refresh token
+    prompt: 'consent'
+  });
+  res.redirect(authorizationUrl);
 });
 
 app.get('/oauth2callback', async (req, res) => {

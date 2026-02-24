@@ -89,10 +89,9 @@ module.exports = function(app) {
         // generate invitation link with group id to display on frontend
         const date = Date.now() + 24 * 60 * 60 * 1000;
         const token = inviteToken.createInviteToken({groupId, expiresAtMs: date});
-        const baseUrl = process.env.REACT_APP_FRONTEND_URL || 'http://localhost:3000';
-        const fullInviteLink = `${baseUrl}/group/respond-invitation?q=${token}`;
-        console.log("shareable link:", fullInviteLink);
-        return res.status(201).json({invite: fullInviteLink});
+        let url = process.env.FRONTEND_URL + `/group/respond-invitation?q=${token}`;        
+        console.log("shareable link:", url);
+        return res.status(201).json({invite: url});
       } else {
         return res.status(401).json({error: "User is not a member of that group."});
       }

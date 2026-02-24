@@ -4,8 +4,7 @@ import './css/login.css';
 export default function Login() {
     
     const handleLogin = () => {
-      const back_url = process.env.REACT_APP_BACKEND_URL || '';
-      window.location.href = `${back_url}/auth/google`;
+        window.location.href = `/auth/google`;
     };
 
     return (
