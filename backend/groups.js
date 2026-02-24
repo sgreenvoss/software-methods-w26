@@ -156,4 +156,13 @@ module.exports = function(app) {
       return res.status(400).json({error: "something went wrong leaving group."});
     }
   });
+
+  app.get('/api/groups/join', async (req, res) => {
+    try {
+      // 1. Validate token structure/HMAC immediately
+      const decoded = inviteToken.verivy
+    }
+  });
 }
+
+
