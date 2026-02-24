@@ -360,7 +360,7 @@ app.get("/api/events", async (req, res) => {
     const response = await calendar.events.list({
       calendarId: 'primary',
       timeMin: calendarStart.toISOString(), // From now onwards
-      maxResults: 50,
+      maxResults: 250,
       singleEvents: true, 
       orderBy: 'startTime',
     });
@@ -387,9 +387,26 @@ app.get("/api/events", async (req, res) => {
     try {
       await db.addCalendar(req.session.userId, calendar.summary);
       const calID = await db.getCalendarID(req.session.userId);
-      console.log("calendar id is", calID);
-      db.addEvents(calID.calendar_id, formattedEvents)
-        .catch(err => console.error("events insert failed", err));
+
+      // grab existing events in calendar from db
+      const existingEvents = await db.getEventsByCalendarID(calID.calendar_id);
+
+      // check if there are new events
+      const existingEventIds = new Set(existingEvents.map(event => event.gcal_event_id));
+      const newEvents = formattedEvents.filter(event => !existingEventIds.has(event.event_id));
+      console.log("new events:", newEvents);
+
+      // check if there are deleted events
+      const googleEventIds = new Set(formattedEvents.map(event => event.event_id));
+      const deletedEvents = existingEvents.filter(event => !googleEventIds.has(event.gcal_event_id));
+      console.log("deleted events:", deletedEvents);
+
+      // check if there are modified events
+
+
+      // update the calendar in the database
+      await db.addEvents(calID.calendar_id, formattedEvents);
+      await db.cleanEvents(calID.calendar_id);
     } catch(error) {
       console.error('error storing: ', error);
     }

@@ -118,7 +118,7 @@ const addEvents = async(cal_id, events, priority=1) => {
  * @param {*} cal_id 
  */
 const cleanEvents = async(cal_id) => {
-    const week_ago = await pool.query(`SELECT NOW() - INTERVAL '1 week';`);
+    const week_ago = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000);
     await pool.query(
         `DELETE FROM cal_event 
         WHERE calendar_id = ($1) 
@@ -128,6 +128,16 @@ const cleanEvents = async(cal_id) => {
             week_ago
         ]
     );
+}
+
+const getEventsByCalendarID = async(cal_id) => {
+    const result = await pool.query(
+        `SELECT * FROM cal_event
+        WHERE calendar_id = $1
+        ORDER BY event_start ASC`,
+        [cal_id]
+    );
+    return result.rows;
 }
 
 const getUserByID = async(user_id) => {
@@ -303,6 +313,7 @@ module.exports = {
     searchFor,
     addCalendar,
     addEvents,
+    getEventsByCalendarID,
     getCalendarID,
     updateTokens,
     createGroup,
