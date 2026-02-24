@@ -394,19 +394,63 @@ app.get("/api/events", async (req, res) => {
       // check if there are new events
       const existingEventIds = new Set(existingEvents.map(event => event.gcal_event_id));
       const newEvents = formattedEvents.filter(event => !existingEventIds.has(event.event_id));
-      console.log("new events:", newEvents);
 
       // check if there are deleted events
       const googleEventIds = new Set(formattedEvents.map(event => event.event_id));
       const deletedEvents = existingEvents.filter(event => !googleEventIds.has(event.gcal_event_id));
-      console.log("deleted events:", deletedEvents);
 
-      // check if there are modified events
+      // check if there are modified events (time and name only)
+      const modifiedEvents = [];
+      for (const existingEvent of existingEvents) {
+        const googleEvent = formattedEvents.find(event => event.event_id === existingEvent.gcal_event_id);
+        
+        if (googleEvent) {
+          // Compare key properties that might have changed
+          const existingStart = new Date(existingEvent.start_time).getTime();
+          const existingEnd = new Date(existingEvent.end_time).getTime();
+          const googleStart = new Date(googleEvent.start).getTime();
+          const googleEnd = new Date(googleEvent.end).getTime();
+          
+          // Check if duration changed or times changed
+          const existingDuration = existingEnd - existingStart;
+          const googleDuration = googleEnd - googleStart;
+          
+          if (existingDuration !== googleDuration || 
+              existingStart !== googleStart || 
+              existingEnd !== googleEnd ||
+              existingEvent.title !== googleEvent.title) {
+            modifiedEvents.push({
+              id: existingEvent.gcal_event_id,
+              oldEvent: existingEvent,
+              newEvent: googleEvent,
+              durationChanged: existingDuration !== googleDuration
+            });
+          }
+        }
+    }
 
+    // update the calendar in the database
+    // clean the old events (> 7 days)
+    await db.cleanEvents(calID.calendar_id);
 
-      // update the calendar in the database
-      await db.addEvents(calID.calendar_id, formattedEvents);
-      await db.cleanEvents(calID.calendar_id);
+    // add new events to db
+    if (newEvents.length > 0) {
+      await db.addEvents(calID.calendar_id, newEvents);
+    }
+
+    // remove events deleted in google calendar
+    if (deletedEvents.length > 0) {
+      const deletedEventIds = deletedEvents.map(event => event.gcal_event_id);
+      await db.deleteEventsByIds(calID.calendar_id, deletedEventIds);
+    }
+
+    // update modified events (only time and name)
+    if (modifiedEvents.length > 0) {
+      for (const mod of modifiedEvents) {
+        await db.updateEvent(calID.calendar_id, mod.id, mod.newEvent);
+      }
+    }
+
     } catch(error) {
       console.error('error storing: ', error);
     }
