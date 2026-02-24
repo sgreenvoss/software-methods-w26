@@ -41,15 +41,20 @@ module.exports = function(app) {
       if (!req.session.userId || !req.session.isAuthenticated) {
         return res.status(401).json({ error: "Unauthorized" });
       }
-      const {group_name} = req.query;
-      console.log("group name is ", group_name);
-      // store group id in database with creator's user id
-      const group_id = await db.createGroup(group_name); //await createGroupId();
-      await db.addUserToGroup(group_id, req.session.userId);
+      const groupName = typeof req.query.group_name === "string"
+        ? req.query.group_name.trim()
+        : "";
+      if (!groupName) {
+        return res.status(400).json({ success: false, error: "group_name is required" });
+      }
+
+      // store group + creator membership in a single transaction
+      const group_id = await db.createGroupWithCreator(groupName, req.session.userId);
       return res.status(201).json({
         success: true,
         groupId: group_id,
-        groupName: group_name
+        groupName,
+        membershipAdded: true
       });
     } catch(error) {
       console.error("error creating group: ", error);
@@ -159,9 +164,12 @@ module.exports = function(app) {
   app.get('/api/groups/join', async (req, res) => {
     try {
       // 1. Validate token structure/HMAC immediately
-      const decoded = inviteToken.verivy
+      const decoded = inviteToken.verifyInviteToken(req.query.token); // Fix 'verivy' typo
+      // Add your implementation here...
+      return res.status(200).json({ success: true, decoded });
+    } 
+    catch (error) {
+      return res.status(500).json({ error: "Failed to join group" });
     }
   });
 }
-
-

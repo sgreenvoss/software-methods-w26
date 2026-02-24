@@ -1,18 +1,21 @@
 import React, { useState, useEffect } from 'react';
-import { apiPost } from '../../api.js'; // Adjust path if needed based on your folder structure
+import { apiPost, apiPostWithMeta } from '../../api.js';
 import '../../css/groupsModal.css';
 import '../../css/groups.css';
 
 
-export default function GroupCreatorModal({ onClose, onGroupCreated }) {
+export default function GroupCreatorModal({ onClose, onGroupCreated, onDone }) {
     const [groupName, setGroupName] = useState('');
     // Initialize with one empty string to mimic "addUserRow()" running once at start
     const [usernames, setUsernames] = useState(['']); 
 
     // =============================================================================
     // GrInv: 1.0 Implementing Structural framework for groupInvite, (think this is the right startingpoint)
+    const [groupCreated, setGroupCreated] = useState(false);
     const [inviteLink, setInviteLink] = useState("");
     const [copyStatus, setCopyStatus] = useState("idle"); // "idle", "success", "error"
+    const [createError, setCreateError] = useState("");
+    const [inviteError, setInviteError] = useState("");
 
     useEffect(() => {
         let timeoutId;
@@ -28,6 +31,11 @@ export default function GroupCreatorModal({ onClose, onGroupCreated }) {
 
     // async ClipBoard Function
     const handleCopyClick = async () => {
+        if (!inviteLink) {
+            setCopyStatus("error");
+            return;
+        }
+
         setCopyStatus("copying");
         try {
             await navigator.clipboard.writeText(inviteLink);
@@ -55,21 +63,29 @@ export default function GroupCreatorModal({ onClose, onGroupCreated }) {
     };
 
     const handleCreate = async () => {
+        setCreateError("");
+        setInviteError("");
+        setCopyStatus("idle");
+
         if (!groupName.trim()) {
-            alert("Please enter a group name.");
+            setCreateError("Please enter a group name.");
             return;
         }
-        const validUsernames = usernames
-            .map(u => u.trim())
-            .filter(u => u !== "");
-        try {
-            // 1. Create the Group
-            // Using encodeURIComponent just like the legacy code
-            const creationResponse = await apiPost(`/group/creation?group_name=${encodeURIComponent(groupName)}`, {});
 
-            if (creationResponse.success && creationResponse.groupId) {
+        try {
+            const creationMeta = await apiPostWithMeta(`/group/creation?group_name=${encodeURIComponent(groupName)}`, {});
+            const creationResponse = creationMeta.data;
+
+            if (creationMeta.status === 201 && creationResponse?.success && creationResponse?.groupId) {
                 const newGroupId = creationResponse.groupId;
                 console.log("Group created! ID:", newGroupId);
+                setGroupCreated(true);
+                setInviteLink("");
+                setCreateError("");
+                setInviteError("");
+                if (typeof onGroupCreated === "function") {
+                    onGroupCreated();
+                }
 
                 // ---- GrInv: 1.1 Matching backend structure before changing it ----
                 try {
@@ -80,18 +96,24 @@ export default function GroupCreatorModal({ onClose, onGroupCreated }) {
                     if (inviteResponse.invite) {
                         // Update the state with the real url
                         setInviteLink(inviteResponse.invite);
+                        setInviteError("");
+                    } else {
+                        setInviteError("Group created, but invite link was not returned.");
                     }
                 } catch(inviteErr) {
                     console.error("Failed to fetch invite link:", inviteErr);
-                    // still set it
-                    setInviteLink("Error generating link. Please try again.");
+                    setInviteError("Group created, but invite link generation failed.");
                 }
-                // Still no call to onGroupCreated() here,
-                // so that modal stays OPEN for them to COPY LINK
+            } else {
+                setGroupCreated(false);
+                setInviteLink("");
+                setCreateError(creationResponse?.error || "Failed to create group.");
             }
         } catch (err) {
-        console.error(err);
-        alert("Failed to create group. Check console.");
+            console.error(err);
+            setGroupCreated(false);
+            setInviteLink("");
+            setCreateError("Failed to create group. Check console.");
         }
     };
 
@@ -100,7 +122,7 @@ export default function GroupCreatorModal({ onClose, onGroupCreated }) {
             <div className="modal-content">
                 {/* ----- GrInv: 1.0 Conditional Rendering for Invite Link Generation ----- */}
 
-                {!inviteLink ? (
+                {!groupCreated ? (
                     <>
                         {/* ---- ORIGINAL VIEW: Group Creation Form (Unchanged) ----- */}      
                     <h2>Create New Group</h2>
@@ -139,6 +161,12 @@ export default function GroupCreatorModal({ onClose, onGroupCreated }) {
                         + Add another user
                     </button>
 
+                    {createError && (
+                        <p style={{ color: 'red', fontSize: '0.85rem', marginTop: '12px' }}>
+                            {createError}
+                        </p>
+                    )}
+
                     <div className="modal-actions">
                         <button onClick={onClose}>Cancel</button>
                         <button className="primary-btn" onClick={handleCreate}>
@@ -156,17 +184,24 @@ export default function GroupCreatorModal({ onClose, onGroupCreated }) {
                         <input
                             type="text"
                             value={inviteLink}
+                            placeholder={inviteError ? "Invite link unavailable." : ""}
                             readOnly
                             style={{ flex: 1, padding: '8px' }}
                         />
                         <button
                             onClick={handleCopyClick}
-                            disabled={copyStatus === 'copying'}
+                            disabled={!inviteLink || copyStatus === 'copying'}
                         >
                             {copyStatus === 'success' ? 'Copied!' : 
                             copyStatus === 'error' ? 'Error' : 'Copy'}
                         </button>
                     </div>
+
+                    {inviteError && (
+                        <p style={{ color: 'red', fontSize: '0.85rem' }}>
+                            {inviteError}
+                        </p>
+                    )}
 
                     {copyStatus === 'error' && (
                         <p style={{ color: 'red', fontSize: '0.85rem' }}>
@@ -175,8 +210,8 @@ export default function GroupCreatorModal({ onClose, onGroupCreated }) {
                     )}
 
                     <div className="modal-actions">
-                        {/* Closing the modal and triggering a parent refresh */}
-                        <button className="primary-btn" onClick={() => onGroupCreated()}>
+                        {/* Closing the modal only. Group list refresh already happened on 201 success. */}
+                        <button className="primary-btn" onClick={() => (onDone ? onDone() : onClose())}>
                             Done
                         </button>
                     </div>

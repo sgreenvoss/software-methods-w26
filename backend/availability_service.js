@@ -41,20 +41,27 @@ const availabilityService = {
       participants,
       granularityMinutes: 15
     });
-    // FIX ATTEMPT: Match input contract for CustomCalendarView
     // CustomCalendar expects: {start, end, count}
-    const formattedBlocks = blocks.map(block => ({
-      start: new Date(block.startMs).toISOString(),
-      end: new Date(block.endMs).toISOString(),
-      // Clarity 02-22 1.1: Using view names instead of B1/B2/B3 for clarity in the frontend
-      count: block.views.StrictView
-    }));
+    const formattedBlocks = blocks.map((block) => {
+      // Keep strict-view mapping as the default UI projection.
+      // The algorithm already computes counts; we just reshape them.
+      // No algorithm contract changes needed here.
+      const strictView = block.views && block.views.StrictView ? block.views.StrictView : {};
+      return {
+        start: new Date(block.startMs).toISOString(),
+        end: new Date(block.endMs).toISOString(),
+        count: Number.isFinite(strictView.availableCount) ? strictView.availableCount : 0,
+        availabilityFraction: Number.isFinite(strictView.availabilityFraction) ? strictView.availabilityFraction : 0,
+        totalCount: Number.isFinite(strictView.totalCount) ? strictView.totalCount : 0
+      };
+    });
     // Return the clean data to the controller
     return {
       groupId,
       windowStartMs,
       windowEndMs,
-      blocks : formattedBlocks
+      availability: formattedBlocks,
+      blocks: formattedBlocks // temporary alias for compatibility during transition
     };
   }
 };

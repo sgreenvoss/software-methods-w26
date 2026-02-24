@@ -11,13 +11,17 @@ export default function Groups( {onSelectGroup} ) {
 
     // Function to fetch groups (replaces the initial apiGet)
     const fetchGroups = async () => {
+        setLoading(true);
         try {
             const response = await apiGet('/user/groups');
             if (response && response.groups) {
                 setGroups(response.groups);
+            } else {
+                setGroups([]);
             }
         } catch (error) {
             console.error("Failed to fetch groups", error);
+            setGroups([]);
         } finally {
             setLoading(false);
         }
@@ -40,8 +44,12 @@ export default function Groups( {onSelectGroup} ) {
     };
 
     const handleCreateSuccess = () => {
+        // Refresh immediately after create success; modal remains open for invite sharing.
+        fetchGroups();
+    };
+
+    const handleModalDone = () => {
         setShowModal(false);
-        fetchGroups(); // Re-fetch list to show the new group
     };
 
     return (
@@ -92,7 +100,8 @@ export default function Groups( {onSelectGroup} ) {
             {showModal && (
                 <GroupCreatorModal 
                     onClose={() => setShowModal(false)} 
-                    onGroupCreated={handleCreateSuccess} 
+                    onGroupCreated={handleCreateSuccess}
+                    onDone={handleModalDone}
                 />
             )}
         </section>

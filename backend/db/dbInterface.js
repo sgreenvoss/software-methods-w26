@@ -207,6 +207,45 @@ const createGroup = async(g_name) => {
     return result.rows[0].group_id; // Garertt changed this line
 }
 
+/**
+ * Atomically create a group and attach the creator as a member.
+ * @param {string} g_name
+ * @param {bigint|string|number} creator_user_id
+ * @returns {Promise<bigint>}
+ */
+const createGroupWithCreator = async(g_name, creator_user_id) => {
+    const client = await pool.connect();
+    try {
+        await client.query("BEGIN");
+
+        const groupResult = await client.query(
+            `INSERT INTO f_group (group_name)
+             VALUES ($1)
+             RETURNING group_id`,
+            [g_name]
+        );
+        const groupId = groupResult.rows[0].group_id;
+
+        await client.query(
+            `INSERT INTO group_match (group_id, user_id)
+             VALUES ($1, $2)`,
+            [groupId, creator_user_id]
+        );
+
+        await client.query("COMMIT");
+        return groupId;
+    } catch (error) {
+        try {
+            await client.query("ROLLBACK");
+        } catch (rollbackError) {
+            console.error("rollback failed while creating group transaction", rollbackError);
+        }
+        throw error;
+    } finally {
+        client.release();
+    }
+}
+
 const addUserToGroup = async(group_id, user_id) => {
     const query = `
         INSERT INTO group_match (group_id, user_id)
@@ -308,6 +347,7 @@ module.exports = {
     getCalendarID,
     updateTokens,
     createGroup,
+    createGroupWithCreator,
     addUserToGroup,
     getGroupsByUID,
     leaveGroup,

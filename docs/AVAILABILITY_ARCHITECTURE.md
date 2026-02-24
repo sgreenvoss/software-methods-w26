@@ -3,7 +3,10 @@
 ## 0. API Integration (Layer 1)
 - Endpoint: GET /api/groups/:groupId/availability
 - Query Params: windowStartMs (int), windowEndMs (int), granularityMinutes (int)
-- Returns: An array of ParticipantSnapshot objects with start, end, count, and status properties.
+- Returns: JSON payload with `ok`, `groupId`, `windowStartMs`, `windowEndMs`, and `availability`.
+- `availability` is an array of blocks: `{ start, end, count, availabilityFraction, totalCount }`.
+- `count` is mapped from the algorithm's `StrictView.availableCount`.
+- Runtime multi-view keys in algorithm output are `StrictView`, `FlexibleView`, and `LenientView`.
 
 ## 1. Overview
 We have adopted a **Service-Oriented MVC** pattern to manage the complexity of the group availability heatmap. This separates the "How" (Algorithm) from the "Who" (Controller) and the "What" (Service).
@@ -37,4 +40,3 @@ If you need to change the priority logic (e.g., adding a "B4" level):
 1. Update `algorithm_types.js` to include the new level.
 2. Update the `priorityMapping` in `algorithmAdapter.js`.
 3. The rest of the system will adapt automatically.
-
