@@ -82,6 +82,7 @@ export default function Main() {
                     onClick={() => {
                         toggleGroupsSidebar();
                         if (isEventSidebarOpen) setIsEventSidebarOpen(false);
+                        setSelectedGroupId(null);
                     }} 
                     id="groupsBtn"
                     className={isGroupsSidebarOpen ? 'active-btn' : ''}
@@ -107,6 +108,7 @@ export default function Main() {
                 {isGroupsSidebarOpen && (
                     <aside className="groups-sidebar">
                         <Groups onSelectGroup={(id) => setSelectedGroupId(Number(id))}/>
+                        
                     </aside>
                 )}
 

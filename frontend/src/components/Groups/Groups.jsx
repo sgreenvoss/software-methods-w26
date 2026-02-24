@@ -1,6 +1,7 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, act } from 'react';
 import { apiGet, apiPost } from '../../api.js';
 import GroupCreatorModal from './GroupCreator.jsx';
+import GroupInfoModal from './GroupInfo.jsx';
 import '../../css/groups.css';
 import '../../css/groupsModal.css';
 
@@ -8,7 +9,9 @@ export default function Groups( {onSelectGroup} ) {
     const [groups, setGroups] = useState([]);
     const [showModal, setShowModal] = useState(false);
     const [loading, setLoading] = useState(true);
+    const [infoModalGroup, setInfoModalGroup] = useState(null);
 
+    const [activeGroupID, setActiveGroupId] = useState(null);
     // Function to fetch groups (replaces the initial apiGet)
     const fetchGroups = async () => {
         setLoading(true);
@@ -38,6 +41,11 @@ export default function Groups( {onSelectGroup} ) {
             await apiPost("/group/leave", { groupId: groupId });
             // Refresh list after leaving
             fetchGroups();
+            if (activeGroupID === groupId) {
+                setActiveGroupID(null);
+                onSelectGroup(null);
+                // Deselect group if it was the active one
+            }
         } catch (error) {
             console.error("Failed to leave group", error);
         }
@@ -63,38 +71,57 @@ export default function Groups( {onSelectGroup} ) {
 
             {loading ? <p>Loading...</p> : null}
 
-            {groups.map((group) => (
+            {groups.map((group) => {
+                const isActive = activeGroupID === group.group_id;
+                return (
                 <div key={group.group_id} className="group-row">
                     <span>{group.group_name}</span>
                     
                     <div>
                         <button 
+                            id="infoBtn" 
+                            onClick={() => {
+                                setInfoModalGroup(group);
+                            }}
+                        >
+                            Info
+                        </button>
+
+                        <button 
                             id="viewBtn" 
-                            onClick={() => onSelectGroup(group.group_id)}
+                            className={isActive ? 'active-view-btn' : ''}
+                            style={{background: isActive ? '#26aa5d' : '#2ecc71'}}
+                            onClick={() => {
+                                if (isActive) {
+                                    // If already active, turn it off
+                                    setActiveGroupId(null);
+                                    onSelectGroup(null); // Tell Main to clear the ID
+                                } else {
+                                    // If not active, turn it on
+                                    setActiveGroupId(group.group_id);
+                                    onSelectGroup(group.group_id); // Tell Main to fetch this ID
+                                }
+                            }}
                         >
-                            View
+                            {isActive ? "Hide" : "View"}
                         </button>
-                        <button 
-                            id="leaveBtn" 
-                            onClick={() => handleLeaveGroup(group.group_id)}
-                        >
-                            Leave
-                        </button>
-                        <button 
-                            id="availBtn" 
-                            onClick={() => console.log("View availability for group", group.group_id)}
-                        >
-                            Calendar
-                        </button>
+
                         <button 
                             id="petitionBtn" 
                             onClick={() => console.log("Create petition for group", group.group_id)}
                         >
                             Petition
                         </button>
+
+                        <button 
+                            id="leaveBtn" 
+                            onClick={() => handleLeaveGroup(group.group_id)}
+                        >
+                            Leave
+                        </button>
                     </div>
                 </div>
-            ))}
+            )})}
 
             {/* Conditionally render the modal */}
             {showModal && (
@@ -102,6 +129,14 @@ export default function Groups( {onSelectGroup} ) {
                     onClose={() => setShowModal(false)} 
                     onGroupCreated={handleCreateSuccess}
                     onDone={handleModalDone}
+                />
+            )}
+
+            {infoModalGroup && (
+                <GroupInfoModal
+                    groupId={infoModalGroup.group_id}
+                    groupName={infoModalGroup.group_name}
+                    onClose={() => setInfoModalGroup(null)} // Closes modal on click
                 />
             )}
         </section>
