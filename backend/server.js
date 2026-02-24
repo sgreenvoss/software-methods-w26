@@ -457,7 +457,7 @@ app.get("/api/events", async (req, res) => {
     res.json(formattedEvents);
 
   } catch (error) {
-    console.error('Error fetching calendar', error);
+    console.error('Error updating calendar', error);
     
     // If authentication failed, clear session
     if (error.code === 401 || error.code === 403) {
@@ -468,6 +468,39 @@ app.get("/api/events", async (req, res) => {
     res.status(500).json({ error: "Failed to fetch events" });
   }
 });
+
+app.get('/api/get-events', async (req, res) => {
+  try {
+    if (!req.session.userId || !req.session.isAuthenticated) {
+      return res.status(401).json({ error: "User not authenticated" });
+    }
+
+    // get calendar and then retrieve events from db
+    const calID = await db.getCalendarID(req.session.userId);
+    const events = await db.getEventsByCalendarID(calID.calendar_id);
+    
+    // transform db format to frontend format
+    const formattedEvents = events.map(event => ({
+      title: event.event_name,
+      start: event.event_start,
+      end: event.event_end,
+      event_id: event.gcal_event_id
+    }));
+    
+    return res.json(formattedEvents);
+
+  } catch (error) {
+    console.error('Error fetching calendar from db', error);
+    
+    // If authentication failed, clear session
+    if (error.code === 401 || error.code === 403) {
+      req.session.destroy();
+      return res.status(401).json({ error: "Authentication expired. Please log in again." });
+    }
+    
+    res.status(500).json({ error: "Failed to fetch events" });
+  }
+})
 
 app.get('/api/email-send-test', async(req,res) => {
   try {

@@ -16,15 +16,10 @@ export default function Main() {
     // live draft preview of event being created/edited.
     const [draftEvent, setDraftEvent] = useState(null);
 
-    // events updates
-    const [events, setEvents] = useState([]);
-
     // grab all of the events using api/events on login
     const fetchEvents = async () => {
         try {
-            const events = await apiGet('/api/events');
-            setEvents(events);
-            console.log('Events loaded:', events);
+            await apiGet('/api/events');
         } catch (error) {
             console.error('Error loading events:', error);
         }

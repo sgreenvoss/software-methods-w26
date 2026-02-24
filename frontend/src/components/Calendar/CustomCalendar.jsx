@@ -53,7 +53,7 @@ export default function CustomCalendar({ groupId, draftEvent }) {
           }
         } else {
           // Default: Fetch personal events
-          const personalEvents = await apiGet('/api/events');
+          const personalEvents = await apiGet('/api/get-events');
           setRawEvents(personalEvents || []);
         }
       } catch (error) {
