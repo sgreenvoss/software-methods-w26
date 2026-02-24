@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect } from 'react';
 import { apiGet } from '../../api'; // Adjust path based on your folder structure
 import '../../css/calendar.css';
 
@@ -16,14 +16,9 @@ export default function CustomCalendar({ groupId, draftEvent }) {
   const [rawEvents, setRawEvents] = useState([]);
   const [loading, setLoading] = useState(true);
 
-  const renderCount = useRef(0);
-  renderCount.current++;
-  console.log("Render #", renderCount.current, "rawEvents length:", rawEvents.length);
-
   // --- ACTIONS (The "Controller" Logic) ---
   console.log("3. CustomCalendar received groupId prop:", groupId);
   useEffect(() => {
-    console.log("custom calendar use effect is being called now.");
     const fetchEvents = async () => {
       setLoading(true);
       try {
@@ -36,17 +31,15 @@ export default function CustomCalendar({ groupId, draftEvent }) {
           const response = await apiGet(`/api/groups/${groupId}/availability?windowStartMs=${startMs}&windowEndMs=${endMs}&granularityMinutes=15`); // URL HARDCODED FOR G=15 FIXME 02-20 3.0
           
           // PROOF OF CONCEPT Console.log, idk why it isn't displaying) 02-20 2.1
-          console.log("RAW AVAILABILITY DATA:", response); // Changed to blocks rather than response.availability
-          if (response && response.ok && response.blocks) {
-            // 2. Disguise the availability blocks as standard events for UI
-            console.log("response is okay!");
-            const heatmapEvents = response.blocks.map((block, i) => ({
-              title: `Avail: ${block.count.availableCount}`,
+          console.log("RAW AVAILABILITY DATA:", response); // Testing why blank availability view: fix 02-20 2.2
+          if (response && response.ok && response.availability) {
+            // 2. Disguise the availability blocks as standard events for your UI
+            const heatmapEvents = response.availability.map((block, i) => ({
+              title: `Avail: ${block.count}`,
               start: block.start,
               end: block.end,
               event_id: `avail-${i}`
             }));
-            console.log("here are the heatmap events", heatmapEvents);
             setRawEvents(heatmapEvents);
           } else {
             setRawEvents([]);
@@ -54,7 +47,18 @@ export default function CustomCalendar({ groupId, draftEvent }) {
         } else {
           // Default: Fetch personal events
           const personalEvents = await apiGet('/api/events');
-          setRawEvents(personalEvents || []);
+          if (Array.isArray(personalEvents)) {
+            setRawEvents(personalEvents);
+          }
+          else if (personalEvents && personalEvents.error) {
+            console.warn("Backend rejected token:", personalEvents.error);
+            setRawEvents([]);
+            window.location.href = '/login'; // IDK
+          }
+          else {
+            console.warn("Unexpected data format for personal events recieved from api/events", personalEvents);
+            setRawEvents([]);
+          }
         }
       } catch (error) {
         console.error('Failed to fetch calendar events:', error);
@@ -172,6 +176,7 @@ export default function CustomCalendar({ groupId, draftEvent }) {
 // --- KEEP YOUR PROCESSING FUNCTIONS OUTSIDE THE COMPONENT ---
 // This keeps the "Business Logic" separate from the "View"
 function processEvents(rawEvents) {
+  if (!Array.isArray(rawEvents)) return [];
   console.log("in the processing events function");
   const processed = [];
   rawEvents.forEach(event => {
@@ -197,7 +202,6 @@ function processEvents(rawEvents) {
       current = nextDayStart;
     }
   });
-  console.log("processed events:", processed);
   return processed;
 }
 

@@ -272,7 +272,7 @@ app.get('/test-session', (req, res) => {
   });
 });
 
-async function ensureValidToken(req) {
+async function ensureValidToken(req, res) {
   const user = await db.getUserByID(req.session.userId);
   
   if (!user || !user.access_token) {
@@ -304,15 +304,34 @@ async function ensureValidToken(req) {
       expiry_date: expiryDate
     });
 
-    const { credentials } = await oauth2Client.refreshAccessToken();
-    
-    // Update DB with new tokens
-    await db.updateTokens(
-        req.session.userId, 
-        credentials.access_token, 
+    try {
+      // Attempt to refresh the token
+      const { credentials } = await oauth2Client.getAccessToken(); // This will trigger a refresh if needed
+      await db.updateTokens(
+        req.session.userId,
+        credentials.access_token,
         credentials.expiry_date
-    );
-    console.log("Tokens refreshed successfully.");
+      );
+      console.log("Token refreshed successfully.");
+      // Update client credentials with new ones
+      oauth2Client.setCredentials({credentials});
+      return true; // Indicate successful refresh for route
+
+    } catch (errRefresh) {
+        if (errRefresh.response && errRefresh.response.data && errRefresh.response.data.error === 'invalid_grant') {
+          console.warn("Google Refresh Token expired for user. Forcing re-authentication.", errRefresh);
+          // Destroy user's session so frontend knkows they are logged out
+          req.session.destroy((err) => {
+            if (err) console.error("Could not destroy session after refresh failure:", err);
+            return res.status(401).json({ error: "Session expired.  Please log in again." });
+          });
+          return false; // Stop execution don't keep trying to fetch events.
+        }
+        // If it is a different error, throw standard 500 error
+        console.error("Failed to fetch Google API data:", errRefresh);
+        res.status(500).json({ error: "Internal Server Error" });
+        return false;
+    }
   } else {
     // Token is still valid, just set credentials so the next call works
     oauth2Client.setCredentials({
@@ -320,6 +339,7 @@ async function ensureValidToken(req) {
       access_token: user.access_token,
       expiry_date: expiryDate
     });
+    return true; // Token is valid, proceed with route
   }
 }
 
@@ -330,7 +350,25 @@ app.get("/api/events", async (req, res) => {
   console.log('Session data:', req.session);
   console.log('userid:', req.session.userId);
   console.log('isAuthenticated:', req.session.isAuthenticated);
-  await ensureValidToken(req);
+  try {
+    const isValid = await ensureValidToken(req, res);
+    if (!isValid) return;
+  } catch (tokenErr) {
+      // Check if google is token is dead or not (no expiration crashing backend)
+      if (tokenErr.response && tokenErr.response.data && tokenErr.response.data.error === 'invalid_grant') {
+        console.error("Refresh Token Expired. Forcing re-authentication.");
+
+        // Clear token from DB
+        await db.updateTokens(req.session.userId, null, null);
+
+        // Tell react user needs to log in again
+        return res.status(401).json({ error: "Session expired.  Please log in with Google Again." });
+      }
+      // If it's a different error log it
+      console.error("Failed to fetch events:", tokenErr);
+      return res.status(500).json({ error: "Internal Server Error" });
+  }
+  
   // Check if user is logged in
   if (!req.session.userId || !req.session.isAuthenticated) {
     return res.status(401).json({ error: "User not authenticated" });
