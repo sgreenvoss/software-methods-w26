@@ -245,7 +245,7 @@ app.get('/oauth2callback', async (req, res) => {
     // Add a small delay to ensure DB write completes
     await new Promise(resolve => setTimeout(resolve, 100));
     console.log('session saved, redirecting.');
-    res.redirect("frontend" + '/'); // Redirect to frontend home page after successful login  
+    res.redirect("/");
 
   } catch (authErr) {
     console.log("authorization error: ", authErr);
@@ -323,7 +323,7 @@ async function ensureValidToken(req, res) {
         return false;
     }
   } else {
-    // Token is still valid, just set credentials so next call works
+    // Token is still valid, just set credentials so the next call works
     oauth2Client.setCredentials({
       refresh_token: user.refresh_token,
       access_token: user.access_token,
