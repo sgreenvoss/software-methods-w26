@@ -80,8 +80,8 @@ export default function CustomCalendar({ groupId, draftEvent }) {
         if (response && response.ok && response.blocks) {
           // 2. Disguise the availability blocks as standard events for your UI
           const heatmapEvents = response.blocks.map((block, i) => ({
-            title: `Avail: ${block.count.availableCount}`,
-            availLvl: block.count.availableCount,
+            title: `Avail: ${block.count}`,
+            availLvl: block.count,
             start: block.start,
             end: block.end,
             event_id: `avail-${i}`,
