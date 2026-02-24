@@ -106,13 +106,13 @@ export default function Main() {
                 {/* The Groups sidebar. */}
                 {isGroupsSidebarOpen && (
                     <aside className="groups-sidebar">
-                        <Groups />
+                        <Groups onSelectGroup={(id) => setSelectedGroupId(Number(id))}/>
                     </aside>
                 )}
 
                 {/* The Calendar always renders.*/}
                 <section className="calendar-main">
-                    <Calendar draftEvent={draftEvent}/>
+                    <Calendar draftEvent={draftEvent} groupId={selectedGroupId}/>
                 </section>
 
                 {/* The Event sidebar, which is used for both creating and editing events. */}
@@ -124,7 +124,7 @@ export default function Main() {
                                 setIsEventSidebarOpen(false);
                                 setDraftEvent(null);
                                 // likely trigger a calendar refresh here
-                                <Calendar draftEvent={draftEvent}/>
+                                <Calendar draftEvent={draftEvent} selectedGroupId={selectedGroupId}/>
                             }}
                         />
                     </aside>

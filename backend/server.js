@@ -4,7 +4,7 @@ const { google } = require('googleapis');
 const crypto = require('crypto');
 const path = require("path");
 // Local imports for DB and email and groups
-const db = require("./db/index");
+const db = require("./db/dbInterface");
 const session = require('express-session');
 const url = require('url');
 const pgSession = require('connect-pg-simple')(session);
@@ -208,6 +208,16 @@ app.get('/oauth2callback', async (req, res) => {
     const {data: userInfo} = await oauth2.userinfo.get();
 
     console.log("expiry date is", tokens.expiry_date);
+
+    const calendar = google.calendar({ version: 'v3', auth: oauth2Client });
+    try {
+      await calendar.calendarList.list({ maxResults: 1 });
+    } catch (error) {
+      if (error.code === 403 || error.code === 401) {
+        return res.redirect('/login?error=calendar_permissions_required');
+      }
+      throw error;
+    }
 
     // need to include groups ids
     const userId = await db.insertUpdateUser(

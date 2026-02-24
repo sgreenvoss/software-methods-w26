@@ -6,7 +6,7 @@
 
 const { fetchAndMapGroupEvents } = require('./algorithm/algorithm_adapter');
 const { computeAvailabilityBlocksAllViews } = require('./algorithm/algorithm');
-const db = require('./db/index.js');
+const db = require('./db/dbInterface.js');
 
 /**
  * High-level service to get group availability heatmap data.
@@ -34,19 +34,27 @@ const availabilityService = {
     }
 
     // 4. Ch. 7: MVC Separation - Delegate pure math to the Algorithm "Model"
+    console.log("DATA FED TO ALGORITHM:", JSON.stringify(participants, null, 2)); // Debug log to verify input format
     const blocks = computeAvailabilityBlocksAllViews({
       windowStartMs,
       windowEndMs,
       participants,
       granularityMinutes: 15
     });
-
+    // FIX ATTEMPT: Match input contract for CustomCalendarView
+    // CustomCalendar expects: {start, end, count}
+    const formattedBlocks = blocks.map(block => ({
+      start: new Date(block.startMs).toISOString(),
+      end: new Date(block.endMs).toISOString(),
+      // Clarity 02-22 1.1: Using view names instead of B1/B2/B3 for clarity in the frontend
+      count: block.views.StrictView
+    }));
     // Return the clean data to the controller
     return {
       groupId,
       windowStartMs,
       windowEndMs,
-      blocks
+      blocks : formattedBlocks
     };
   }
 };

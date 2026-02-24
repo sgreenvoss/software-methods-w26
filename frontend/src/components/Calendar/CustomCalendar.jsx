@@ -177,6 +177,7 @@ export default function CustomCalendar({ groupId, draftEvent }) {
 // This keeps the "Business Logic" separate from the "View"
 function processEvents(rawEvents) {
   if (!Array.isArray(rawEvents)) return [];
+  console.log("in the processing events function");
   const processed = [];
   rawEvents.forEach(event => {
     let start = parseLocal(event.start);
