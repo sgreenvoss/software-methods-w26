@@ -290,6 +290,24 @@ const isUserInGroup = async(user_id, group_id) => {
     return (res.rowCount > 0);
 }
 
+const getGroupByID = async(group_id) => {
+    const query = `
+        SELECT * FROM f_group WHERE group_id = ($1)`;
+    const res = await pool.query(query, [group_id]);
+    return res.rows;
+}
+
+const getGroupMembersByID = async(group_id) => {
+    const query = `
+        SELECT p.username, p.user_id 
+        FROM person p
+        JOIN group_match gm ON p.user_id = gm.user_id
+        WHERE gm.group_id = ($1)
+    `;
+    const res = await pool.query(query, [group_id]);
+    return res.rows; // Returns an array of user objects: [{ username: "bob", user_id: 1 }, ...]
+}
+
 const deleteGroup = async(group_id) => {
     const query = `DELETE FROM f_group WHERE group_id = ($1)`;
     await pool.query(query, [group_id]);
@@ -358,7 +376,8 @@ module.exports = {
     createGroupWithCreator,
     addUserToGroup,
     getGroupsByUID,
-    getGroupById,
+    getGroupByID,
+    getGroupMembersByID,
     leaveGroup,
     updateUsername,
     checkUsernameExists,

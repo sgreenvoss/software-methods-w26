@@ -15,45 +15,20 @@ export default function CustomCalendar({ groupId, draftEvent }) {
   const [weekStart, setWeekStart] = useState(getStartOfWeek(new Date()));
   const [rawEvents, setRawEvents] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [groupAvailability, setGroupAvailability] = useState([]);
 
-  // --- ACTIONS (The "Controller" Logic) ---
-  console.log("3. CustomCalendar received groupId prop:", groupId);
+  // const renderCount = useRef(0);
+  // renderCount.current++;
+  // console.log("Render #", renderCount.current, "rawEvents length:", rawEvents.length);
+
+  // --- EFFECT 1: Fetch Personal Events ---
+
   useEffect(() => {
-    const fetchEvents = async () => {
+    const fetchPersonalEvents = async () => {
       setLoading(true);
       try {
-        if (groupId) {
-          // 1. Fetch group availability for the currently viewed week
-          const startMs = weekStart.getTime();
-          const ONEWEEK_MS = 7 * 24 * 60 * 60 * 1000;
-          const endMs = startMs + ONEWEEK_MS; // 7 days later
-
-          const response = await apiGet(`/api/groups/${groupId}/availability?windowStartMs=${startMs}&windowEndMs=${endMs}&granularityMinutes=15`); // URL HARDCODED FOR G=15 FIXME 02-20 3.0
-          
-          // PROOF OF CONCEPT Console.log, idk why it isn't displaying) 02-20 2.1
-          console.log("RAW AVAILABILITY DATA:", response); // Testing why blank availability view: fix 02-20 2.2
-          const availabilityBlocks = Array.isArray(response?.availability)
-            ? response.availability
-            : Array.isArray(response?.blocks)
-              ? response.blocks
-              : null;
-
-          if (response && response.ok && availabilityBlocks) {
-            // 2. Disguise the availability blocks as standard events for your UI
-            const heatmapEvents = availabilityBlocks.map((block, i) => ({
-              title: `Avail: ${block.count}`,
-              start: block.start,
-              end: block.end,
-              event_id: `avail-${i}`
-            }));
-            setRawEvents(heatmapEvents);
-          } else {
-            setRawEvents([]);
-          }
-        } else {
-          // Default: Fetch personal events
-          const personalEvents = await apiGet('/api/events');
-          if (Array.isArray(personalEvents)) {
+        const personalEvents = await apiGet('/api/events');
+        if (Array.isArray(personalEvents)) {
             setRawEvents(personalEvents);
           }
           else if (personalEvents && personalEvents.error) {
@@ -65,17 +40,74 @@ export default function CustomCalendar({ groupId, draftEvent }) {
             console.warn("Unexpected data format for personal events recieved from api/events", personalEvents);
             setRawEvents([]);
           }
-        }
       } catch (error) {
-        console.error('Failed to fetch calendar events:', error);
+        console.error('Failed to fetch personal events:', error);
         setRawEvents([]);
       } finally {
         setLoading(false);
       }
     };
     
-    fetchEvents();
-  }, [groupId, weekStart]); // Adding weekStart ensures it refetches if you click Prev/Next week
+    fetchPersonalEvents();
+  }, [weekStart]); 
+
+  // --- EFFECT 2: Fetch Group Availability ---
+
+  useEffect(() => {
+    const fetchGroupEvents = async () => {
+      // If the user clicked "Hide", groupId will be null.
+      // We just clear the state and exit early. No network call needed.
+      if (!groupId || groupId === 0) {
+        setGroupAvailability([]);
+        return; 
+      }
+
+      setLoading(true);
+      try {
+        const startMs = weekStart.getTime();
+        const ONEWEEK_MS = 7 * 24 * 60 * 60 * 1000;
+        const endMs = startMs + ONEWEEK_MS;
+
+        const response = await apiGet(`/api/groups/${groupId}/availability?windowStartMs=${startMs}&windowEndMs=${endMs}&granularityMinutes=15`);
+        
+        console.log("RAW AVAILABILITY DATA:", response); // Testing why blank availability view: fix 02-20 2.2
+        const availabilityBlocks = Array.isArray(response?.availability)
+          ? response.availability
+          : Array.isArray(response?.blocks)
+            ? response.blocks
+            : null;
+
+        if (response && response.ok && response.blocks) {
+          // 2. Disguise the availability blocks as standard events for your UI
+          const heatmapEvents = response.blocks.map((block, i) => ({
+            title: `Avail: ${block.count}`,
+            availLvl: block.count,
+            start: block.start,
+            end: block.end,
+            event_id: `avail-${i}`,
+            mode: 'avail'
+          }));
+
+          const consolidatedEvents = mergeAvailabilityBlocks(heatmapEvents);
+          const finalHeatmapEvents = consolidatedEvents.map((event, i) => ({ 
+            ...event,
+            event_id: `avail-merged-${i}`
+          }));
+
+          setGroupAvailability(finalHeatmapEvents);
+        } else {
+            setGroupAvailability([]); // Clear if response is bad
+        }
+      } catch (error) {
+        console.error('Failed to fetch group availability:', error);
+        setGroupAvailability([]);
+      } finally {
+        setLoading(false);
+      }
+    };
+    
+    fetchGroupEvents();
+  }, [groupId, weekStart]);
 
   const handlePrevWeek = () => {
     const newDate = new Date(weekStart);
@@ -89,16 +121,16 @@ export default function CustomCalendar({ groupId, draftEvent }) {
     setWeekStart(newDate);
   };
 
-  // --- PREPARING THE VIEW ---
-  const events = processEvents(rawEvents);
+  const finalRawEvents = [...rawEvents];
 
   if (draftEvent) {
-      events.push({
-          ...draftEvent,
-          isAllDay: false, // assuming typed events aren't all day for now
-          isEndOfDay: false
-      });
+      finalRawEvents.push({ ...draftEvent });
   }
+
+  // --- PREPARING THE VIEW ---
+  const events = processEvents(finalRawEvents);
+  const groupEvents = processEvents(groupAvailability);
+  const allEvents = events.concat(groupEvents);
 
   const days = Array.from({ length: 7 }, (_, i) => {
     const d = new Date(weekStart);
@@ -135,9 +167,15 @@ export default function CustomCalendar({ groupId, draftEvent }) {
 
             {days.map((day, i) => (
               <div key={i} className="calendar-cell">
-                {events
+                {allEvents
                   .filter(e => e.start.toDateString() === day.toDateString() && e.start.getHours() === hour)
                   .map((event, idx) => {
+                    // --- hides 0 avail events
+                    if (event.mode == 'avail' && event.availLvl === 0) {
+                      // Don't render 0-availability blocks, they just add clutter
+                      return null;
+                    }
+
                     const startMins = event.start.getMinutes();
                     const duration = (event.end - event.start) / (1000 * 60);
 
@@ -147,10 +185,30 @@ export default function CustomCalendar({ groupId, draftEvent }) {
                     const endsOnHour = event.end.getMinutes() === 0 && event.end.getSeconds() === 0;
                     if (!event.isEndOfDay && !endsOnHour) visualHeight -= 2;
 
-                    let backgroundColor = 'cornflowerblue';
-                    if (event.mode === 'blocking') backgroundColor = 'darkslategray';
-                    if (event.mode === 'petition') backgroundColor = 'peru';
-                    
+                    let backgroundColor;
+                    let opacity;
+                    let zIndex;
+                    switch (event.mode) {
+                      case 'petition':
+                        backgroundColor = '#ffa963';
+                        opacity = 0.6;
+                        zIndex = 2;
+                        break;
+                      case 'blocking':
+                        backgroundColor = '#34333c';
+                        opacity = 0.6;
+                        zIndex = 2;
+                        break;
+                      case 'avail':
+                        backgroundColor = '#2ecc71';
+                        opacity = 0.5;
+                        zIndex = 4
+                        break;
+                      default:
+                        backgroundColor = '#6395ee';
+                        opacity = 1;
+                        zIndex = 3;
+                    }
                     return (
                       <div
                         key={idx}
@@ -158,8 +216,8 @@ export default function CustomCalendar({ groupId, draftEvent }) {
                         style={{
                           height: `${Math.max(1, visualHeight)}px`,
                           top: `${startMins}px`,
-                          opacity: event.isAllDay || event.isPreview? 0.6 : 1,
-
+                          opacity: event.isAllDay ? 0.6 : opacity,
+                          zIndex: event.isAllDay ? 1 :zIndex,
                           backgroundColor: backgroundColor,
                           border: event.isPreview ? '2px dashed #333' : 'none'
                           
@@ -203,7 +261,11 @@ function processEvents(rawEvents) {
         end: new Date(effectiveEnd),
         id: event.event_id,
         isAllDay: (effectiveEnd - current) >= 24 * 60 * 60 * 1000,
-        isEndOfDay: effectiveEnd.getTime() === nextDayStart.getTime()
+        isEndOfDay: effectiveEnd.getTime() === nextDayStart.getTime(),
+        isPreview: event.isPreview || false,
+        availLvl: event.availLvl || 0, // for group availability heatmap
+        mode: event.mode || 'normal', // 'normal', 'blocking', 'petition', 'avail'
+        // isAvail: event.isAvail || false
       });
       current = nextDayStart;
     }
@@ -217,4 +279,42 @@ function parseLocal(dateInput) {
     return new Date(y, m - 1, d);
   }
   return new Date(dateInput);
+}
+
+
+function mergeAvailabilityBlocks(blocks) {
+  if (!blocks || blocks.length === 0) return [];
+
+  // 1. Sort blocks chronologically by start time just to be safe
+  const sortedBlocks = [...blocks].sort((a, b) => {
+    const timeA = new Date(a.start).getTime();
+    const timeB = new Date(b.start).getTime();
+    return timeA - timeB; // if negative sort a before b; if positive sort b before a; if 0, keep original order
+  });
+
+  const merged = [];
+  let currentBlock = { ...sortedBlocks[0] };
+
+  for (let i = 1; i < sortedBlocks.length; i++) {
+    const nextBlock = sortedBlocks[i];
+    
+    const currentEndMs = new Date(currentBlock.end).getTime();
+    const nextStartMs = new Date(nextBlock.start).getTime();
+
+    // 2. Check if they are back-to-back (or overlapping) AND have the same availability count
+    if (currentEndMs >= nextStartMs && currentBlock.availLvl === nextBlock.availLvl) {
+      // 3. Extend the current block's end time
+      const nextEndMs = new Date(nextBlock.end).getTime();
+      currentBlock.end = new Date(Math.max(currentEndMs, nextEndMs));
+    } else {
+      // 4. No match, push the current block and start a new one
+      merged.push(currentBlock);
+      currentBlock = { ...nextBlock };
+    }
+  }
+  
+  // Push the very last block
+  merged.push(currentBlock);
+
+  return merged;
 }

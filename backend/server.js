@@ -395,7 +395,8 @@ app.get("/api/events", async (req, res) => {
     const response = await calendar.events.list({
       calendarId: 'primary',
       timeMin: calendarStart.toISOString(), // From now onwards
-      maxResults: 50,
+      // timeMax: new Date(calendarStart.getTime() + 6 * 24 * 60 * 60 * 1000).toISOString(), // 7 days ahead
+      maxResults: 200,
       singleEvents: true, 
       orderBy: 'startTime',
     });
@@ -476,6 +477,8 @@ const availabilityController = require('./availability_controller');
 // This one line tells Express: 
 // "When someone hits this URL, hand the request over to the Controller"
 app.get('/api/groups/:groupId/availability', availabilityController.getAvailability);
+
+
 
 // Catch-all route for React Router - must be after all API routes
 app.get('*', (req, res) => {

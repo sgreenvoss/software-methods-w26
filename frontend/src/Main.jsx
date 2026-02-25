@@ -131,6 +131,7 @@ export default function Main() {
                     onClick={() => {
                         toggleGroupsSidebar();
                         if (isEventSidebarOpen) setIsEventSidebarOpen(false);
+                        setSelectedGroupId(null);
                     }} 
                     id="groupsBtn"
                     className={isGroupsSidebarOpen ? 'active-btn' : ''}
