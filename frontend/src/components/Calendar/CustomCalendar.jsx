@@ -164,10 +164,10 @@ export default function CustomCalendar({ groupId, draftEvent }) {
                   .filter(e => e.start.toDateString() === day.toDateString() && e.start.getHours() === hour)
                   .map((event, idx) => {
                     // --- hides 0 avail events
-                    // if (event.mode == 'avail' && event.availLvl === 0) {
-                    //   // Don't render 0-availability blocks, they just add clutter
-                    //   return null;
-                    // }
+                    if (event.mode == 'avail' && event.availLvl === 0) {
+                      // Don't render 0-availability blocks, they just add clutter
+                      return null;
+                    }
 
                     const startMins = event.start.getMinutes();
                     const duration = (event.end - event.start) / (1000 * 60);
