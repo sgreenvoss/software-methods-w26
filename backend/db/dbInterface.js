@@ -274,6 +274,14 @@ const getUIDByGroupID = async(group_id) => {
     return res;
 }
 
+const getGroupById = async(group_id) => {
+    const query = `
+        SELECT group_id, group_name FROM f_group
+        WHERE group_id = ($1)`;
+    const res = await pool.query(query, [group_id]);
+    return res.rows[0] || null;
+}
+
 const isUserInGroup = async(user_id, group_id) => {
     const query = `
         SELECT user_id FROM group_match
@@ -368,6 +376,7 @@ module.exports = {
     createGroupWithCreator,
     addUserToGroup,
     getGroupsByUID,
+    getGroupById,
     getGroupByID,
     getGroupMembersByID,
     leaveGroup,

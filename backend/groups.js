@@ -17,175 +17,24 @@ invitee
     add group id to user, user id to group
     user can now view available times
 */
-const { randomUUID } = require("crypto");
 const db = require("./db/dbInterface");
-const { getgroups } = require("process");
-const emailer = require("./emailer");
 const inviteToken = require("./inviteToken");
+const registerGroupRoutes = require("./routes/group_routes");
+const registerInviteRoutes = require("./routes/invite_routes");
+const { createInviteStateService } = require("./services/invite_state_service");
 
 module.exports = function(app) {
-  async function resolveGroupInvite(req) {
-    if (!req.session.pendingGroupToken) return null;
-    
-    const result = inviteToken.verifyInviteToken(req.session.pendingGroupToken);
-    if (!result.valid) return null;
-    
-    await db.addUserToGroup(result.groupId, req.session.userId);
-    delete req.session.pendingGroupToken;
-    return result.groupId;
-  }
-
-  app.post("/group/creation", async (req, res) => {
-    try {
-      // ensure user is logged in
-      if (!req.session.userId || !req.session.isAuthenticated) {
-        return res.status(401).json({ error: "Unauthorized" });
-      }
-      const groupName = typeof req.query.group_name === "string"
-        ? req.query.group_name.trim()
-        : "";
-      if (!groupName) {
-        return res.status(400).json({ success: false, error: "group_name is required" });
-      }
-
-      // store group + creator membership in a single transaction
-      const group_id = await db.createGroupWithCreator(groupName, req.session.userId);
-      return res.status(201).json({
-        success: true,
-        groupId: group_id,
-        groupName,
-        membershipAdded: true
-      });
-    } catch(error) {
-      console.error("error creating group: ", error);
-      return res.status(500).json({error: "Failed to create group"});
-    }
+  const inviteState = createInviteStateService({
+    isProduction: process.env.NODE_ENV === "production"
   });
 
-  app.get("/user/groups", async (req, res) => {
-    // ensure user is logged in
-    try{
-      if (!req.session.userId || !req.session.isAuthenticated) {
-        return res.status(401).json({ error: "Unauthorized" });
-      }
-      // query database for groups that include user's id
-      // return list of groups to frontend
-      const groups = await db.getGroupsByUID(req.session.userId);
-      return res.status(201).json({
-        success:true,
-        groups:groups
-      });
-    } catch(error) {
-      console.error("error fetching groups:", error);
-      return res.status(500).json({error: "failed getting groups from db"});
-    }
-
-  });
-
-  app.get("/group/:groupId", async (req, res) => { // GCAVAILVIEW
-    try { // GCAVAILVIEW
-      const groupId = req.params.groupId; // GCAVAILVIEW
-      const groupInfo = await db.getGroupByID(groupId); // GCAVAILVIEW
-      const members = await db.getGroupMembersByID(groupId); // GCAVAILVIEW
-      return res.status(200).json({ // GCAVAILVIEW
-        success: true, // GCAVAILVIEW
-        group: groupInfo, // GCAVAILVIEW
-        members: members // GCAVAILVIEW
-      }); // GCAVAILVIEW
-    } catch (error) { // GCAVAILVIEW
-      console.error("error fetching group details:", error); // GCAVAILVIEW
-      return res.status(500).json({error: "failed getting group details from db"}); // GCAVAILVIEW
-    } // GCAVAILVIEW
-  }); // GCAVAILVIEW
-
-  app.post("/group/invite", async (req, res) => {
-    // ensure user is logged in
-    if (!req.session.userId || !req.session.isAuthenticated) {
-      return res.status(401).json({ error: "Unauthorized" });
-    }
-    try {
-      const groupId = req.body.group_id;
-      // verify that user is a member of the group
-      if (await db.isUserInGroup(req.session.userId, groupId)) {
-        // generate invitation link with group id to display on frontend
-        const date = Date.now() + 24 * 60 * 60 * 1000;
-        const token = inviteToken.createInviteToken({groupId, expiresAtMs: date});
-        let url = process.env.FRONTEND_URL + `/group/respond-invitation?q=${token}`;        
-        console.log("shareable link:", url);
-        return res.status(201).json({invite: url});
-      } else {
-        return res.status(401).json({error: "User is not a member of that group."});
-      }
-    } catch(error) {
-      console.error("error with inviting:", error);
-      return res.status(500).json({error: "failed creating invite link."});
-    }
-  });
-
-  app.get("/group/respond-invitation", async (req, res) => {
-    // get token out of url, save in session.
-    const {q} = req.query;
-    const result = inviteToken.verifyInviteToken(q);
-    if (!result.valid) {
-      return res.status(401).json({error: "Bad invite token"});
-    }
-    req.session.pendingGroupToken = q;
-    // if user is not logged in, redirect to login, then go back here
-    if (!req.session.userId || !req.session.isAuthenticated) {
-      // i think here we should force a session save (because of the session loss issues with oauth)
-      await new Promise((resolve, reject) => {
-        req.session.save((saveErr) => {
-          if (saveErr) {
-            console.error("Session Save Error:", saveErr);
-            reject(saveErr);
-          } else {
-            resolve();
-          }
-        });
-      });
-      console.log("redirecting now");
-      return res.redirect('/login'); // TODO: redirect to a signup page
-    }
-    // if we hit here, the user already has an account.
-    // for now let's assume that clicking the link = accepting being
-    // in the group.
-    await resolveGroupInvite(req);
-    res.redirect('/');
-  });
-
-  app.post("/group/leave", async (req, res) => {
-    // ensure user is logged in
-    try {
-      if (!req.session.userId || !req.session.isAuthenticated) {
-        return res.status(401).json({ error: "Unauthorized" });
-      }
-      const {groupId} = req.body;
-      console.log("this is the groupid:", groupId);
-
-      if (!groupId) {
-        return res.status(400).json({error: "No group to leave identified"});
-      }
-      db.leaveGroup(req.session.userId, groupId);
-      return res.status(201).json({success:true});
-      // get group id from request body
-      // remove user id from group's list of members in database
-      // remove group id from user's list of groups in database
-
-    } catch (error) {
-      console.error("error leaving group ", error);
-      return res.status(400).json({error: "something went wrong leaving group."});
-    }
-  });
-
-  app.get('/api/groups/join', async (req, res) => {
-    try {
-      // 1. Validate token structure/HMAC immediately
-      const decoded = inviteToken.verifyInviteToken(req.query.token); // Fix 'verivy' typo
-      // Add your implementation here...
-      return res.status(200).json({ success: true, decoded });
-    } 
-    catch (error) {
-      return res.status(500).json({ error: "Failed to join group" });
-    }
-  });
-}
+  /*
+    Route visibility map (modular source of truth):
+    - Group routes: ./routes/group_routes
+      - Includes group details endpoint (/group/:groupId) [GCAVAILVIEW]
+    - Invite routes: ./routes/invite_routes
+      - Includes invite entry (/group/respond-invitation) and modal APIs
+  */
+  registerGroupRoutes(app, { db });
+  registerInviteRoutes(app, { db, inviteToken, inviteState });
+};

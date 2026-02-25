@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import Calendar from './components/Calendar/CustomCalendar';
 import Groups from './components/Groups/Groups';
+import PendingInviteModal from './components/Groups/PendingInviteModal';
 import EventSidebar from './components/Calendar/EventSidebar';
 import './css/main.css';
 import {apiGet, apiPost} from './api';
@@ -8,10 +9,14 @@ import {apiGet, apiPost} from './api';
 export default function Main() {
     const [selectedGroupId, setSelectedGroupId] = useState(null);
     const [groupsList, setGroupsList] = useState([]); 
+    const [groupsRefreshSignal, setGroupsRefreshSignal] = useState(0);
     // const [view, setView] = useState('calendar'); -- old 
     
     const [isGroupsSidebarOpen, setIsGroupsSidebarOpen] = useState(false);
     const [isEventSidebarOpen, setIsEventSidebarOpen] = useState(false);
+    const [pendingInvite, setPendingInvite] = useState(null);
+    const [inviteActionLoading, setInviteActionLoading] = useState(false);
+    const [inviteError, setInviteError] = useState('');
 
     // live draft preview of event being created/edited.
     const [draftEvent, setDraftEvent] = useState(null);
@@ -35,6 +40,20 @@ export default function Main() {
         }
     };
 
+    const fetchPendingInvite = async () => {
+        try {
+            const response = await apiGet('/api/group-invite/pending');
+            if (response && response.ok && response.hasPendingInvite && response.invite) {
+                setPendingInvite(response.invite);
+            } else {
+                setPendingInvite(null);
+            }
+        } catch (err) {
+            console.error("Pending invite fetch failed", err);
+            setPendingInvite(null);
+        }
+    };
+
     // 2. Move handleLogout INSIDE
     const handleLogout = async () => {
         try {
@@ -48,6 +67,7 @@ export default function Main() {
     // 3. Effect calls the internal function
     useEffect(() => {
         fetchGroups();
+        fetchPendingInvite();
     }, []);
 
     console.log("2. Main.jsx current selectedGroupId:", selectedGroupId);
@@ -61,9 +81,38 @@ export default function Main() {
         setIsEventSidebarOpen(!isEventSidebarOpen);
     }
 
+    const handleInviteDecision = async (decision) => {
+        setInviteActionLoading(true);
+        setInviteError('');
+        try {
+            const response = await apiPost('/api/group-invite/respond', { decision });
+            if (response && response.ok) {
+                setPendingInvite(null);
+                if (decision === 'accept') {
+                    fetchGroups();
+                    setGroupsRefreshSignal((v) => v + 1);
+                }
+            } else {
+                setInviteError(response?.error || 'Could not process invite decision.');
+            }
+        } catch (err) {
+            console.error("Failed to submit invite decision", err);
+            setInviteError('Could not process invite decision.');
+        } finally {
+            setInviteActionLoading(false);
+        }
+    };
+
     // displays two buttons that will bring up either Calendar or Group
     return (
         <div id="app-wrapper">
+            <PendingInviteModal
+                invite={pendingInvite}
+                loading={inviteActionLoading}
+                error={inviteError}
+                onAccept={() => handleInviteDecision('accept')}
+                onDecline={() => handleInviteDecision('decline')}
+            />
             <section id="logout">
                 <button onClick={handleLogout} id="logoutBtn">Logout</button>
             </section>
@@ -107,8 +156,10 @@ export default function Main() {
                 {/* The Groups sidebar. */}
                 {isGroupsSidebarOpen && (
                     <aside className="groups-sidebar">
-                        <Groups onSelectGroup={(id) => setSelectedGroupId(Number(id))}/>
-                        
+                        <Groups
+                            onSelectGroup={(id) => setSelectedGroupId(Number(id))}
+                            refreshSignal={groupsRefreshSignal}
+                        />
                     </aside>
                 )}
 
