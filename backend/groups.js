@@ -17,13 +17,15 @@ invitee
     add group id to user, user id to group
     user can now view available times
 */
-const { randomUUID } = require("crypto");
 const db = require("./db/dbInterface");
-const { getgroups } = require("process");
-const emailer = require("./emailer");
 const inviteToken = require("./inviteToken");
+const registerGroupRoutes = require("./routes/group_routes");
+const registerInviteRoutes = require("./routes/invite_routes");
+const { createInviteStateService } = require("./services/invite_state_service");
 
 module.exports = function(app) {
+  const inviteState = createInviteStateService({
+    isProduction: process.env.NODE_ENV === "production"
   async function resolveGroupInvite(req) {
     if (!req.session.pendingGroupToken) return null;
     
@@ -122,70 +124,6 @@ module.exports = function(app) {
     }
   });
 
-  app.get("/group/respond-invitation", async (req, res) => {
-    // get token out of url, save in session.
-    const {q} = req.query;
-    const result = inviteToken.verifyInviteToken(q);
-    if (!result.valid) {
-      return res.status(401).json({error: "Bad invite token"});
-    }
-    req.session.pendingGroupToken = q;
-    // if user is not logged in, redirect to login, then go back here
-    if (!req.session.userId || !req.session.isAuthenticated) {
-      // i think here we should force a session save (because of the session loss issues with oauth)
-      await new Promise((resolve, reject) => {
-        req.session.save((saveErr) => {
-          if (saveErr) {
-            console.error("Session Save Error:", saveErr);
-            reject(saveErr);
-          } else {
-            resolve();
-          }
-        });
-      });
-      console.log("redirecting now");
-      return res.redirect('/login'); // TODO: redirect to a signup page
-    }
-    // if we hit here, the user already has an account.
-    // for now let's assume that clicking the link = accepting being
-    // in the group.
-    await resolveGroupInvite(req);
-    res.redirect('/');
-  });
-
-  app.post("/group/leave", async (req, res) => {
-    // ensure user is logged in
-    try {
-      if (!req.session.userId || !req.session.isAuthenticated) {
-        return res.status(401).json({ error: "Unauthorized" });
-      }
-      const {groupId} = req.body;
-      console.log("this is the groupid:", groupId);
-
-      if (!groupId) {
-        return res.status(400).json({error: "No group to leave identified"});
-      }
-      db.leaveGroup(req.session.userId, groupId);
-      return res.status(201).json({success:true});
-      // get group id from request body
-      // remove user id from group's list of members in database
-      // remove group id from user's list of groups in database
-
-    } catch (error) {
-      console.error("error leaving group ", error);
-      return res.status(400).json({error: "something went wrong leaving group."});
-    }
-  });
-
-  app.get('/api/groups/join', async (req, res) => {
-    try {
-      // 1. Validate token structure/HMAC immediately
-      const decoded = inviteToken.verifyInviteToken(req.query.token); // Fix 'verivy' typo
-      // Add your implementation here...
-      return res.status(200).json({ success: true, decoded });
-    } 
-    catch (error) {
-      return res.status(500).json({ error: "Failed to join group" });
-    }
-  });
-}
+  registerGroupRoutes(app, { db });
+  registerInviteRoutes(app, { db, inviteToken, inviteState });
+};
