@@ -1,4 +1,23 @@
 module.exports = function registerInviteRoutes(app, { db, inviteToken, inviteState }) {
+  async function getGroupForInvite(groupId) {
+    if (typeof db.getGroupById === "function") {
+      const group = await db.getGroupById(groupId);
+      if (group) return group;
+    }
+
+    if (typeof db.getGroupByID === "function") {
+      const legacyRows = await db.getGroupByID(groupId);
+      if (Array.isArray(legacyRows) && legacyRows[0]) {
+        return {
+          group_id: legacyRows[0].group_id,
+          group_name: legacyRows[0].group_name
+        };
+      }
+    }
+
+    return null;
+  }
+
   app.post("/group/invite", async (req, res) => {
     if (!inviteState.isAuthenticated(req)) {
       return res.status(401).json({ error: "Unauthorized" });
@@ -63,7 +82,7 @@ module.exports = function registerInviteRoutes(app, { db, inviteToken, inviteSta
         return res.status(200).json({ ok: true, hasPendingInvite: false });
       }
 
-      const group = await db.getGroupById(decoded.groupId);
+      const group = await getGroupForInvite(decoded.groupId);
       if (!group) {
         await inviteState.clearPendingInvite(req, res);
         return res.status(200).json({ ok: true, hasPendingInvite: false });

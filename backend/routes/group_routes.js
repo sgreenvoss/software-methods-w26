@@ -42,6 +42,26 @@ module.exports = function registerGroupRoutes(app, { db }) {
     }
   });
 
+  app.get("/group/:groupId(\\d+)", async (req, res) => { // GCAVAILVIEW
+    try { // GCAVAILVIEW
+      if (!req.session.userId || !req.session.isAuthenticated) { // GCAVAILVIEW
+        return res.status(401).json({ error: "Unauthorized" }); // GCAVAILVIEW
+      } // GCAVAILVIEW
+
+      const groupId = req.params.groupId; // GCAVAILVIEW
+      const groupInfo = await db.getGroupByID(groupId); // GCAVAILVIEW
+      const members = await db.getGroupMembersByID(groupId); // GCAVAILVIEW
+      return res.status(200).json({ // GCAVAILVIEW
+        success: true, // GCAVAILVIEW
+        group: groupInfo, // GCAVAILVIEW
+        members // GCAVAILVIEW
+      }); // GCAVAILVIEW
+    } catch (error) { // GCAVAILVIEW
+      console.error("error fetching group details:", error); // GCAVAILVIEW
+      return res.status(500).json({ error: "failed getting group details from db" }); // GCAVAILVIEW
+    } // GCAVAILVIEW
+  }); // GCAVAILVIEW
+
   app.post("/group/leave", async (req, res) => {
     try {
       if (!req.session.userId || !req.session.isAuthenticated) {

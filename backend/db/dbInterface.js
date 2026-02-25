@@ -376,6 +376,7 @@ module.exports = {
     createGroupWithCreator,
     addUserToGroup,
     getGroupsByUID,
+    getGroupById,
     getGroupByID,
     getGroupMembersByID,
     leaveGroup,
