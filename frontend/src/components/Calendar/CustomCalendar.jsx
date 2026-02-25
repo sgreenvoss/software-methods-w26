@@ -200,7 +200,9 @@ export default function CustomCalendar({ groupId, draftEvent }) {
                         zIndex = 2;
                         break;
                       case 'avail':
-                        backgroundColor = '#2ecc71';
+                        // backgroundColor = '#2ecc71';
+                        const calculatedLightness = Math.max(35, 90 - (event.availLvl * 12));
+                        backgroundColor = `hsl(145, 65%, ${calculatedLightness}%)`;
                         opacity = 0.5;
                         zIndex = 4
                         break;
