@@ -21,7 +21,9 @@ export default function Main() {
     // live draft preview of event being created/edited.
     const [draftEvent, setDraftEvent] = useState(null);
 
-    // 1. Move fetchGroups INSIDE so it can see setGroupsList
+    const [eventMode, setEventMode] = useState('blocking');
+    const [petitionGroupId, setPetitionGroupId] = useState('');
+    
     const fetchGroups = async () => {
         try {
             // 1. Hit the ACTUAL endpoint
@@ -64,7 +66,6 @@ export default function Main() {
         }
     };
 
-    // 3. Effect calls the internal function
     useEffect(() => {
         fetchGroups();
         fetchPendingInvite();
@@ -72,7 +73,7 @@ export default function Main() {
 
     console.log("2. Main.jsx current selectedGroupId:", selectedGroupId);
 
-    
+
     // Toggle the sidebar open/closed
     const toggleGroupsSidebar = () => {
         setIsGroupsSidebarOpen(!isGroupsSidebarOpen);
@@ -101,6 +102,13 @@ export default function Main() {
         } finally {
             setInviteActionLoading(false);
         }
+    };
+    
+    const handleOpenPetition = (groupId) => {
+        setEventMode('petition');
+        setPetitionGroupId(groupId);
+        setIsGroupsSidebarOpen(false); // Close groups sidebar
+        setIsEventSidebarOpen(true);   // Open event sidebar
     };
 
     // displays two buttons that will bring up either Calendar or Group
@@ -142,6 +150,11 @@ export default function Main() {
                 <button 
                     onClick={() => {
                         toggleEventSidebar();
+                        if (!isEventSidebarOpen) {
+                            setEventMode('blocking');
+                            setPetitionGroupId('');
+                        }
+
                         if (isGroupsSidebarOpen) setIsGroupsSidebarOpen(false);
                     }} 
                     id="eventBtn"
@@ -151,13 +164,13 @@ export default function Main() {
                 </button>
             </section>
 
-            {/* {view === 'calendar' ? <Calendar /> : <Groups />} */}
             <main className="main-layout">
                 {/* The Groups sidebar. */}
                 {isGroupsSidebarOpen && (
                     <aside className="groups-sidebar">
                         <Groups
                             onSelectGroup={(id) => setSelectedGroupId(Number(id))}
+                            onOpenPetition={handleOpenPetition} 
                             refreshSignal={groupsRefreshSignal}
                         />
                     </aside>
@@ -172,11 +185,16 @@ export default function Main() {
                 {isEventSidebarOpen && (
                     <aside className="event-sidebar">
                         <EventSidebar 
-                            setDraftEvent={setDraftEvent} 
+                            setDraftEvent={setDraftEvent}
+                            mode={eventMode}
+                            setMode={setEventMode}
+                            petitionGroupId={petitionGroupId}
+                            setPetitionGroupId={setPetitionGroupId}
+                            groupsList={groupsList} // pass groups for dorpdown
                             onFinalize={() => {
                                 setIsEventSidebarOpen(false);
                                 setDraftEvent(null);
-                                // likely trigger a calendar refresh here
+                                // trigger a calendar refresh here
                                 <Calendar draftEvent={draftEvent} selectedGroupId={selectedGroupId}/>
                             }}
                         />

@@ -1,8 +1,16 @@
 import React, { useState, useEffect } from 'react';
 import '../../css/eventSidebar.css';
 
-export default function EventSidebar({ setDraftEvent, onFinalize }) {
-    const [mode, setMode] = useState('blocking'); // 'blocking' or 'petition'
+export default function EventSidebar({ 
+    setDraftEvent, 
+    onFinalize,
+    mode,
+    setMode,
+    petitionGroupId,
+    setPetitionGroupId,
+    groupsList
+}) {
+    // const [mode, setMode] = useState('blocking'); // 'blocking' or 'petition'
     const [title, setTitle] = useState('');
     const [date, setDate] = useState('');
     const [startTime, setStartTime] = useState('');
@@ -28,9 +36,13 @@ export default function EventSidebar({ setDraftEvent, onFinalize }) {
     }, [title, date, startTime, endTime, mode, setDraftEvent]);
 
     const handleSubmit = async () => {
-        // Here you would do your apiPost to save the event to the DB
+        if (mode === 'petition' && !petitionGroupId) {
+            alert("Please select a group for the petition.");
+            return;
+        }
+
+        // TODO: apiPost to save the event to the DB
         console.log("Saving event:", { title, date, startTime, endTime, mode });
-        
         // Once successful, clear the form and close sidebar
         onFinalize(); 
     };
@@ -65,6 +77,24 @@ export default function EventSidebar({ setDraftEvent, onFinalize }) {
             <label>Event Name</label>
             <input type="text" value={title} onChange={e => setTitle(e.target.value)} />
                     <br />
+            {mode === 'petition' && (
+                <>
+                    <label>Select Group</label>
+                    <select 
+                        value={petitionGroupId} 
+                        onChange={(e) => setPetitionGroupId(e.target.value)}
+                        className="group-select-dropdown"
+                    >
+                        <option value="">-- Choose a Group --</option>
+                        {groupsList.map(group => (
+                            <option key={group.group_id} value={group.group_id}>
+                                {group.group_name}
+                            </option>
+                        ))}
+                    </select>
+                </>
+            )}
+                <br />
             <label>Date & Time</label>
             <input type="date" value={date} onChange={e => setDate(e.target.value)} />
                     <br />

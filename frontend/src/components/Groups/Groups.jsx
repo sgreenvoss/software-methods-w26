@@ -5,7 +5,7 @@ import GroupInfoModal from './GroupInfo.jsx';
 import '../../css/groups.css';
 import '../../css/groupsModal.css';
 
-export default function Groups( {onSelectGroup, refreshSignal = 0} ) {
+export default function Groups( {onSelectGroup, onOpenPetition, refreshSignal = 0} ) {
     const [groups, setGroups] = useState([]);
     const [showModal, setShowModal] = useState(false);
     const [loading, setLoading] = useState(true);
@@ -108,7 +108,10 @@ export default function Groups( {onSelectGroup, refreshSignal = 0} ) {
 
                         <button 
                             id="petitionBtn" 
-                            onClick={() => console.log("Create petition for group", group.group_id)}
+                            onClick={() => {
+                                console.log("Create petition for group", group.group_id);
+                                onOpenPetition(group.group_id); // handoff to Main to open petition sidebar with this group ID
+                            }}
                         >
                             Petition
                         </button>
