@@ -87,7 +87,14 @@ export default function CustomCalendar({ groupId, draftEvent }) {
             event_id: `avail-${i}`,
             mode: 'avail'
           }));
-          setGroupAvailability(heatmapEvents);
+
+          const consolidatedEvents = mergeAvailabilityBlocks(heatmapEvents);
+          const finalHeatmapEvents = consolidatedEvents.map((event, i) => ({ 
+            ...event,
+            event_id: `avail-merged-${i}`
+          }));
+
+          setGroupAvailability(finalHeatmapEvents);
         } else {
             setGroupAvailability([]); // Clear if response is bad
         }
@@ -272,4 +279,42 @@ function parseLocal(dateInput) {
     return new Date(y, m - 1, d);
   }
   return new Date(dateInput);
+}
+
+
+function mergeAvailabilityBlocks(blocks) {
+  if (!blocks || blocks.length === 0) return [];
+
+  // 1. Sort blocks chronologically by start time just to be safe
+  const sortedBlocks = [...blocks].sort((a, b) => {
+    const timeA = new Date(a.start).getTime();
+    const timeB = new Date(b.start).getTime();
+    return timeA - timeB; // if negative sort a before b; if positive sort b before a; if 0, keep original order
+  });
+
+  const merged = [];
+  let currentBlock = { ...sortedBlocks[0] };
+
+  for (let i = 1; i < sortedBlocks.length; i++) {
+    const nextBlock = sortedBlocks[i];
+    
+    const currentEndMs = new Date(currentBlock.end).getTime();
+    const nextStartMs = new Date(nextBlock.start).getTime();
+
+    // 2. Check if they are back-to-back (or overlapping) AND have the same availability count
+    if (currentEndMs >= nextStartMs && currentBlock.availLvl === nextBlock.availLvl) {
+      // 3. Extend the current block's end time
+      const nextEndMs = new Date(nextBlock.end).getTime();
+      currentBlock.end = new Date(Math.max(currentEndMs, nextEndMs));
+    } else {
+      // 4. No match, push the current block and start a new one
+      merged.push(currentBlock);
+      currentBlock = { ...nextBlock };
+    }
+  }
+  
+  // Push the very last block
+  merged.push(currentBlock);
+
+  return merged;
 }
