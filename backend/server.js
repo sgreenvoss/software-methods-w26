@@ -355,7 +355,7 @@ app.get("/api/events", async (req, res) => {
     const calendar = google.calendar({ version: 'v3', auth: oauth2Client });
     const calendarStart = new Date();
 
-    calendarStart.setDate(calendarStart.getDate());
+    calendarStart.setDate(calendarStart.getDate() - 7);
 
     const response = await calendar.events.list({
       calendarId: 'primary',
@@ -431,7 +431,7 @@ app.get("/api/events", async (req, res) => {
 
     // update the calendar in the database
     // clean the old events (> 7 days)
-    await db.cleanEvents(calID.calendar_id);
+    await db.cleanEvents(calID.calendar_id, calendarStart.toISOString());
 
     // add new events to db
     if (newEvents.length > 0) {

@@ -117,15 +117,14 @@ const addEvents = async(cal_id, events, priority=1) => {
  * under that calendar id that ended a week ago or more
  * @param {*} cal_id 
  */
-const cleanEvents = async(cal_id) => {
-    const week_ago = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000);
+const cleanEvents = async(cal_id, date) => {
     await pool.query(
         `DELETE FROM cal_event 
         WHERE calendar_id = ($1) 
         AND event_end < ($2)`,
         [   
             cal_id,
-            week_ago
+            date
         ]
     );
 }
