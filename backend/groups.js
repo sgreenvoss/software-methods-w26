@@ -26,6 +26,10 @@ const { createInviteStateService } = require("./services/invite_state_service");
 module.exports = function(app) {
   const inviteState = createInviteStateService({
     isProduction: process.env.NODE_ENV === "production"
+  }); // Fixed missing closing bracket and parenthesis
+
+  // Note: This function is currently unused in this file. 
+  // You may need to pass it to registerInviteRoutes below.
   async function resolveGroupInvite(req) {
     if (!req.session.pendingGroupToken) return null;
     
@@ -43,9 +47,11 @@ module.exports = function(app) {
       if (!req.session.userId || !req.session.isAuthenticated) {
         return res.status(401).json({ error: "Unauthorized" });
       }
+      
       const groupName = typeof req.query.group_name === "string"
         ? req.query.group_name.trim()
         : "";
+        
       if (!groupName) {
         return res.status(400).json({ success: false, error: "group_name is required" });
       }
@@ -73,32 +79,31 @@ module.exports = function(app) {
       // query database for groups that include user's id
       // return list of groups to frontend
       const groups = await db.getGroupsByUID(req.session.userId);
-      return res.status(201).json({
-        success:true,
-        groups:groups
+      return res.status(200).json({ // Changed from 201 to 200 for a GET request
+        success: true,
+        groups: groups
       });
     } catch(error) {
       console.error("error fetching groups:", error);
       return res.status(500).json({error: "failed getting groups from db"});
     }
-
   });
 
-  app.get("/group/:groupId", async (req, res) => { // GCAVAILVIEW
-    try { // GCAVAILVIEW
-      const groupId = req.params.groupId; // GCAVAILVIEW
-      const groupInfo = await db.getGroupByID(groupId); // GCAVAILVIEW
-      const members = await db.getGroupMembersByID(groupId); // GCAVAILVIEW
-      return res.status(200).json({ // GCAVAILVIEW
-        success: true, // GCAVAILVIEW
-        group: groupInfo, // GCAVAILVIEW
-        members: members // GCAVAILVIEW
-      }); // GCAVAILVIEW
-    } catch (error) { // GCAVAILVIEW
-      console.error("error fetching group details:", error); // GCAVAILVIEW
-      return res.status(500).json({error: "failed getting group details from db"}); // GCAVAILVIEW
-    } // GCAVAILVIEW
-  }); // GCAVAILVIEW
+  app.get("/group/:groupId", async (req, res) => {
+    try { 
+      const groupId = req.params.groupId; 
+      const groupInfo = await db.getGroupByID(groupId); 
+      const members = await db.getGroupMembersByID(groupId); 
+      return res.status(200).json({ 
+        success: true, 
+        group: groupInfo, 
+        members: members 
+      }); 
+    } catch (error) { 
+      console.error("error fetching group details:", error); 
+      return res.status(500).json({error: "failed getting group details from db"}); 
+    } 
+  });
 
   app.post("/group/invite", async (req, res) => {
     // ensure user is logged in
@@ -125,5 +130,5 @@ module.exports = function(app) {
   });
 
   registerGroupRoutes(app, { db });
-  registerInviteRoutes(app, { db, inviteToken, inviteState });
+  registerInviteRoutes(app, { db, inviteToken, inviteState }); // resolveGroupInvite might need to be passed here?
 };
