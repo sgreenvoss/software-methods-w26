@@ -1,4 +1,4 @@
-export function createEventView() {
+function createEventView() {
   return {
     eventBlockAdded(event) {
       return {
@@ -55,3 +55,7 @@ export function createEventView() {
     },
   };
 }
+
+module.exports = {
+  createEventView,
+};

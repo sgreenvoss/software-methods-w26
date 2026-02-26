@@ -1,8 +1,8 @@
-import { EventStore, EventStoreError, EventSources } from "./model.js";
-import { EventController } from "./controller.js";
-import { createEventView } from "./view.js";
+const { EventStore, EventStoreError, EventSources } = require("./model.js");
+const { EventController } = require("./controller.js");
+const { createEventView } = require("./view.js");
 
-export function createEventManagementModule({
+function createEventManagementModule({
   model = new EventStore(),
   view = createEventView(),
 } = {}) {
@@ -10,4 +10,11 @@ export function createEventManagementModule({
   return { model, view, controller };
 }
 
-export { EventStore, EventStoreError, EventSources, EventController, createEventView };
+module.exports = {
+  createEventManagementModule,
+  EventStore,
+  EventStoreError,
+  EventSources,
+  EventController,
+  createEventView,
+};

@@ -13,14 +13,14 @@ const {
   computeAvailabilityBlocks, 
   computeAvailabilityBlocksAllViews, 
   toSingleViewBlocks 
-} = require('./algorithm.js');
+} = require('../../../algorithm/algorithm.js');
 
 const { 
   DEFAULT_G_MINUTES, 
   BlockingLevel 
-} = require('./algorithm_types.js');
+} = require('../../../algorithm/algorithm_types.js');
 
-/** @typedef {import("./types/algorithm_types.js").ParticipantSnapshot} ParticipantSnapshot */
+/** @typedef {import("../../../algorithm/algorithm_types.js").ParticipantSnapshot} ParticipantSnapshot */
 
 const BASE_TIME = Date.UTC(2026, 0, 1, 10, 0, 0, 0);
 const ONE_MIN = 60 * 1000;

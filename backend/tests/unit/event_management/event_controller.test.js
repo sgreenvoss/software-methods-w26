@@ -1,7 +1,7 @@
-import { EventStore, EventStoreError } from "./model.js";
-import { EventController } from "./controller.js";
-import { createEventView } from "./view.js";
-import { BlockingLevel } from "../types/algorithm_types.js";
+const { EventStore, EventStoreError } = require("../../../event_management/model.js");
+const { EventController } = require("../../../event_management/controller.js");
+const { createEventView } = require("../../../event_management/view.js");
+const { BlockingLevel } = require("../../../algorithm/algorithm_types.js");
 
 describe("EventController: happy paths", () => {
   test("returns view payloads for each controller method", () => {

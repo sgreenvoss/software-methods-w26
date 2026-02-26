@@ -1,5 +1,5 @@
-import { EventStore, EventStoreError, EventSources } from "./model.js";
-import { BlockingLevel } from "../types/algorithm_types.js";
+const { EventStore, EventStoreError, EventSources } = require("../../../event_management/model.js");
+const { BlockingLevel } = require("../../../algorithm/algorithm_types.js");
 
 const USER_A = "user-a";
 const USER_B = "user-b";

@@ -36,6 +36,12 @@ const blockingOrder = Object.freeze({
   [BlockingLevel.B3]: 3,
 });
 
+const viewByBlockingLevel = Object.freeze({
+  [BlockingLevel.B1]: "StrictView",
+  [BlockingLevel.B2]: "FlexibleView",
+  [BlockingLevel.B3]: "LenientView",
+});
+
 /**
  * Missing/invalid blockingLevel is treated as B3.
  * Why? If we don't know the level, I'd rather be conservative than accidentally
@@ -453,8 +459,10 @@ function toSingleViewBlocks(blocksMulti, chosen) {
     throw new Error("blocksMulti must be an array.");
   }
 
-  // Defensive default: if chosen is wrong, go restrictive.
-  const key = blockingOrder[chosen] ? chosen : BlockingLevel.StrictView;
+  const requestedView = viewByBlockingLevel[chosen] || chosen;
+  const key = (requestedView === "StrictView" || requestedView === "FlexibleView" || requestedView === "LenientView")
+    ? requestedView
+    : "StrictView";
 
   return blocksMulti.map((b) => ({
     startMs: b.startMs,

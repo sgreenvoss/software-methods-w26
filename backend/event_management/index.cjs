@@ -1,17 +1,3 @@
-let modulePromise = null;
+const mod = require("./index.js");
 
-async function loadModule() {
-  if (!modulePromise) {
-    modulePromise = import("./index.js");
-  }
-  return modulePromise;
-}
-
-async function createEventManagementModule(options) {
-  const mod = await loadModule();
-  return mod.createEventManagementModule(options);
-}
-
-module.exports = {
-  createEventManagementModule,
-};
+module.exports = mod;

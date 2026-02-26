@@ -1,4 +1,4 @@
-import { createEventView } from "./view.js";
+const { createEventView } = require("../../../event_management/view.js");
 
 describe("Event view helpers", () => {
   test("success helpers return ok actions", () => {

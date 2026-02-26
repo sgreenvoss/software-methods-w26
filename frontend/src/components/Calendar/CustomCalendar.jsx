@@ -77,9 +77,9 @@ export default function CustomCalendar({ groupId, draftEvent }) {
             ? response.blocks
             : null;
 
-        if (response && response.ok && response.blocks) {
+        if (response && response.ok && Array.isArray(availabilityBlocks)) {
           // 2. Disguise the availability blocks as standard events for your UI
-          const heatmapEvents = response.blocks.map((block, i) => ({
+          const heatmapEvents = availabilityBlocks.map((block, i) => ({
             title: `Avail: ${block.count}`,
             availLvl: block.count,
             start: block.start,
@@ -96,9 +96,6 @@ export default function CustomCalendar({ groupId, draftEvent }) {
 
           setGroupAvailability(finalHeatmapEvents);
         } else {
-          // Default: Fetch personal events
-          const personalEvents = await apiGet('/api/get-events');
-          setRawEvents(personalEvents || []);
           setGroupAvailability([]); // Clear if response is bad
         }
       } catch (error) {

@@ -10,7 +10,7 @@
     }
   },
   "scripts": {
-    "test": "jest",
+    "test": "cd .. && jest --config ./jest.config.cjs --runInBand --coverage=false tests/unit/algorithm",
     "render-proof": "node ./render_proof.cjs"
   },
   "keywords": [],

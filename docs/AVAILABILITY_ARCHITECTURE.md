@@ -40,3 +40,17 @@ If you need to change the priority logic (e.g., adding a "B4" level):
 1. Update `algorithm_types.js` to include the new level.
 2. Update the `priorityMapping` in `algorithmAdapter.js`.
 3. The rest of the system will adapt automatically.
+
+## 5. Test Workflow
+- Backend test source of truth: `backend/tests/**`
+- Frontend test source of truth: `frontend/src/tests/**`
+- Rule: place all new tests in these modularized folders (do not add colocated `*.test.js` files under feature modules).
+
+### Backend Commands
+- `cd backend && npm test`
+- `cd backend && npm run test:watch`
+- `cd backend && npm run test:coverage`
+
+### Frontend Commands
+- `cd frontend && npm test`
+- `cd frontend && npm run test:ci`

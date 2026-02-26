@@ -1,10 +1,10 @@
-import { BlockingLevel } from "../types/algorithm_types.js";
+const { BlockingLevel } = require("../algorithm/algorithm_types.js");
 
 const VALID_BLOCKING_LEVELS = new Set(Object.values(BlockingLevel));
 const SOURCE_MANUAL = "manual";
 const SOURCE_GOOGLE = "google";
 
-export class EventStoreError extends Error {
+class EventStoreError extends Error {
   /**
    * @param {string} code
    * @param {string} message
@@ -70,7 +70,7 @@ function makeEventRef(prefix, nowMs, seq) {
  * In-memory event store for UC-05 (Add Event Block) and priority edits.
  * This is intentionally transient (no DB, no UI).
  */
-export class EventStore {
+class EventStore {
   constructor({ nowFn = () => Date.now(), manualEventPrefix = "manual" } = {}) {
     this._manualEventsByUser = new Map();
     this._googleEventsByUser = new Map();
@@ -89,7 +89,7 @@ export class EventStore {
    * @param {string} [args.blockingLevel] - defaults to B3 for MVP
    * @param {string} [args.title]
    * @param {string} [args.eventRef]
-   * @returns {import("../types/algorithm_types.js").EventInterval}
+   * @returns {import("../algorithm/algorithm_types.js").EventInterval}
    */
   addManualEvent({ userId, startMs, endMs, blockingLevel, title, eventRef } = {}) {
     validateInterval({ userId, startMs, endMs });
@@ -185,7 +185,7 @@ export class EventStore {
    * @param {string} args.userId
    * @param {string} args.eventRef
    * @param {string} args.blockingLevel
-   * @returns {{applied:boolean,event:import("../types/algorithm_types.js").EventInterval}}
+   * @returns {{applied:boolean,event:import("../algorithm/algorithm_types.js").EventInterval}}
    */
   setGoogleEventPriority({ userId, eventRef, blockingLevel } = {}) {
     assertNonEmptyString(userId, "userId");
@@ -225,7 +225,7 @@ export class EventStore {
    * @param {string} args.userId
    * @param {boolean} [args.includeManual=true]
    * @param {boolean} [args.includeGoogle=true]
-   * @returns {import("../types/algorithm_types.js").EventInterval[]}
+   * @returns {import("../algorithm/algorithm_types.js").EventInterval[]}
    */
   getUserEvents({ userId, includeManual = true, includeGoogle = true } = {}) {
     assertNonEmptyString(userId, "userId");
@@ -254,7 +254,7 @@ export class EventStore {
    * @param {string} args.userId
    * @param {boolean} [args.includeManual=true]
    * @param {boolean} [args.includeGoogle=true]
-   * @returns {import("../types/algorithm_types.js").ParticipantSnapshot}
+   * @returns {import("../algorithm/algorithm_types.js").ParticipantSnapshot}
    */
   getParticipantSnapshot({ userId, includeManual = true, includeGoogle = true } = {}) {
     const events = this.getUserEvents({ userId, includeManual, includeGoogle });
@@ -266,7 +266,7 @@ export class EventStore {
    * @param {object} args
    * @param {boolean} [args.includeManual=true]
    * @param {boolean} [args.includeGoogle=true]
-   * @returns {import("../types/algorithm_types.js").ParticipantSnapshot[]}
+   * @returns {import("../algorithm/algorithm_types.js").ParticipantSnapshot[]}
    */
   getAllParticipantSnapshots({ includeManual = true, includeGoogle = true } = {}) {
     const userIds = new Set([
@@ -282,7 +282,13 @@ export class EventStore {
   }
 }
 
-export const EventSources = Object.freeze({
+const EventSources = Object.freeze({
   manual: SOURCE_MANUAL,
   google: SOURCE_GOOGLE,
 });
+
+module.exports = {
+  EventStore,
+  EventStoreError,
+  EventSources,
+};

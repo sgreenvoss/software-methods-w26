@@ -1,7 +1,7 @@
-import { EventStore, EventStoreError } from "./model.js";
-import { createEventView } from "./view.js";
+const { EventStore, EventStoreError } = require("./model.js");
+const { createEventView } = require("./view.js");
 
-export class EventController {
+class EventController {
   /**
    * @param {EventStore} model
    * @param {ReturnType<typeof createEventView>} view
@@ -68,3 +68,7 @@ export class EventController {
     );
   }
 }
+
+module.exports = {
+  EventController,
+};
