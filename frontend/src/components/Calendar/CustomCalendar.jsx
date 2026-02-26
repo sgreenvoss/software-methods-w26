@@ -96,7 +96,10 @@ export default function CustomCalendar({ groupId, draftEvent }) {
 
           setGroupAvailability(finalHeatmapEvents);
         } else {
-            setGroupAvailability([]); // Clear if response is bad
+          // Default: Fetch personal events
+          const personalEvents = await apiGet('/api/get-events');
+          setRawEvents(personalEvents || []);
+          setGroupAvailability([]); // Clear if response is bad
         }
       } catch (error) {
         console.error('Failed to fetch group availability:', error);

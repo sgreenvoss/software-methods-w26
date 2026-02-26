@@ -20,10 +20,21 @@ export default function Main() {
 
     // live draft preview of event being created/edited.
     const [draftEvent, setDraftEvent] = useState(null);
-
+  
+    // 1. Move fetchGroups INSIDE so it can see setGroupsList
     const [eventMode, setEventMode] = useState('blocking');
     const [petitionGroupId, setPetitionGroupId] = useState('');
     
+
+    // grab all of the events using api/events on login
+    const fetchEvents = async () => {
+        try {
+            await apiGet('/api/events');
+        } catch (error) {
+            console.error('Error loading events:', error);
+        }
+    }
+
     const fetchGroups = async () => {
         try {
             // 1. Hit the ACTUAL endpoint
@@ -67,6 +78,7 @@ export default function Main() {
     };
 
     useEffect(() => {
+        fetchEvents();
         fetchGroups();
         fetchPendingInvite();
     }, []);

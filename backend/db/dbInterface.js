@@ -117,15 +117,50 @@ const addEvents = async(cal_id, events, priority=3) => {
  * under that calendar id that ended a week ago or more
  * @param {*} cal_id 
  */
-const cleanEvents = async(cal_id) => {
-    const week_ago = await pool.query(`SELECT NOW() - INTERVAL '1 week';`);
+const cleanEvents = async(cal_id, date) => {
     await pool.query(
         `DELETE FROM cal_event 
         WHERE calendar_id = ($1) 
         AND event_end < ($2)`,
         [   
             cal_id,
-            week_ago
+            date
+        ]
+    );
+}
+
+const getEventsByCalendarID = async(cal_id) => {
+    const result = await pool.query(
+        `SELECT * FROM cal_event
+        WHERE calendar_id = $1
+        ORDER BY event_start ASC`,
+        [cal_id]
+    );
+    return result.rows;
+}
+
+const deleteEventsByIds = async(cal_id, gcal_event_ids) => {
+    if (!gcal_event_ids || gcal_event_ids.length === 0) return;
+    
+    await pool.query(
+        `DELETE FROM cal_event 
+        WHERE calendar_id = $1 
+        AND gcal_event_id = ANY($2)`,
+        [cal_id, gcal_event_ids]
+    );
+}
+
+const updateEvent = async(cal_id, gcal_event_id, eventData) => {
+    await pool.query(
+        `UPDATE cal_event 
+        SET event_start = $1, event_end = $2, event_name = $3
+        WHERE calendar_id = $4 AND gcal_event_id = $5`,
+        [
+            eventData.start,
+            eventData.end,
+            eventData.title,
+            cal_id,
+            gcal_event_id
         ]
     );
 }
@@ -370,6 +405,9 @@ module.exports = {
     searchFor,
     addCalendar,
     addEvents,
+    getEventsByCalendarID,
+    deleteEventsByIds,
+    updateEvent,
     getCalendarID,
     updateTokens,
     createGroup,

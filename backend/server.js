@@ -390,13 +390,12 @@ app.get("/api/events", async (req, res) => {
     const calendar = google.calendar({ version: 'v3', auth: oauth2Client });
     const calendarStart = new Date();
 
-    calendarStart.setDate(calendarStart.getDate() - 14);
+    calendarStart.setDate(calendarStart.getDate() - 7);
 
     const response = await calendar.events.list({
       calendarId: 'primary',
       timeMin: calendarStart.toISOString(), // From now onwards
-      // timeMax: new Date(calendarStart.getTime() + 6 * 24 * 60 * 60 * 1000).toISOString(), // 7 days ahead
-      maxResults: 200,
+      maxResults: 250,
       singleEvents: true, 
       orderBy: 'startTime',
     });
@@ -423,16 +422,77 @@ app.get("/api/events", async (req, res) => {
     try {
       await db.addCalendar(req.session.userId, calendar.summary);
       const calID = await db.getCalendarID(req.session.userId);
-      console.log("calendar id is", calID);
-      db.addEvents(calID.calendar_id, formattedEvents)
-        .catch(err => console.error("events insert failed", err));
+
+      // grab existing events in calendar from db
+      const existingEvents = await db.getEventsByCalendarID(calID.calendar_id);
+
+      // check if there are new events
+      const existingEventIds = new Set(existingEvents.map(event => event.gcal_event_id));
+      const newEvents = formattedEvents.filter(event => !existingEventIds.has(event.event_id));
+
+      // check if there are deleted events
+      const googleEventIds = new Set(formattedEvents.map(event => event.event_id));
+      const deletedEvents = existingEvents.filter(event => !googleEventIds.has(event.gcal_event_id));
+
+      // check if there are modified events (time and name only)
+      const modifiedEvents = [];
+      for (const existingEvent of existingEvents) {
+        const googleEvent = formattedEvents.find(event => event.event_id === existingEvent.gcal_event_id);
+        
+        if (googleEvent) {
+          // Compare key properties that might have changed
+          const existingStart = new Date(existingEvent.start_time).getTime();
+          const existingEnd = new Date(existingEvent.end_time).getTime();
+          const googleStart = new Date(googleEvent.start).getTime();
+          const googleEnd = new Date(googleEvent.end).getTime();
+          
+          // Check if duration changed or times changed
+          const existingDuration = existingEnd - existingStart;
+          const googleDuration = googleEnd - googleStart;
+          
+          if (existingDuration !== googleDuration || 
+              existingStart !== googleStart || 
+              existingEnd !== googleEnd ||
+              existingEvent.title !== googleEvent.title) {
+            modifiedEvents.push({
+              id: existingEvent.gcal_event_id,
+              oldEvent: existingEvent,
+              newEvent: googleEvent,
+              durationChanged: existingDuration !== googleDuration
+            });
+          }
+        }
+    }
+
+    // update the calendar in the database
+    // clean the old events (> 7 days)
+    await db.cleanEvents(calID.calendar_id, calendarStart.toISOString());
+
+    // add new events to db
+    if (newEvents.length > 0) {
+      await db.addEvents(calID.calendar_id, newEvents);
+    }
+
+    // remove events deleted in google calendar
+    if (deletedEvents.length > 0) {
+      const deletedEventIds = deletedEvents.map(event => event.gcal_event_id);
+      await db.deleteEventsByIds(calID.calendar_id, deletedEventIds);
+    }
+
+    // update modified events (only time and name)
+    if (modifiedEvents.length > 0) {
+      for (const mod of modifiedEvents) {
+        await db.updateEvent(calID.calendar_id, mod.id, mod.newEvent);
+      }
+    }
+
     } catch(error) {
       console.error('error storing: ', error);
     }
     res.json(formattedEvents);
 
   } catch (error) {
-    console.error('Error fetching calendar', error);
+    console.error('Error updating calendar', error);
     
     // If authentication failed, clear session
     if (error.code === 401 || error.code === 403) {
@@ -443,6 +503,39 @@ app.get("/api/events", async (req, res) => {
     res.status(500).json({ error: "Failed to fetch events" });
   }
 });
+
+app.get('/api/get-events', async (req, res) => {
+  try {
+    if (!req.session.userId || !req.session.isAuthenticated) {
+      return res.status(401).json({ error: "User not authenticated" });
+    }
+
+    // get calendar and then retrieve events from db
+    const calID = await db.getCalendarID(req.session.userId);
+    const events = await db.getEventsByCalendarID(calID.calendar_id);
+    
+    // transform db format to frontend format
+    const formattedEvents = events.map(event => ({
+      title: event.event_name,
+      start: event.event_start,
+      end: event.event_end,
+      event_id: event.gcal_event_id
+    }));
+    
+    return res.json(formattedEvents);
+
+  } catch (error) {
+    console.error('Error fetching calendar from db', error);
+    
+    // If authentication failed, clear session
+    if (error.code === 401 || error.code === 403) {
+      req.session.destroy();
+      return res.status(401).json({ error: "Authentication expired. Please log in again." });
+    }
+    
+    res.status(500).json({ error: "Failed to fetch events" });
+  }
+})
 
 app.get('/api/email-send-test', async(req,res) => {
   try {
