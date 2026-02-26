@@ -213,7 +213,18 @@ app.get('/oauth2callback', async (req, res) => {
 
     const calendar = google.calendar({ version: 'v3', auth: oauth2Client });
     try {
-      await calendar.calendarList.list({ maxResults: 1 });
+
+    //grab calendar info (test)
+    const responseCal = await calendar.calendarList.list({ maxResults: 10 });
+
+    const calList = responseCal.data.items.map(cal => ({
+      id: cal.id,
+      summary: cal.summary,
+      description: cal.description,
+      primary: cal.primary
+    }));
+
+
     } catch (error) {
       if (error.code === 403 || error.code === 401) {
         return res.redirect('/login?error=calendar_permissions_required');
