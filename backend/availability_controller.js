@@ -1,4 +1,4 @@
-const availabilityService = require('./availability_service');
+const availabilityService = require('./services/availability_service');
 
 const availabilityController = {
   async getAvailability(req, res) {
