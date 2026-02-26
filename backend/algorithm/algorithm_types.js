@@ -16,14 +16,14 @@ const DEFAULT_G_MINUTES = 15;
  * BlockingLevel is a PRIORITY / STRICTNESS label attached to each busy interval.
  *
  * IMPORTANT: the algorithm uses threshold views:
- *   - View B3 => only treat B3 events as busy (most lenient)
- *   - View B2 => treat B2 + B3 events as busy
- *   - View B1 => treat B1 + B2 + B3 events as busy (most restrictive)
+ *   - LenientView => only treat B3 events as busy (most lenient)
+ *   - FlexibleView => treat B2 + B3 events as busy
+ *   - StrictView => treat B1 + B2 + B3 events as busy (most restrictive)
  *
  * That matches the petition idea:
- *   - A B3 petition only cares about B3 conflicts
- *   - A B2 petition cares about B2/B3 conflicts
- *   - A B1 petition cares about everything
+ *   - A lenient petition only cares about B3 conflicts
+ *   - A flexible petition cares about B2/B3 conflicts
+ *   - A strict petition cares about everything
  */
 const BlockingLevel = Object.freeze({
   B1: "B1",
@@ -36,7 +36,7 @@ const BlockingLevel = Object.freeze({
 /**
  * INPUT CONTRACT: event intervals
  *
- * The algorithm only cares about: startMs/endMs and blockingLevel.
+ * The algorithm only cares about: startMs/endMs and blockingLevel (B1/B2/B3).
  * Everything else is optional metadata that other layers can use.
  *
  * Rules (enforced by algorithm):
@@ -85,7 +85,8 @@ const BlockingLevel = Object.freeze({
 /**
  * OUTPUT CONTRACT (multi view):
  *
- * Same blocks, but each block carries 3 "views" (B1/B2/B3).
+ * Same blocks, but each block carries 3 threshold "views":
+ * StrictView/FlexibleView/LenientView.
  * This is the efficient path: compute once, toggle in UI with a cheap projection.
  *
  * @typedef {Object} AvailabilityView
@@ -99,7 +100,7 @@ const BlockingLevel = Object.freeze({
  * @typedef {Object} AvailabilityBlockMulti
  * @property {number} startMs
  * @property {number} endMs
- * @property {{B1: AvailabilityView, B2: AvailabilityView, B3: AvailabilityView}} views
+ * @property {{StrictView: AvailabilityView, FlexibleView: AvailabilityView, LenientView: AvailabilityView}} views
  */
 
 

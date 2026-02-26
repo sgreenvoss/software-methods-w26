@@ -92,7 +92,7 @@ const getCalendarID = async(user_id) => {
     return result.rows[0];
 }
 
-const addEvents = async(cal_id, events, priority=1) => {
+const addEvents = async(cal_id, events, priority=3) => {
     for (let i = 0; i < events.length; i++) {
         // TODO: consider the logic for doing nothing -> might want to update instead? 
         // added event id to query, some function is server expected it
@@ -102,7 +102,7 @@ const addEvents = async(cal_id, events, priority=1) => {
             ON CONFLICT DO NOTHING`,
             [
                 cal_id,
-                priority, // for testing purposes
+                priority, // TODO: make this events[i].priority
                 events[i].start,
                 events[i].end,
                 events[i].title,
@@ -242,6 +242,45 @@ const createGroup = async(g_name) => {
     return result.rows[0].group_id; // Garertt changed this line
 }
 
+/**
+ * Atomically create a group and attach the creator as a member.
+ * @param {string} g_name
+ * @param {bigint|string|number} creator_user_id
+ * @returns {Promise<bigint>}
+ */
+const createGroupWithCreator = async(g_name, creator_user_id) => {
+    const client = await pool.connect();
+    try {
+        await client.query("BEGIN");
+
+        const groupResult = await client.query(
+            `INSERT INTO f_group (group_name)
+             VALUES ($1)
+             RETURNING group_id`,
+            [g_name]
+        );
+        const groupId = groupResult.rows[0].group_id;
+
+        await client.query(
+            `INSERT INTO group_match (group_id, user_id)
+             VALUES ($1, $2)`,
+            [groupId, creator_user_id]
+        );
+
+        await client.query("COMMIT");
+        return groupId;
+    } catch (error) {
+        try {
+            await client.query("ROLLBACK");
+        } catch (rollbackError) {
+            console.error("rollback failed while creating group transaction", rollbackError);
+        }
+        throw error;
+    } finally {
+        client.release();
+    }
+}
+
 const addUserToGroup = async(group_id, user_id) => {
     const query = `
         INSERT INTO group_match (group_id, user_id)
@@ -270,12 +309,38 @@ const getUIDByGroupID = async(group_id) => {
     return res;
 }
 
+const getGroupById = async(group_id) => {
+    const query = `
+        SELECT group_id, group_name FROM f_group
+        WHERE group_id = ($1)`;
+    const res = await pool.query(query, [group_id]);
+    return res.rows[0] || null;
+}
+
 const isUserInGroup = async(user_id, group_id) => {
     const query = `
         SELECT user_id FROM group_match
         WHERE group_id = ($1) AND user_id = ($2)`;
     const res = await pool.query(query, [group_id, user_id]);
     return (res.rowCount > 0);
+}
+
+const getGroupByID = async(group_id) => {
+    const query = `
+        SELECT * FROM f_group WHERE group_id = ($1)`;
+    const res = await pool.query(query, [group_id]);
+    return res.rows;
+}
+
+const getGroupMembersByID = async(group_id) => {
+    const query = `
+        SELECT p.username, p.user_id 
+        FROM person p
+        JOIN group_match gm ON p.user_id = gm.user_id
+        WHERE gm.group_id = ($1)
+    `;
+    const res = await pool.query(query, [group_id]);
+    return res.rows; // Returns an array of user objects: [{ username: "bob", user_id: 1 }, ...]
 }
 
 const deleteGroup = async(group_id) => {
@@ -327,6 +392,8 @@ const checkUsernameExists = async(username) => {
     return result.rows.length > 0; // returns true if exists
 }
 
+// STELLA TODO: changePriority
+
 module.exports = {
     pool,
     query: (text, params) => pool.query(text,params),
@@ -344,8 +411,12 @@ module.exports = {
     getCalendarID,
     updateTokens,
     createGroup,
+    createGroupWithCreator,
     addUserToGroup,
     getGroupsByUID,
+    getGroupById,
+    getGroupByID,
+    getGroupMembersByID,
     leaveGroup,
     updateUsername,
     checkUsernameExists,

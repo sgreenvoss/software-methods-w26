@@ -1,6 +1,5 @@
 import React, { useState, useEffect } from 'react';
 import './css/login.css';
-const BACKEND_URL = process.env.BACKEND_URL || ''; // Gemini assisted fix for local deployment
 // handles login
 export default function Login() {
   const [errorMsg, setErrorMsg] = useState('');
