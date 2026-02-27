@@ -27,7 +27,7 @@ export default function CustomCalendar({ groupId, draftEvent }) {
     const fetchPersonalEvents = async () => {
       setLoading(true);
       try {
-        const personalEvents = await apiGet('/api/events');
+        const personalEvents = await apiGet('/api/get-events');
         if (Array.isArray(personalEvents)) {
             setRawEvents(personalEvents);
           }
