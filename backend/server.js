@@ -305,23 +305,21 @@ async function ensureValidToken(req, res) {
       throw new Error('Access token expired and no refresh token available.');
     }
 
-    // FIX 3: Manually map the DB fields to what Google expects
     oauth2Client.setCredentials({
-      refresh_token: user.refresh_token,
-      access_token: user.access_token,
-      expiry_date: expiryDate
+      refresh_token: user.refresh_token
     });
 
     try {
       // Attempt to refresh the token
       const { credentials } = await oauth2Client.getAccessToken(); // This will trigger a refresh if needed
+      const {access_token, expiry_date} = oauth2Client.credentials;
       await db.updateTokens(
         req.session.userId,
-        credentials.access_token,
-        credentials.expiry_date
+        access_token,
+        expiry_date
       );
       console.log("Token refreshed successfully.");
-      // Update client credentials with new ones
+
       oauth2Client.setCredentials({credentials});
       return true; // Indicate successful refresh for route
 
