@@ -27,6 +27,11 @@ export default function CustomCalendar({ groupId, draftEvent }) {
     const fetchPersonalEvents = async () => {
       setLoading(true);
       try {
+        try {
+          await apiGet('/api/events');
+        } catch (syncErr) {
+          console.error("Failed syncing events:", syncErr);
+        }
         const personalEvents = await apiGet('/api/get-events');
         if (Array.isArray(personalEvents)) {
             setRawEvents(personalEvents);
@@ -70,7 +75,6 @@ export default function CustomCalendar({ groupId, draftEvent }) {
 
         const response = await apiGet(`/api/groups/${groupId}/availability?windowStartMs=${startMs}&windowEndMs=${endMs}&granularityMinutes=15`);
         
-        console.log("RAW AVAILABILITY DATA:", response); // Testing why blank availability view: fix 02-20 2.2
         const availabilityBlocks = Array.isArray(response?.availability)
           ? response.availability
           : Array.isArray(response?.blocks)
