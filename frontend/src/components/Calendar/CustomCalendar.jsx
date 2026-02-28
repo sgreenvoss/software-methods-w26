@@ -10,6 +10,14 @@ function getStartOfWeek(date) {
   return d;
 }
 
+// check if user is on present week
+function isCurrentWeek(date) {
+  const today = new Date();
+  const currWeekStart = getStartOfWeek(today);
+  return date.getTime() === currWeekStart.getTime();
+}
+
+
 export default function CustomCalendar({ groupId, draftEvent }) {
   // --- STATE (The "Controller" Data) ---
   const [weekStart, setWeekStart] = useState(getStartOfWeek(new Date()));
@@ -29,11 +37,9 @@ export default function CustomCalendar({ groupId, draftEvent }) {
       try {
         try {
           await apiGet('/api/events');
-        } catch (syncError) {
-          console.warn('Failed to sync with Google Calendar:', syncError);
+        } catch (syncErr) {
+          console.error("Failed syncing events:", syncErr);
         }
-
-        // Now fetch the synced events from the DB
         const personalEvents = await apiGet('/api/get-events');
         if (Array.isArray(personalEvents)) {
             setRawEvents(personalEvents);
@@ -77,7 +83,6 @@ export default function CustomCalendar({ groupId, draftEvent }) {
 
         const response = await apiGet(`/api/groups/${groupId}/availability?windowStartMs=${startMs}&windowEndMs=${endMs}&granularityMinutes=15`);
         
-        console.log("RAW AVAILABILITY DATA:", response); // Testing why blank availability view: fix 02-20 2.2
         const availabilityBlocks = Array.isArray(response?.availability)
           ? response.availability
           : Array.isArray(response?.blocks)
@@ -153,7 +158,7 @@ export default function CustomCalendar({ groupId, draftEvent }) {
     <div id="calendar-container">
       {/* 1. CALENDAR HEADER (Navigation) */}
       <div className="calendar-header">
-        <button onClick={handlePrevWeek}>← Prev</button>
+        <button onClick={handlePrevWeek} disabled={isCurrentWeek(weekStart)}>← Prev</button>
         <h2>
           {weekStart.toLocaleString("default", { month: "long", year: "numeric" })}
         </h2>
