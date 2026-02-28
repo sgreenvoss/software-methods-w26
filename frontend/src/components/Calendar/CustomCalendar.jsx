@@ -10,6 +10,14 @@ function getStartOfWeek(date) {
   return d;
 }
 
+// check if user is on present week
+function isCurrentWeek(date) {
+  const today = new Date();
+  const currWeekStart = getStartOfWeek(today);
+  return date.getTime() === currWeekStart.getTime();
+}
+
+
 export default function CustomCalendar({ groupId, draftEvent }) {
   // --- STATE (The "Controller" Data) ---
   const [weekStart, setWeekStart] = useState(getStartOfWeek(new Date()));
@@ -150,7 +158,7 @@ export default function CustomCalendar({ groupId, draftEvent }) {
     <div id="calendar-container">
       {/* 1. CALENDAR HEADER (Navigation) */}
       <div className="calendar-header">
-        <button onClick={handlePrevWeek}>← Prev</button>
+        <button onClick={handlePrevWeek} disabled={isCurrentWeek(weekStart)}>← Prev</button>
         <h2>
           {weekStart.toLocaleString("default", { month: "long", year: "numeric" })}
         </h2>
