@@ -349,6 +349,12 @@ async function ensureValidToken(req, res) {
   }
 }
 
+
+// endpoint for users to choose their calendars upon first login
+app.post("/calendarselection", async (req, res) => {
+  
+})
+
 app.get("/api/events", async (req, res) => {
   // TODO: add a way to pick which calendar to use
   // TODO: have the database cache the next month or so of events

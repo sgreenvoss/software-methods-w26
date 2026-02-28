@@ -27,6 +27,13 @@ export default function CustomCalendar({ groupId, draftEvent }) {
     const fetchPersonalEvents = async () => {
       setLoading(true);
       try {
+        try {
+          await apiGet('/api/events');
+        } catch (syncError) {
+          console.warn('Failed to sync with Google Calendar:', syncError);
+        }
+
+        // Now fetch the synced events from the DB
         const personalEvents = await apiGet('/api/get-events');
         if (Array.isArray(personalEvents)) {
             setRawEvents(personalEvents);
