@@ -24,6 +24,8 @@ export default function Main() {
     // 1. Move fetchGroups INSIDE so it can see setGroupsList
     const [eventMode, setEventMode] = useState('blocking');
     const [petitionGroupId, setPetitionGroupId] = useState('');
+    const [petitionRefreshSignal, setPetitionRefreshSignal] = useState(0);
+    const [lastCreatedPetition, setLastCreatedPetition] = useState(null);
     
 
     // grab all of the events using api/events on login
@@ -184,13 +186,21 @@ export default function Main() {
                             onSelectGroup={(id) => setSelectedGroupId(Number(id))}
                             onOpenPetition={handleOpenPetition} 
                             refreshSignal={groupsRefreshSignal}
+                            onGroupsLoaded={(nextGroups) => {
+                                setGroupsList(Array.isArray(nextGroups) ? nextGroups : []);
+                            }}
                         />
                     </aside>
                 )}
 
                 {/* The Calendar always renders.*/}
                 <section className="calendar-main">
-                    <Calendar draftEvent={draftEvent} groupId={selectedGroupId}/>
+                    <Calendar
+                        draftEvent={draftEvent}
+                        groupId={selectedGroupId}
+                        petitionRefreshSignal={petitionRefreshSignal}
+                        lastCreatedPetition={lastCreatedPetition}
+                    />
                 </section>
 
                 {/* The Event sidebar, which is used for both creating and editing events. */}
@@ -203,11 +213,15 @@ export default function Main() {
                             petitionGroupId={petitionGroupId}
                             setPetitionGroupId={setPetitionGroupId}
                             groupsList={groupsList} // pass groups for dorpdown
-                            onFinalize={() => {
+                            onFinalize={({ mode, createdPetition }) => {
+                                if (mode === 'petition' && createdPetition) {
+                                    setLastCreatedPetition(createdPetition);
+                                    setPetitionRefreshSignal((v) => v + 1);
+                                }
                                 setIsEventSidebarOpen(false);
                                 setDraftEvent(null);
-                                // trigger a calendar refresh here
-                                <Calendar draftEvent={draftEvent} selectedGroupId={selectedGroupId}/>
+                                fetchGroups();
+                                setGroupsRefreshSignal((v) => v + 1);
                             }}
                         />
                     </aside>

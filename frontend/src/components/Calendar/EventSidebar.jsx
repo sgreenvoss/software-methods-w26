@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { apiPostWithMeta } from '../../api';
 import '../../css/eventSidebar.css';
 
 export default function EventSidebar({ 
@@ -15,6 +16,7 @@ export default function EventSidebar({
     const [date, setDate] = useState('');
     const [startTime, setStartTime] = useState('');
     const [endTime, setEndTime] = useState('');
+    const [isSubmitting, setIsSubmitting] = useState(false);
 
     // Update the live preview whenever inputs change
     useEffect(() => {
@@ -36,15 +38,81 @@ export default function EventSidebar({
     }, [title, date, startTime, endTime, mode, setDraftEvent]);
 
     const handleSubmit = async () => {
+        const trimmedTitle = title.trim();
+        if (!trimmedTitle) {
+            alert("Please enter a title.");
+            return;
+        }
+
+        if (!date || !startTime || !endTime) {
+            alert("Please provide date, start time, and end time.");
+            return;
+        }
+
+        const start = new Date(`${date}T${startTime}`);
+        const end = new Date(`${date}T${endTime}`);
+
+        if (!Number.isFinite(start.getTime()) || !Number.isFinite(end.getTime())) {
+            alert("Invalid date/time.");
+            return;
+        }
+
+        if (end.getTime() <= start.getTime()) {
+            alert("End time must be after start time.");
+            return;
+        }
+
         if (mode === 'petition' && !petitionGroupId) {
             alert("Please select a group for the petition.");
             return;
         }
 
-        // TODO: apiPost to save the event to the DB
-        console.log("Saving event:", { title, date, startTime, endTime, mode });
-        // Once successful, clear the form and close sidebar
-        onFinalize(); 
+        try {
+            setIsSubmitting(true);
+
+            if (mode === 'petition') {
+                const createMeta = await apiPostWithMeta(`/api/groups/${petitionGroupId}/petitions`, {
+                    title: trimmedTitle,
+                    start: start.getTime(),
+                    end: end.getTime(),
+                    blocking_level: 'B3'
+                });
+
+                if (createMeta.status !== 201) {
+                    const msg = createMeta?.data?.error || 'Failed to create petition.';
+                    alert(msg);
+                    return;
+                }
+
+                const createdPetition = createMeta.data;
+
+                onFinalize({
+                    mode: 'petition',
+                    createdPetition
+                });
+
+                setTitle('');
+                setDate('');
+                setStartTime('');
+                setEndTime('');
+                return;
+            }
+
+            onFinalize({
+                mode: 'blocking',
+                createdPetition: null
+            });
+
+            setTitle('');
+            setDate('');
+            setStartTime('');
+            setEndTime('');
+        } catch (error) {
+            console.error("Finalize failed:", error);
+            alert("Failed to finalize. Please try again.");
+        } finally {
+            setIsSubmitting(false);
+        }
     };
 
     return (
@@ -104,7 +172,9 @@ export default function EventSidebar({
                     <input type="time" value={endTime} onChange={e => setEndTime(e.target.value)} />
             </div>
                     <br />
-            <button className="submit-btn" onClick={handleSubmit}>Finalize Event</button>
+            <button className="submit-btn" onClick={handleSubmit} disabled={isSubmitting}>
+                {isSubmitting ? 'Saving...' : 'Finalize Event'}
+            </button>
         </div>
     );
 }

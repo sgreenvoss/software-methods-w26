@@ -1,8 +1,11 @@
 import React, { useState, useEffect } from 'react';
 import { apiGet } from '../../api'; // Adjust path based on your folder structure
+import PetitionActionModal from '../Petitions/PetitionActionModal';
 import '../../css/calendar.css';
 
 // --- HELPER LOGIC (The "Business Logic" or Model Helpers) ---
+const ONE_WEEK_MS = 7 * 24 * 60 * 60 * 1000;
+
 function getStartOfWeek(date) {
   const d = new Date(date);
   d.setDate(d.getDate() - d.getDay());
@@ -10,20 +13,121 @@ function getStartOfWeek(date) {
   return d;
 }
 
-// check if user is on present week
-function isCurrentWeek(date) {
-  const today = new Date();
-  const currWeekStart = getStartOfWeek(today);
-  return date.getTime() === currWeekStart.getTime();
+function canGoToPrevWeek(date) {
+  const displayedWeekStart = getStartOfWeek(date).getTime();
+  const currentWeekStart = getStartOfWeek(new Date()).getTime();
+  return (displayedWeekStart - ONE_WEEK_MS) >= currentWeekStart;
 }
 
+function mapPetitionToCalendarEvent(petition, activeGroupId, weekStart) {
+  if (!petition) return null;
 
-export default function CustomCalendar({ groupId, draftEvent }) {
+  const petitionGroupId = Number(
+    petition.groupId ??
+    petition.group_id
+  );
+  const petitionId = Number(
+    petition.petitionId ??
+    petition.petition_id ??
+    petition.id
+  );
+  const createdByUserId = Number(
+    petition.createdByUserId ??
+    petition.created_by_user_id ??
+    petition.created_by_person_id
+  );
+  const acceptedCount = Number(
+    petition.acceptedCount ??
+    petition.accepted_count ??
+    0
+  );
+  const declinedCount = Number(
+    petition.declinedCount ??
+    petition.declined_count ??
+    0
+  );
+  const groupSize = Number(
+    petition.groupSize ??
+    petition.group_size ??
+    0
+  );
+  const currentUserResponse =
+    petition.currentUserResponse ??
+    petition.current_user_response ??
+    null;
+  const computedStatus =
+    declinedCount > 0
+      ? 'FAILED'
+      : (groupSize > 0 && acceptedCount === groupSize)
+        ? 'ACCEPTED_ALL'
+        : 'OPEN';
+  const status = petition.status ?? computedStatus;
+
+  const startValue = petition.start_time ?? petition.start ?? petition.startMs;
+  const endValue = petition.end_time ?? petition.end ?? petition.endMs;
+  const startDate = typeof startValue === 'number'
+    ? new Date(startValue)
+    : new Date(Date.parse(startValue));
+  const endDate = typeof endValue === 'number'
+    ? new Date(endValue)
+    : new Date(Date.parse(endValue));
+
+  const startMs = startDate.getTime();
+  const endMs = endDate.getTime();
+
+  if (!Number.isFinite(startMs) || !Number.isFinite(endMs)) {
+    return null;
+  }
+
+  if (activeGroupId && Number(activeGroupId) !== petitionGroupId) {
+    return null;
+  }
+
+  const weekStartMs = weekStart.getTime();
+  const weekEndMs = weekStartMs + (7 * 24 * 60 * 60 * 1000);
+
+  if (endMs <= weekStartMs || startMs >= weekEndMs) {
+    return null;
+  }
+
+  const label = activeGroupId
+    ? (petition.title || 'Petition')
+    : (petition.group_name ? `${petition.group_name}: ${petition.title || 'Petition'}` : (petition.title || 'Petition'));
+
+  return {
+    event_id: `petition-${petitionId}`,
+    mode: 'petition',
+    petitionId,
+    groupId: petitionGroupId,
+    createdByUserId,
+    title: label,
+    titleRaw: petition.title || 'Petition',
+    start: petition.start_time ?? petition.start ?? petition.startMs,
+    end: petition.end_time ?? petition.end ?? petition.endMs,
+    start_time: petition.start_time ?? petition.start ?? petition.startMs,
+    end_time: petition.end_time ?? petition.end ?? petition.endMs,
+    blockingLevel: petition.blocking_level ?? petition.blockingLevel ?? 'B3',
+    acceptedCount,
+    declinedCount,
+    groupSize,
+    currentUserResponse,
+    status,
+    groupName: petition.group_name ?? petition.groupName ?? ''
+  };
+}
+
+export default function CustomCalendar({ groupId, draftEvent, petitionRefreshSignal = 0, lastCreatedPetition = null }) {
   // --- STATE (The "Controller" Data) ---
   const [weekStart, setWeekStart] = useState(getStartOfWeek(new Date()));
   const [rawEvents, setRawEvents] = useState([]);
   const [loading, setLoading] = useState(true);
-  const [groupAvailability, setGroupAvailability] = useState([]);
+  const [availabilityView, setAvailabilityView] = useState('StrictView');
+  const [rawAvailabilityBlocks, setRawAvailabilityBlocks] = useState([]);
+  const [visiblePetitions, setVisiblePetitions] = useState([]);
+  const [currentUserId, setCurrentUserId] = useState(null);
+  const [selectedPetition, setSelectedPetition] = useState(null);
+  const [isPetitionModalOpen, setIsPetitionModalOpen] = useState(false);
+  const [petitionActionRefreshKey, setPetitionActionRefreshKey] = useState(0);
 
   // const renderCount = useRef(0);
   // renderCount.current++;
@@ -32,15 +136,25 @@ export default function CustomCalendar({ groupId, draftEvent }) {
   // --- EFFECT 1: Fetch Personal Events ---
 
   useEffect(() => {
+    const fetchCurrentUser = async () => {
+      try {
+        const response = await apiGet('/api/me');
+        const userId = response?.user?.user_id;
+        setCurrentUserId(userId ? Number(userId) : null);
+      } catch (error) {
+        console.error('Failed to load current user for petition actions:', error);
+        setCurrentUserId(null);
+      }
+    };
+
+    fetchCurrentUser();
+  }, []);
+
+  useEffect(() => {
     const fetchPersonalEvents = async () => {
       setLoading(true);
       try {
-        try {
-          await apiGet('/api/events');
-        } catch (syncErr) {
-          console.error("Failed syncing events:", syncErr);
-        }
-        const personalEvents = await apiGet('/api/get-events');
+        const personalEvents = await apiGet('/api/events');
         if (Array.isArray(personalEvents)) {
             setRawEvents(personalEvents);
           }
@@ -64,6 +178,10 @@ export default function CustomCalendar({ groupId, draftEvent }) {
     fetchPersonalEvents();
   }, [weekStart]); 
 
+  useEffect(() => {
+    setAvailabilityView('StrictView');
+  }, [groupId]);
+
   // --- EFFECT 2: Fetch Group Availability ---
 
   useEffect(() => {
@@ -71,7 +189,7 @@ export default function CustomCalendar({ groupId, draftEvent }) {
       // If the user clicked "Hide", groupId will be null.
       // We just clear the state and exit early. No network call needed.
       if (!groupId || groupId === 0) {
-        setGroupAvailability([]);
+        setRawAvailabilityBlocks([]);
         return; 
       }
 
@@ -83,46 +201,82 @@ export default function CustomCalendar({ groupId, draftEvent }) {
 
         const response = await apiGet(`/api/groups/${groupId}/availability?windowStartMs=${startMs}&windowEndMs=${endMs}&granularityMinutes=15`);
         
-        const availabilityBlocks = Array.isArray(response?.availability)
-          ? response.availability
-          : Array.isArray(response?.blocks)
-            ? response.blocks
-            : null;
-
-        if (response && response.ok && response.blocks) {
-          // 2. Disguise the availability blocks as standard events for your UI
-          const heatmapEvents = response.blocks.map((block, i) => ({
-            title: `Avail: ${block.count}`,
-            availLvl: block.count,
-            start: block.start,
-            end: block.end,
-            event_id: `avail-${i}`,
-            mode: 'avail'
-          }));
-
-          const consolidatedEvents = mergeAvailabilityBlocks(heatmapEvents);
-          const finalHeatmapEvents = consolidatedEvents.map((event, i) => ({ 
-            ...event,
-            event_id: `avail-merged-${i}`
-          }));
-
-          setGroupAvailability(finalHeatmapEvents);
+        if (response && response.ok && Array.isArray(response.blocks)) {
+          setRawAvailabilityBlocks(response.blocks);
         } else {
-          // Default: Fetch personal events
-          const personalEvents = await apiGet('/api/get-events');
-          setRawEvents(personalEvents || []);
-          setGroupAvailability([]); // Clear if response is bad
+          setRawAvailabilityBlocks([]);
         }
       } catch (error) {
         console.error('Failed to fetch group availability:', error);
-        setGroupAvailability([]);
+        setRawAvailabilityBlocks([]);
       } finally {
         setLoading(false);
       }
     };
     
     fetchGroupEvents();
-  }, [groupId, weekStart]);
+  }, [groupId, weekStart, petitionActionRefreshKey]);
+
+  useEffect(() => {
+    const fetchVisiblePetitions = async () => {
+      const endpoint = groupId ? `/api/groups/${groupId}/petitions` : '/api/petitions';
+
+      try {
+        const response = await apiGet(endpoint);
+
+        if (!Array.isArray(response)) {
+          setVisiblePetitions([]);
+          return;
+        }
+
+        const mappedPetitions = response
+          .map((petition) => mapPetitionToCalendarEvent(petition, groupId, weekStart))
+          .filter(Boolean);
+
+        setVisiblePetitions(mappedPetitions);
+      } catch (error) {
+        console.error('Failed to fetch petitions:', error);
+        setVisiblePetitions([]);
+      }
+    };
+
+    fetchVisiblePetitions();
+  }, [groupId, weekStart, petitionRefreshSignal, petitionActionRefreshKey]);
+
+  useEffect(() => {
+    if (!lastCreatedPetition) {
+      return;
+    }
+
+    const optimisticPetition = mapPetitionToCalendarEvent(lastCreatedPetition, groupId, weekStart);
+    if (!optimisticPetition) {
+      return;
+    }
+
+    setVisiblePetitions((currentPetitions) => {
+      const withoutDuplicate = currentPetitions.filter(
+        (event) => event.event_id !== optimisticPetition.event_id
+      );
+
+      return [optimisticPetition, ...withoutDuplicate];
+    });
+  }, [lastCreatedPetition, groupId, weekStart]);
+
+  const handlePetitionClick = (petitionEvent) => {
+    setSelectedPetition(petitionEvent);
+    setIsPetitionModalOpen(true);
+  };
+
+  const handleClosePetitionModal = () => {
+    setIsPetitionModalOpen(false);
+    setSelectedPetition(null);
+  };
+
+  const handlePetitionActionComplete = () => {
+    setIsPetitionModalOpen(false);
+    setSelectedPetition(null);
+    setPetitionActionRefreshKey((v) => v + 1);
+  };
 
   const handlePrevWeek = () => {
     const newDate = new Date(weekStart);
@@ -142,10 +296,33 @@ export default function CustomCalendar({ groupId, draftEvent }) {
       finalRawEvents.push({ ...draftEvent });
   }
 
+  const projectedAvailabilityEvents = (groupId ? rawAvailabilityBlocks : []).map((block, i) => {
+    const selectedView = block?.views?.[availabilityView] || block?.views?.StrictView || {};
+    const availableCount = Number.isFinite(selectedView.availableCount)
+      ? selectedView.availableCount
+      : (Number.isFinite(block?.count) ? block.count : 0);
+
+    return {
+      title: `Avail: ${availableCount}`,
+      availLvl: availableCount,
+      start: block.start,
+      end: block.end,
+      event_id: `avail-${i}`,
+      mode: 'avail'
+    };
+  });
+
+  const consolidatedAvailability = mergeAvailabilityBlocks(projectedAvailabilityEvents);
+  const groupAvailability = consolidatedAvailability.map((event, i) => ({
+    ...event,
+    event_id: `avail-merged-${i}`
+  }));
+
   // --- PREPARING THE VIEW ---
   const events = processEvents(finalRawEvents);
   const groupEvents = processEvents(groupAvailability);
-  const allEvents = events.concat(groupEvents);
+  const petitionEvents = processEvents(visiblePetitions);
+  const allEvents = events.concat(groupEvents, petitionEvents);
 
   const days = Array.from({ length: 7 }, (_, i) => {
     const d = new Date(weekStart);
@@ -154,16 +331,74 @@ export default function CustomCalendar({ groupId, draftEvent }) {
   });
   const hours = Array.from({ length: 24 }, (_, i) => i);
 
+  const getPetitionStatusClass = (event) => {
+    if (event.mode !== 'petition') return '';
+
+    switch (event.status) {
+      case 'FAILED':
+        return 'petition-failed';
+      case 'ACCEPTED_ALL':
+        return 'petition-accepted-all';
+      case 'OPEN':
+      default:
+        return 'petition-open';
+    }
+  };
+
   return (
     <div id="calendar-container">
       {/* 1. CALENDAR HEADER (Navigation) */}
       <div className="calendar-header">
-        <button onClick={handlePrevWeek} disabled={isCurrentWeek(weekStart)}>← Prev</button>
+        <button onClick={handlePrevWeek} disabled={!canGoToPrevWeek(weekStart)}>← Prev</button>
         <h2>
           {weekStart.toLocaleString("default", { month: "long", year: "numeric" })}
         </h2>
         <button onClick={handleNextWeek}>Next →</button>
       </div>
+
+      {groupId ? (
+        <div style={{ display: 'flex', gap: '8px', marginBottom: '10px' }}>
+          <button
+            onClick={() => setAvailabilityView('StrictView')}
+            style={{
+              padding: '6px 10px',
+              fontWeight: availabilityView === 'StrictView' ? 700 : 500,
+              background: availabilityView === 'StrictView' ? '#d9f99d' : '#f3f4f6',
+              border: '1px solid #d1d5db',
+              borderRadius: '8px',
+              cursor: 'pointer'
+            }}
+          >
+            Strict
+          </button>
+          <button
+            onClick={() => setAvailabilityView('FlexibleView')}
+            style={{
+              padding: '6px 10px',
+              fontWeight: availabilityView === 'FlexibleView' ? 700 : 500,
+              background: availabilityView === 'FlexibleView' ? '#d9f99d' : '#f3f4f6',
+              border: '1px solid #d1d5db',
+              borderRadius: '8px',
+              cursor: 'pointer'
+            }}
+          >
+            Flexible
+          </button>
+          <button
+            onClick={() => setAvailabilityView('LenientView')}
+            style={{
+              padding: '6px 10px',
+              fontWeight: availabilityView === 'LenientView' ? 700 : 500,
+              background: availabilityView === 'LenientView' ? '#d9f99d' : '#f3f4f6',
+              border: '1px solid #d1d5db',
+              borderRadius: '8px',
+              cursor: 'pointer'
+            }}
+          >
+            Lenient
+          </button>
+        </div>
+      ) : null}
 
       {/* 2. CALENDAR GRID (View) */}
       <div className="calendar-grid">
@@ -205,9 +440,9 @@ export default function CustomCalendar({ groupId, draftEvent }) {
                     let zIndex;
                     switch (event.mode) {
                       case 'petition':
-                        backgroundColor = '#ffa963';
-                        opacity = 0.6;
-                        zIndex = 2;
+                        backgroundColor = undefined;
+                        opacity = 0.95;
+                        zIndex = 5;
                         break;
                       case 'blocking':
                         backgroundColor = '#34333c';
@@ -229,15 +464,16 @@ export default function CustomCalendar({ groupId, draftEvent }) {
                     return (
                       <div
                         key={idx}
-                        className={`calendar-event ${event.isAllDay ? 'all-day-event' : ''}`}
+                        className={`calendar-event ${event.isAllDay ? 'all-day-event' : ''} ${event.mode === 'petition' ? `petition-event ${getPetitionStatusClass(event)}` : ''}`}
+                        onClick={event.mode === 'petition' ? () => handlePetitionClick(event) : undefined}
                         style={{
                           height: `${Math.max(1, visualHeight)}px`,
                           top: `${startMins}px`,
                           opacity: event.isAllDay ? 0.6 : opacity,
-                          zIndex: event.isAllDay ? 1 :zIndex,
+                          zIndex: event.isAllDay ? 1 : zIndex,
                           backgroundColor: backgroundColor,
-                          border: event.isPreview ? '2px dashed #333' : 'none'
-                          
+                          border: event.isPreview ? '2px dashed #333' : 'none',
+                          cursor: event.mode === 'petition' ? 'pointer' : 'default'
                         }}
                       >
                         {event.title}
@@ -250,6 +486,13 @@ export default function CustomCalendar({ groupId, draftEvent }) {
         ))}
       </div>
       {loading && <p>Loading events...</p>}
+      <PetitionActionModal
+        open={isPetitionModalOpen}
+        petition={selectedPetition}
+        currentUserId={currentUserId}
+        onClose={handleClosePetitionModal}
+        onActionComplete={handlePetitionActionComplete}
+      />
     </div>
   );
 }
@@ -277,11 +520,25 @@ function processEvents(rawEvents) {
         start: new Date(current),
         end: new Date(effectiveEnd),
         id: event.event_id,
+        event_id: event.event_id,
         isAllDay: (effectiveEnd - current) >= 24 * 60 * 60 * 1000,
         isEndOfDay: effectiveEnd.getTime() === nextDayStart.getTime(),
         isPreview: event.isPreview || false,
         availLvl: event.availLvl || 0, // for group availability heatmap
         mode: event.mode || 'normal', // 'normal', 'blocking', 'petition', 'avail'
+        petitionId: event.petitionId ?? null,
+        groupId: event.groupId ?? null,
+        createdByUserId: event.createdByUserId ?? null,
+        titleRaw: event.titleRaw ?? event.title,
+        start_time: event.start_time ?? event.start,
+        end_time: event.end_time ?? event.end,
+        blockingLevel: event.blockingLevel ?? null,
+        acceptedCount: event.acceptedCount ?? 0,
+        declinedCount: event.declinedCount ?? 0,
+        groupSize: event.groupSize ?? 0,
+        currentUserResponse: event.currentUserResponse ?? null,
+        status: event.status ?? null,
+        groupName: event.groupName ?? '',
         // isAvail: event.isAvail || false
       });
       current = nextDayStart;
