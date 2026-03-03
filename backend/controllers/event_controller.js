@@ -72,7 +72,7 @@ function createEventController({ db, google, oauth2Client }) {
         );
         console.log("Token refreshed successfully.");
 
-        oauth2Client.setCredentials({ credentials });
+        oauth2Client.setCredentials(credentials);
         return true;
       } catch (errRefresh) {
         if (errRefresh.response && errRefresh.response.data && errRefresh.response.data.error === 'invalid_grant') {
