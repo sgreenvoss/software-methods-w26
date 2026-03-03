@@ -33,3 +33,9 @@
     background-color: #00b894;
     color: white;
 }
+
+.priority-select-dropdown {
+  margin-top: 6px;
+  margin-bottom: 8px;
+  min-width: 180px;
+}

@@ -11,10 +11,8 @@ const url = require('url');
 const pgSession = require('connect-pg-simple')(session);
 const email = require('./emailer'); 
 const groupModule = require("./groups");
-
-// Algoritihm inports
-const { fetchAndMapGroupEvents } = require('./algorithm/algorithm_adapter');
-const { computeAvailabilityBlocksAllViews } = require('./algorithm/algorithm');
+const petitionRoutes = require("./routes/petition_routes");
+const createEventRouter = require("./routes/event_routes");
 // Load the .env file, determine whether on production or local dev
 require('dotenv').config({
   path: process.env.NODE_ENV === 'production' ? '.env.production' : '.env.development'
@@ -59,6 +57,7 @@ app.use(session({
 
 // use the modules
 groupModule(app);
+app.use(petitionRoutes);
 
 app.use(express.static(path.join(__dirname, "..", "frontend", "build")));
 
@@ -73,6 +72,8 @@ const scopes = [
   'https://www.googleapis.com/auth/userinfo.email',
   'https://www.googleapis.com/auth/userinfo.profile'
 ];
+
+app.use(createEventRouter({ db, google, oauth2Client }));
 
 const PORT = process.env.PORT || 3000;
 
@@ -631,7 +632,15 @@ app.get('*', (req, res) => {
   }
 });
 
-app.listen(PORT, async () => {
-  console.log(`Server running on port ${PORT}`);
-});
+async function startServer() {
+  await db.ensurePetitionSchema();
 
+  app.listen(PORT, async () => {
+    console.log(`Server running on port ${PORT}`);
+  });
+}
+
+startServer().catch((error) => {
+  console.error('Failed to initialize server schema', error);
+  process.exit(1);
+});

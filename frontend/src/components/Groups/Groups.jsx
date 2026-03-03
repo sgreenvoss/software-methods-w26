@@ -1,17 +1,15 @@
-import React, { useState, useEffect, act } from 'react';
+import React, { useState, useEffect } from 'react';
 import { apiGet, apiPost } from '../../api.js';
 import GroupCreatorModal from './GroupCreator.jsx';
 import GroupInfoModal from './GroupInfo.jsx';
 import '../../css/groups.css';
 import '../../css/groupsModal.css';
 
-export default function Groups( {onSelectGroup, onOpenPetition, refreshSignal = 0} ) {
+export default function Groups( {selectedGroupId, onSelectGroup, onOpenPetition, refreshSignal = 0, onGroupsLoaded} ) {
     const [groups, setGroups] = useState([]);
     const [showModal, setShowModal] = useState(false);
     const [loading, setLoading] = useState(true);
     const [infoModalGroup, setInfoModalGroup] = useState(null);
-
-    const [activeGroupID, setActiveGroupId] = useState(null);
     // Function to fetch groups (replaces the initial apiGet)
     const fetchGroups = async () => {
         setLoading(true);
@@ -19,12 +17,21 @@ export default function Groups( {onSelectGroup, onOpenPetition, refreshSignal = 
             const response = await apiGet('/user/groups');
             if (response && response.groups) {
                 setGroups(response.groups);
+                if (typeof onGroupsLoaded === 'function') {
+                    onGroupsLoaded(response.groups);
+                }
             } else {
                 setGroups([]);
+                if (typeof onGroupsLoaded === 'function') {
+                    onGroupsLoaded([]);
+                }
             }
         } catch (error) {
             console.error("Failed to fetch groups", error);
             setGroups([]);
+            if (typeof onGroupsLoaded === 'function') {
+                onGroupsLoaded([]);
+            }
         } finally {
             setLoading(false);
         }
@@ -41,8 +48,7 @@ export default function Groups( {onSelectGroup, onOpenPetition, refreshSignal = 
             await apiPost("/group/leave", { groupId: groupId });
             // Refresh list after leaving
             fetchGroups();
-            if (activeGroupID === groupId) {
-                setActiveGroupID(null);
+            if (Number(selectedGroupId) === Number(groupId)) {
                 onSelectGroup(null);
                 // Deselect group if it was the active one
             }
@@ -72,7 +78,7 @@ export default function Groups( {onSelectGroup, onOpenPetition, refreshSignal = 
             {loading ? <p>Loading...</p> : null}
 
             {groups.map((group) => {
-                const isActive = activeGroupID === group.group_id;
+                const isActive = Number(selectedGroupId) === Number(group.group_id);
                 return (
                 <div key={group.group_id} className="group-row">
                     <span>{group.group_name}</span>
@@ -94,11 +100,9 @@ export default function Groups( {onSelectGroup, onOpenPetition, refreshSignal = 
                             onClick={() => {
                                 if (isActive) {
                                     // If already active, turn it off
-                                    setActiveGroupId(null);
                                     onSelectGroup(null); // Tell Main to clear the ID
                                 } else {
                                     // If not active, turn it on
-                                    setActiveGroupId(group.group_id);
                                     onSelectGroup(group.group_id); // Tell Main to fetch this ID
                                 }
                             }}
