@@ -58,21 +58,12 @@ function createEventController({ db, google, oauth2Client }) {
       console.log("Token expired or missing expiry. Refreshing...");
       console.log("User refresh token status:", user.refresh_token ? "Present" : "MISSING");
 
-      oauth2Client.setCredentials({
-        refresh_token: user.refresh_token
-      });
-
       try {
-        const { credentials } = await oauth2Client.getAccessToken();
-        const { access_token, expiry_date } = oauth2Client.credentials;
-        await db.updateTokens(
-          req.session.userId,
-          access_token,
-          expiry_date
-        );
+        oauth2Client.setCredentials({
+          refresh_token: user.refresh_token
+        });
         console.log("Token refreshed successfully.");
 
-        oauth2Client.setCredentials(credentials);
         return true;
       } catch (errRefresh) {
         if (errRefresh.response && errRefresh.response.data && errRefresh.response.data.error === 'invalid_grant') {
@@ -89,12 +80,6 @@ function createEventController({ db, google, oauth2Client }) {
         return false;
       }
     }
-
-    oauth2Client.setCredentials({
-      refresh_token: user.refresh_token,
-      access_token: user.access_token,
-      expiry_date: expiryDate
-    });
     return true;
   }
 
@@ -130,9 +115,9 @@ function createEventController({ db, google, oauth2Client }) {
       }
 
       oauth2Client.setCredentials({
-        refresh_token: user.refresh_token,
-        access_token: user.access_token,
-        expiry_date: user.token_expiry ? new Date(user.token_expiry).getTime() : null
+        refresh_token: user.refresh_token
+        // access_token: user.access_token,
+        // expiry_date: user.token_expiry ? new Date(user.token_expiry).getTime() : null
       });
 
       const calendar = google.calendar({ version: 'v3', auth: oauth2Client });
