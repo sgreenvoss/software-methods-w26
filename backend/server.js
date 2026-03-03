@@ -575,6 +575,35 @@ app.get('/api/users/search', async(req, res) => {
   }
 });
 
+app.get('/api/calendars', async (req, res) => {
+  try {
+    const isValid = await ensureValidToken(req, res);
+    if (!isValid) return;
+
+    const user = await db.getUserByID(req.session.userId);
+    oauth2Client.setCredentials({
+      refresh_token: user.refresh_token,
+      access_token: user.access_token,
+      expiry_date: user.token_expiry
+    });
+
+    const calendar = google.calendar({ version: 'v3', auth: oauth2Client });
+    const response = await calendar.calendarList.list({ maxResults: 25 });
+
+    const calendars = response.data.items.map(cal => ({
+      id: cal.id,
+      summary: cal.summary,
+      description: cal.description,
+      primary: cal.primary
+    }));
+
+    res.json(calendars);
+  } catch (error) {
+    console.error('Error fetching calendars:', error);
+    res.status(500).json({ error: 'Failed to fetch calendars' });
+  }
+});
+
 // ALGORITHM ROUTE: SEE docs/AVAILABILITY_ARCHITECTURE.md for documentation of how this works and what files have been changed.
   // availability_service.js
   // availability_adapter.js

@@ -5,6 +5,21 @@ export default function UsernameCreation() {
     const [username, setUsername] = useState('');
     const [errors, setErrors] = useState([]);
 
+    const [calendars, setCalendars] = useState([]);
+    const [selectedCals, setSelectedCals] = useState([]);
+
+    const handleCheckboxChange = (e) => {
+        const { value, checked } = e.target;
+
+        if (checked) {
+            // add calendar to array if checked
+            setSelectedCals((prev) => [...prev, value]);
+        } else {
+            // remove value from array if unchecked
+            setSelectedCals((prev) => prev.filter((cal) => cal !== value));
+        }
+    };
+
     const handleSubmit = async (e) => {
         e.preventDefault();
 
@@ -35,6 +50,21 @@ export default function UsernameCreation() {
             setErrors(['An error occurred.']);
         }
     }
+
+    useEffect(() => {
+        const getCals = async () => {
+            const cals = await apiGet('/api/calendars');
+            const updatedCals = cals.map((cal) => {
+                if (cal.primary === true) {
+                    console.log(cal);
+                    cal.summary = 'Primary';
+                }
+                return {summary: cal.summary, checked: false};
+            });
+            setCalendars(updatedCals);
+        }
+        getCals();
+    }, [])
  
     return (
         <>
@@ -52,6 +82,23 @@ export default function UsernameCreation() {
             <li>Username must be between 4 and 16 characters long.</li>
             <li>Username may not contain special characters except for '.' and '_'</li>
         </ul>
+
+        {calendars.map((calendar) => (
+            <div key={calendar.summary}>
+                <label>
+                    <input
+                        type="checkbox"
+                        value={calendar.summary}
+                        checked={selectedCals.includes(calendar.summary)}
+                        onChange={handleCheckboxChange}
+                    />
+                    {calendar.summary}
+                </label>
+            </div>
+        ))}
+        <div>
+            <p>Selected Calendars: {selectedCals.join(', ')}</p>
+        </div>
         </>
     )
 }
