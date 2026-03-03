@@ -22,7 +22,7 @@ CREATE TABLE IF NOT EXISTS public.calendar
     calendar_name character varying(100) COLLATE pg_catalog."default",
     user_id bigint NOT NULL,
     CONSTRAINT calendar_pkey PRIMARY KEY (calendar_id),
-    CONSTRAINT calendar_user_id_key UNIQUE (user_id)
+    CONSTRAINT calendar_user_id_key (user_id)
 );
 
 CREATE TABLE IF NOT EXISTS public.f_group
