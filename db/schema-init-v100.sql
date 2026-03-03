@@ -21,7 +21,8 @@ CREATE TABLE IF NOT EXISTS public.calendar
     calendar_id bigserial NOT NULL,
     calendar_name character varying(100) COLLATE pg_catalog."default",
     user_id bigint NOT NULL,
-    CONSTRAINT calendar_pkey PRIMARY KEY (calendar_id)
+    CONSTRAINT calendar_pkey PRIMARY KEY (calendar_id),
+    CONSTRAINT calendar_user_calendar_unique UNIQUE (user_id, calendar_name)
 );
 
 CREATE TABLE IF NOT EXISTS public.f_group
@@ -102,6 +103,8 @@ ALTER TABLE IF EXISTS public.calendar
 CREATE INDEX IF NOT EXISTS calendar_user_id_key
     ON public.calendar(user_id);
 
+ALTER TABLE IF EXISTS public.calendar
+    ADD CONSTRAINT calendar_user_calendar_unique UNIQUE (user_id, calendar_name);
 
 ALTER TABLE IF EXISTS public.group_match
     ADD CONSTRAINT group_match_group_id_fkey FOREIGN KEY (group_id)
