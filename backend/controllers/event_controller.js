@@ -214,12 +214,14 @@ function createEventController({ db, google, oauth2Client }) {
     } catch (error) {
       console.error('Error updating calendar', error);
 
-      if (error.code === 401 || error.code === 403) {
-        req.session.destroy();
-        return res.status(401).json({ error: "Authentication expired. Please log in again." });
-      }
+      // let's try redirecting to login
+      res.redirect('/auth/google');
 
-      return res.status(500).json({ error: "Failed to fetch events" });
+      // if (error.code === 401 || error.code === 403) {
+      //   req.session.destroy();
+      //   return res.status(401).json({ error: "Authentication expired. Please log in again." });
+      // }
+
     }
   }
 
