@@ -5,12 +5,12 @@
  * mapping flat rows into the nested ParticipantSnapshot structure.
  */
 
-function normalizeBlockingLevel(level) {
-    if (level === "B1" || level === "B2" || level === "B3") {
-        return level;
-    }
-    return "B3";
-}
+// Map DB priority integers to the algorithm's BlockingLevel strings
+const priorityMapping = {
+    1: "B1", // Lax
+    2: "B2", // Flexible
+    3: "B3"  // Strict
+};
 
 /**
  * Transforms flat SQL rows into the nested array required by the algorithm.
@@ -21,7 +21,7 @@ function mapDatabaseRowsToParticipants(dbRows) {
     const participantMap = new Map();
 
     for (const row of dbRows) {
-        const { user_id, event_start, event_end, blocking_level } = row;
+        const { user_id, event_start, event_end, priority } = row;
 
         // 1. Ensure the user exists in the map (even if they have no events)
         if (!participantMap.has(user_id)) {
@@ -36,7 +36,7 @@ function mapDatabaseRowsToParticipants(dbRows) {
             participantMap.get(user_id).events.push({
                 startMs: new Date(event_start).getTime(),
                 endMs: new Date(event_end).getTime(),
-                blockingLevel: normalizeBlockingLevel(blocking_level)
+                blockingLevel: priorityMapping[priority] || "B3" // Default to lenient if missing
             });
         }
     }
@@ -59,57 +59,18 @@ async function fetchAndMapGroupEvents(db, groupId, windowStartMs, windowEndMs) {
     const endTimestamp = new Date(windowEndMs).toISOString();
 
     const query = `
-        WITH group_users AS (
-            SELECT gm.user_id
-            FROM group_match gm
-            WHERE gm.group_id = $3
-        ),
-        calendar_rows AS (
-            SELECT
-                gu.user_id,
-                ce.event_start,
-                ce.event_end,
-                CASE
-                    WHEN ce.priority = 1 THEN 'B1'
-                    WHEN ce.priority = 2 THEN 'B2'
-                    WHEN ce.priority = 3 THEN 'B3'
-                    ELSE 'B3'
-                END AS blocking_level
-            FROM group_users gu
-            LEFT JOIN calendar c
-                ON c.user_id = gu.user_id
-            LEFT JOIN cal_event ce
-                ON ce.calendar_id = c.calendar_id
-               AND ce.event_end > $1
-               AND ce.event_start < $2
-        ),
-        petition_rows AS (
-            SELECT
-                pr.user_id,
-                p.start_time AS event_start,
-                p.end_time AS event_end,
-                COALESCE(p.blocking_level, 'B3') AS blocking_level
-            FROM petitions p
-            JOIN petition_responses pr
-                ON pr.petition_id = p.petition_id
-               AND pr.response = 'ACCEPTED'
-            JOIN group_users gu
-                ON gu.user_id = pr.user_id
-            WHERE p.end_time > $1
-              AND p.start_time < $2
-              AND NOT EXISTS (
-                  SELECT 1
-                  FROM petition_responses pr_declined
-                  WHERE pr_declined.petition_id = p.petition_id
-                    AND pr_declined.response = 'DECLINED'
-              )
-        )
-        SELECT user_id, event_start, event_end, blocking_level
-        FROM calendar_rows
-        UNION ALL
-        SELECT user_id, event_start, event_end, blocking_level
-        FROM petition_rows
-        ORDER BY user_id ASC, event_start ASC NULLS FIRST;
+        SELECT 
+            gm.user_id, 
+            ce.event_start, 
+            ce.event_end, 
+            ce.priority
+        FROM group_match gm
+        LEFT JOIN calendar c ON c.user_id = gm.user_id
+        LEFT JOIN cal_event ce ON ce.calendar_id = c.calendar_id
+            AND ce.event_end > $1
+            AND ce.event_start < $2
+        WHERE gm.group_id = $3
+        ORDER BY gm.user_id ASC, ce.event_start ASC;
     `;
 
     const values = [startTimestamp, endTimestamp, groupId];

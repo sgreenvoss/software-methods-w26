@@ -11,8 +11,10 @@ const url = require('url');
 const pgSession = require('connect-pg-simple')(session);
 const email = require('./emailer'); 
 const groupModule = require("./groups");
-const petitionRoutes = require("./routes/petition_routes");
-const createEventRouter = require("./routes/event_routes");
+
+// Algoritihm inports
+const { fetchAndMapGroupEvents } = require('./algorithm/algorithm_adapter');
+const { computeAvailabilityBlocksAllViews } = require('./algorithm/algorithm');
 // Load the .env file, determine whether on production or local dev
 require('dotenv').config({
   path: process.env.NODE_ENV === 'production' ? '.env.production' : '.env.development'
@@ -57,7 +59,6 @@ app.use(session({
 
 // use the modules
 groupModule(app);
-app.use(petitionRoutes);
 
 app.use(express.static(path.join(__dirname, "..", "frontend", "build")));
 
@@ -72,8 +73,6 @@ const scopes = [
   'https://www.googleapis.com/auth/userinfo.email',
   'https://www.googleapis.com/auth/userinfo.profile'
 ];
-
-app.use(createEventRouter({ db, google, oauth2Client }));
 
 const PORT = process.env.PORT || 3000;
 
@@ -270,6 +269,272 @@ app.get('/test-session', (req, res) => {
   });
 });
 
+async function ensureValidToken(req, res) {
+  const user = await db.getUserByID(req.session.userId);
+  
+  if (!user || !user.access_token) {
+    throw new Error('no user or user tokens');
+  }
+
+  const now = Date.now();
+  const fiveMins = 5 * 60 * 1000;
+  
+  // FIX 1: Use 'token_expiry' (from DB) instead of 'expiry_date'
+  // Convert to Number because DB might return it as a string
+  const expiryDate = user.token_expiry ? Number(user.token_expiry) : 0;
+
+  // FIX 2: Check if expiryDate is valid before doing math
+  if (!expiryDate || now >= expiryDate - fiveMins) {
+    console.log("Token expired or missing expiry. Refreshing...");
+    console.log('User refresh token status:', user.refresh_token ? 'Present' : 'NULL');
+
+    if (!user.refresh_token) {
+      // If we need to refresh but have no token, we must fail gracefully
+      // or rely on the caller to redirect to login.
+      throw new Error('Access token expired and no refresh token available.');
+    }
+
+    oauth2Client.setCredentials({
+      refresh_token: user.refresh_token
+    });
+
+    try {
+      // Attempt to refresh the token
+      const { credentials } = await oauth2Client.getAccessToken(); // This will trigger a refresh if needed
+      const {access_token, expiry_date} = oauth2Client.credentials;
+      await db.updateTokens(
+        req.session.userId,
+        access_token,
+        expiry_date
+      );
+      console.log("Token refreshed successfully.");
+
+      oauth2Client.setCredentials({credentials});
+      return true; // Indicate successful refresh for route
+
+    } catch (errRefresh) {
+        if (errRefresh.response && errRefresh.response.data && errRefresh.response.data.error === 'invalid_grant') {
+          console.warn("Google Refresh Token expired for user. Forcing re-authentication.", errRefresh);
+          // Destroy user's session so frontend knkows they are logged out
+          req.session.destroy((err) => {
+            if (err) console.error("Could not destroy session after refresh failure:", err);
+            return res.status(401).json({ error: "Session expired.  Please log in again." });
+          });
+          return false; // Stop execution don't keep trying to fetch events.
+        }
+        // If it is a different error, throw standard 500 error
+        console.error("Failed to fetch Google API data:", errRefresh);
+        res.status(500).json({ error: "Internal Server Error" });
+        return false;
+    }
+  } else {
+    // Token is still valid, just set credentials so the next call works
+    oauth2Client.setCredentials({
+      refresh_token: user.refresh_token,
+      access_token: user.access_token,
+      expiry_date: expiryDate
+    });
+    return true; // Token is valid, proceed with route
+  }
+}
+
+app.get("/api/events", async (req, res) => {
+  // TODO: add a way to pick which calendar to use
+  // TODO: have the database cache the next month or so of events
+  console.log('Session ID:', req.sessionID);
+  console.log('Session data:', req.session);
+  console.log('userid:', req.session.userId);
+  console.log('isAuthenticated:', req.session.isAuthenticated);
+  try {
+    const isValid = await ensureValidToken(req, res);
+    if (!isValid) return;
+  } catch (tokenErr) {
+      // Check if google is token is dead or not (no expiration crashing backend)
+      if (tokenErr.response && tokenErr.response.data && tokenErr.response.data.error === 'invalid_grant') {
+        console.error("Refresh Token Expired. Forcing re-authentication.");
+
+        // Clear token from DB
+        await db.updateTokens(req.session.userId, null, null);
+
+        // Tell react user needs to log in again
+        return res.status(401).json({ error: "Session expired.  Please log in with Google Again." });
+      }
+      // If it's a different error log it
+      console.error("Failed to fetch events:", tokenErr);
+      return res.status(500).json({ error: "Internal Server Error" });
+  }
+  
+  // Check if user is logged in
+  if (!req.session.userId || !req.session.isAuthenticated) {
+    return res.status(401).json({ error: "User not authenticated" });
+  }
+  try {
+    // Set credentials for this specific request using session data
+    const user = await db.getUserByID(req.session.userId);
+    console.log('user in /api/events: ', user);
+    if (!user || !user.refresh_token) {
+      return res.status(401).json({ error: "No tokens found. Please re-authenticate." });
+    }
+    const refreshToken = user.refresh_token; // TODO: encrypt this
+
+    oauth2Client.setCredentials( {
+      refresh_token: refreshToken,
+      access_token: user.access_token,
+      expiry_date: user.token_expiry ? new Date(user.token_expiry).getTime() : null
+    });
+
+    // add some updating tokens logic here
+
+    const calendar = google.calendar({ version: 'v3', auth: oauth2Client });
+    const calendarStart = new Date();
+
+    calendarStart.setDate(calendarStart.getDate() - 7);
+
+    const response = await calendar.events.list({
+      calendarId: 'primary',
+      timeMin: calendarStart.toISOString(), // From now onwards
+      maxResults: 250,
+      singleEvents: true, 
+      orderBy: 'startTime',
+    });
+
+    const events = response.data.items;
+    
+    if (!events || events.length === 0) {
+      return res.json([]);
+    }
+
+    const formattedEvents = events.map((event) => {
+      const start = event.start.dateTime || event.start.date;
+      const end = event.end.dateTime || event.end.date;
+
+      return {
+        title: event.summary || "No Title",
+        start: start,
+        end: end,
+        // for stella/the db.addEvents function:
+        event_id: event.id
+      };
+    });
+    // TODO: add a check to see if their calendar is already in the db
+    try {
+      await db.addCalendar(req.session.userId, calendar.summary);
+      const calID = await db.getCalendarID(req.session.userId);
+
+      // grab existing events in calendar from db
+      const existingEvents = await db.getEventsByCalendarID(calID.calendar_id);
+
+      // check if there are new events
+      const existingEventIds = new Set(existingEvents.map(event => event.gcal_event_id));
+      const newEvents = formattedEvents.filter(event => !existingEventIds.has(event.event_id));
+
+      // check if there are deleted events
+      const googleEventIds = new Set(formattedEvents.map(event => event.event_id));
+      const deletedEvents = existingEvents.filter(event => !googleEventIds.has(event.gcal_event_id));
+
+      // check if there are modified events (time and name only)
+      const modifiedEvents = [];
+      for (const existingEvent of existingEvents) {
+        const googleEvent = formattedEvents.find(event => event.event_id === existingEvent.gcal_event_id);
+        
+        if (googleEvent) {
+          // Compare key properties that might have changed
+          const existingStart = new Date(existingEvent.start_time).getTime();
+          const existingEnd = new Date(existingEvent.end_time).getTime();
+          const googleStart = new Date(googleEvent.start).getTime();
+          const googleEnd = new Date(googleEvent.end).getTime();
+          
+          // Check if duration changed or times changed
+          const existingDuration = existingEnd - existingStart;
+          const googleDuration = googleEnd - googleStart;
+          
+          if (existingDuration !== googleDuration || 
+              existingStart !== googleStart || 
+              existingEnd !== googleEnd ||
+              existingEvent.title !== googleEvent.title) {
+            modifiedEvents.push({
+              id: existingEvent.gcal_event_id,
+              oldEvent: existingEvent,
+              newEvent: googleEvent,
+              durationChanged: existingDuration !== googleDuration
+            });
+          }
+        }
+    }
+
+    // update the calendar in the database
+    // clean the old events (> 7 days)
+    await db.cleanEvents(calID.calendar_id, calendarStart.toISOString());
+
+    // add new events to db
+    if (newEvents.length > 0) {
+      await db.addEvents(calID.calendar_id, newEvents);
+    }
+
+    // remove events deleted in google calendar
+    if (deletedEvents.length > 0) {
+      const deletedEventIds = deletedEvents.map(event => event.gcal_event_id);
+      await db.deleteEventsByIds(calID.calendar_id, deletedEventIds);
+    }
+
+    // update modified events (only time and name)
+    if (modifiedEvents.length > 0) {
+      for (const mod of modifiedEvents) {
+        await db.updateEvent(calID.calendar_id, mod.id, mod.newEvent);
+      }
+    }
+
+    } catch(error) {
+      console.error('error storing: ', error);
+    }
+    res.json(formattedEvents);
+
+  } catch (error) {
+    console.error('Error updating calendar', error);
+    
+    // If authentication failed, clear session
+    if (error.code === 401 || error.code === 403) {
+      req.session.destroy();
+      return res.status(401).json({ error: "Authentication expired. Please log in again." });
+    }
+    
+    res.status(500).json({ error: "Failed to fetch events" });
+  }
+});
+
+app.get('/api/get-events', async (req, res) => {
+  try {
+    if (!req.session.userId || !req.session.isAuthenticated) {
+      return res.status(401).json({ error: "User not authenticated" });
+    }
+
+    // get calendar and then retrieve events from db
+    const calID = await db.getCalendarID(req.session.userId);
+    const events = await db.getEventsByCalendarID(calID.calendar_id);
+    
+    // transform db format to frontend format
+    const formattedEvents = events.map(event => ({
+      title: event.event_name,
+      start: event.event_start,
+      end: event.event_end,
+      event_id: event.gcal_event_id
+    }));
+    
+    return res.json(formattedEvents);
+
+  } catch (error) {
+    console.error('Error fetching calendar from db', error);
+    
+    // If authentication failed, clear session
+    if (error.code === 401 || error.code === 403) {
+      req.session.destroy();
+      return res.status(401).json({ error: "Authentication expired. Please log in again." });
+    }
+    
+    res.status(500).json({ error: "Failed to fetch events" });
+  }
+})
+
 app.get('/api/email-send-test', async(req,res) => {
   try {
     email.groupRequest("sgreenvoss@gmail.com", "stellag",
@@ -316,15 +581,7 @@ app.get('*', (req, res) => {
   }
 });
 
-async function startServer() {
-  await db.ensurePetitionSchema();
-
-  app.listen(PORT, async () => {
-    console.log(`Server running on port ${PORT}`);
-  });
-}
-
-startServer().catch((error) => {
-  console.error('Failed to initialize server schema', error);
-  process.exit(1);
+app.listen(PORT, async () => {
+  console.log(`Server running on port ${PORT}`);
 });
+

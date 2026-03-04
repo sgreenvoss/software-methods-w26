@@ -1,5 +1,3 @@
-const fs = require('fs');
-const path = require('path');
 const { Pool } = require('pg');
 
 require('dotenv').config({
@@ -28,12 +26,6 @@ const testConnection = async () => {
         timestamp: result.rows[0].now,
         message: "Database connected successfully!"
     };
-};
-
-const ensurePetitionSchema = async() => {
-    const schemaPath = path.resolve(__dirname, '..', '..', 'db', '001_petitions_schema.sql');
-    const schemaSql = fs.readFileSync(schemaPath, 'utf8');
-    await pool.query(schemaSql);
 };
 
 
@@ -120,23 +112,6 @@ const addEvents = async(cal_id, events, priority=3) => {
     };
 }
 
-const createManualEvent = async(cal_id, { priority, start, end, title, event_id }) => {
-    const result = await pool.query(
-        `INSERT INTO cal_event (calendar_id, priority, event_start, event_end, event_name, gcal_event_id)
-        VALUES ($1, $2, $3, $4, $5, $6)
-        RETURNING event_id, calendar_id, priority, event_start, event_end, event_name, gcal_event_id`,
-        [
-            cal_id,
-            priority,
-            start,
-            end,
-            title,
-            event_id
-        ]
-    );
-    return result.rows[0] || null;
-}
-
 /**
  * This takes the calendar id and deletes the events
  * under that calendar id that ended a week ago or more
@@ -175,17 +150,6 @@ const deleteEventsByIds = async(cal_id, gcal_event_ids) => {
     );
 }
 
-const deleteEventById = async(cal_id, gcal_event_id) => {
-    const result = await pool.query(
-        `DELETE FROM cal_event
-        WHERE calendar_id = $1
-          AND gcal_event_id = $2
-        RETURNING event_id, gcal_event_id, priority, event_start, event_end, event_name`,
-        [cal_id, gcal_event_id]
-    );
-    return result.rows[0] || null;
-}
-
 const updateEvent = async(cal_id, gcal_event_id, eventData) => {
     await pool.query(
         `UPDATE cal_event 
@@ -199,22 +163,6 @@ const updateEvent = async(cal_id, gcal_event_id, eventData) => {
             gcal_event_id
         ]
     );
-}
-
-const updateEventPriority = async(cal_id, gcal_event_id, priority) => {
-    const result = await pool.query(
-        `UPDATE cal_event
-        SET priority = $1
-        WHERE calendar_id = $2
-          AND gcal_event_id = $3
-        RETURNING event_id, gcal_event_id, priority, event_start, event_end, event_name`,
-        [
-            priority,
-            cal_id,
-            gcal_event_id
-        ]
-    );
-    return result.rows[0] || null;
 }
 
 const getUserByID = async(user_id) => {
@@ -444,313 +392,12 @@ const checkUsernameExists = async(username) => {
     return result.rows.length > 0; // returns true if exists
 }
 
-const PETITION_CTES = `
-WITH response_counts AS (
-    SELECT
-        petition_id,
-        COUNT(*) FILTER (WHERE response = 'ACCEPTED')::INT AS accepted_count,
-        COUNT(*) FILTER (WHERE response = 'DECLINED')::INT AS declined_count
-    FROM petition_responses
-    GROUP BY petition_id
-),
-group_sizes AS (
-    SELECT
-        group_id,
-        COUNT(*)::INT AS group_size
-    FROM group_match
-    GROUP BY group_id
-)
-`;
-
-const PETITION_SELECT_COLUMNS = `
-    p.petition_id,
-    p.group_id,
-    p.created_by_user_id,
-    p.title,
-    p.start_time,
-    p.end_time,
-    p.blocking_level,
-    COALESCE(rc.accepted_count, 0)::INT AS accepted_count,
-    COALESCE(rc.declined_count, 0)::INT AS declined_count,
-    COALESCE(gs.group_size, 0)::INT AS group_size,
-    cur.response AS current_user_response,
-    CASE
-        WHEN COALESCE(rc.declined_count, 0) > 0 THEN 'FAILED'
-        WHEN COALESCE(gs.group_size, 0) > 0
-         AND COALESCE(rc.accepted_count, 0) = COALESCE(gs.group_size, 0) THEN 'ACCEPTED_ALL'
-        ELSE 'OPEN'
-    END AS status,
-    p.created_at,
-    p.updated_at,
-    g.group_name
-`;
-
-const getPetitionByIdForUser = async (executor, petitionId, userId) => {
-    const sql = `
-        ${PETITION_CTES}
-        SELECT
-            ${PETITION_SELECT_COLUMNS}
-        FROM petitions p
-        JOIN f_group g ON g.group_id = p.group_id
-        LEFT JOIN group_sizes gs ON gs.group_id = p.group_id
-        LEFT JOIN response_counts rc ON rc.petition_id = p.petition_id
-        LEFT JOIN petition_responses cur
-            ON cur.petition_id = p.petition_id
-           AND cur.user_id = $2
-        WHERE p.petition_id = $1
-    `;
-    const result = await executor.query(sql, [petitionId, userId]);
-    return result.rows[0] || null;
-};
-
-const createPetition = async ({ groupId, creatorUserId, title, startMs, endMs, blockingLevel }) => {
-    const client = await pool.connect();
-    try {
-        await client.query('BEGIN');
-
-        const insertSql = `
-            INSERT INTO petitions (
-                group_id,
-                created_by_user_id,
-                title,
-                start_time,
-                end_time,
-                blocking_level
-            )
-            VALUES (
-                $1,
-                $2,
-                $3,
-                to_timestamp($4 / 1000.0),
-                to_timestamp($5 / 1000.0),
-                $6
-            )
-            RETURNING petition_id
-        `;
-        const insertResult = await client.query(insertSql, [
-            groupId,
-            creatorUserId,
-            title,
-            startMs,
-            endMs,
-            blockingLevel
-        ]);
-
-        const petitionId = insertResult.rows[0].petition_id;
-
-        await client.query(
-            `
-            INSERT INTO petition_responses (petition_id, user_id, response)
-            VALUES ($1, $2, 'ACCEPTED')
-            ON CONFLICT (petition_id, user_id)
-            DO UPDATE SET
-                response = EXCLUDED.response,
-                responded_at = NOW()
-            `,
-            [petitionId, creatorUserId]
-        );
-
-        await client.query(
-            `
-            UPDATE petitions
-            SET updated_at = NOW()
-            WHERE petition_id = $1
-            `,
-            [petitionId]
-        );
-
-        const row = await getPetitionByIdForUser(client, petitionId, creatorUserId);
-
-        await client.query('COMMIT');
-        return row;
-    } catch (error) {
-        await client.query('ROLLBACK');
-        throw error;
-    } finally {
-        client.release();
-    }
-};
-
-const listGroupPetitions = async ({ groupId, userId }) => {
-    const sql = `
-        ${PETITION_CTES}
-        SELECT
-            ${PETITION_SELECT_COLUMNS}
-        FROM petitions p
-        JOIN f_group g ON g.group_id = p.group_id
-        LEFT JOIN group_sizes gs ON gs.group_id = p.group_id
-        LEFT JOIN response_counts rc ON rc.petition_id = p.petition_id
-        LEFT JOIN petition_responses cur
-            ON cur.petition_id = p.petition_id
-           AND cur.user_id = $2
-        WHERE p.group_id = $1
-        ORDER BY p.start_time ASC, p.petition_id DESC
-    `;
-    const result = await pool.query(sql, [groupId, userId]);
-    return result.rows;
-};
-
-const listUserPetitions = async ({ userId }) => {
-    const sql = `
-        ${PETITION_CTES}
-        SELECT
-            ${PETITION_SELECT_COLUMNS}
-        FROM petitions p
-        JOIN f_group g ON g.group_id = p.group_id
-        LEFT JOIN group_match gm
-            ON gm.group_id = p.group_id
-           AND gm.user_id = $1
-        LEFT JOIN group_sizes gs ON gs.group_id = p.group_id
-        LEFT JOIN response_counts rc ON rc.petition_id = p.petition_id
-        LEFT JOIN petition_responses cur
-            ON cur.petition_id = p.petition_id
-           AND cur.user_id = $1
-        WHERE gm.user_id IS NOT NULL
-           OR p.created_by_user_id = $1
-        ORDER BY p.start_time ASC, p.petition_id DESC
-    `;
-    const result = await pool.query(sql, [userId]);
-    return result.rows;
-};
-
-const respondToPetition = async ({ petitionId, userId, response }) => {
-    const normalizedResponse = String(response || '').toUpperCase();
-    if (normalizedResponse !== 'ACCEPTED' && normalizedResponse !== 'DECLINED') {
-        const err = new Error('response must be ACCEPTED or DECLINED');
-        err.status = 400;
-        throw err;
-    }
-
-    const client = await pool.connect();
-    try {
-        await client.query('BEGIN');
-
-        const petitionResult = await client.query(
-            `
-            SELECT petition_id, group_id
-            FROM petitions
-            WHERE petition_id = $1
-            FOR UPDATE
-            `,
-            [petitionId]
-        );
-
-        const petition = petitionResult.rows[0];
-        if (!petition) {
-            const err = new Error('Petition not found');
-            err.status = 404;
-            throw err;
-        }
-
-        const memberResult = await client.query(
-            `
-            SELECT 1
-            FROM group_match
-            WHERE group_id = $1
-              AND user_id = $2
-            `,
-            [petition.group_id, userId]
-        );
-
-        if (memberResult.rowCount === 0) {
-            const err = new Error('Forbidden');
-            err.status = 403;
-            throw err;
-        }
-
-        await client.query(
-            `
-            INSERT INTO petition_responses (petition_id, user_id, response)
-            VALUES ($1, $2, $3)
-            ON CONFLICT (petition_id, user_id)
-            DO UPDATE SET
-                response = EXCLUDED.response,
-                responded_at = NOW()
-            `,
-            [petitionId, userId, normalizedResponse]
-        );
-
-        await client.query(
-            `
-            UPDATE petitions
-            SET updated_at = NOW()
-            WHERE petition_id = $1
-            `,
-            [petitionId]
-        );
-
-        const row = await getPetitionByIdForUser(client, petitionId, userId);
-
-        await client.query('COMMIT');
-        return row;
-    } catch (error) {
-        await client.query('ROLLBACK');
-        throw error;
-    } finally {
-        client.release();
-    }
-};
-
-const deleteFailedPetition = async ({ petitionId, userId }) => {
-    const client = await pool.connect();
-    try {
-        await client.query('BEGIN');
-
-        const petitionResult = await client.query(
-            `
-            SELECT petition_id, created_by_user_id
-            FROM petitions
-            WHERE petition_id = $1
-            FOR UPDATE
-            `,
-            [petitionId]
-        );
-
-        const petition = petitionResult.rows[0];
-        if (!petition) {
-            const err = new Error('Petition not found');
-            err.status = 404;
-            throw err;
-        }
-
-        if (Number(petition.created_by_user_id) !== Number(userId)) {
-            const err = new Error('Only petition creator can delete');
-            err.status = 403;
-            throw err;
-        }
-
-        const projected = await getPetitionByIdForUser(client, petitionId, userId);
-        if (!projected || projected.status !== 'FAILED') {
-            const err = new Error('Only FAILED petitions can be deleted');
-            err.status = 400;
-            throw err;
-        }
-
-        await client.query(
-            `
-            DELETE FROM petitions
-            WHERE petition_id = $1
-            `,
-            [petitionId]
-        );
-
-        await client.query('COMMIT');
-        return { ok: true };
-    } catch (error) {
-        await client.query('ROLLBACK');
-        throw error;
-    } finally {
-        client.release();
-    }
-};
-
 // STELLA TODO: changePriority
 
 module.exports = {
     pool,
     query: (text, params) => pool.query(text,params),
     testConnection,
-    ensurePetitionSchema,
     getUsersWithName,
     getUserByID,
     getNameByID,
@@ -758,12 +405,9 @@ module.exports = {
     searchFor,
     addCalendar,
     addEvents,
-    createManualEvent,
     getEventsByCalendarID,
     deleteEventsByIds,
-    deleteEventById,
     updateEvent,
-    updateEventPriority,
     getCalendarID,
     updateTokens,
     createGroup,
@@ -777,10 +421,5 @@ module.exports = {
     updateUsername,
     checkUsernameExists,
     isUserInGroup,
-    cleanEvents,
-    createPetition,
-    listGroupPetitions,
-    listUserPetitions,
-    respondToPetition,
-    deleteFailedPetition
+    cleanEvents
 }

@@ -44,12 +44,3 @@ export async function apiPostWithMeta(path, data) {
 
   return parseJsonResponse(response);
 }
-
-export async function apiDeleteWithMeta(path) {
-  const response = await fetch(path, {
-    method: "DELETE",
-    credentials: "include"
-  });
-
-  return parseJsonResponse(response);
-}
