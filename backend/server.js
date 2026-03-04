@@ -430,7 +430,18 @@ app.get("/api/events", async (req, res) => {
 
       // check if there are deleted events
       const googleEventIds = new Set(formattedEvents.map(event => event.event_id));
-      const deletedEvents = existingEvents.filter(event => !googleEventIds.has(event.gcal_event_id));
+
+      // const deletedEvents = existingEvents.filter(event => !googleEventIds.has(event.gcal_event_id));
+      const deletedEvents = existingEvents.filter(event => {
+          // 1. If the event ID starts with 'manual-', it was made in our app. Keep it!
+          if (event.gcal_event_id && event.gcal_event_id.startsWith('manual-')) {
+              return false; // Don't flag it for deletion
+          }
+          
+          // 2. Otherwise, if it's missing from Google, flag it for deletion
+          return !googleEventIds.has(event.gcal_event_id);
+      });
+
 
       // check if there are modified events (time and name only)
       const modifiedEvents = [];
@@ -534,6 +545,42 @@ app.get('/api/get-events', async (req, res) => {
     res.status(500).json({ error: "Failed to fetch events" });
   }
 })
+
+app.post("/api/add-events", async (req, res) => {
+  try {
+    const { events } = req.body;
+
+    if (!events || !Array.isArray(events) || events.length === 0) {
+      return res.status(400).json({ error: "Invalid events data" });
+    }
+
+    const userId = req.session.userId; 
+    
+    if (!userId) {
+        return res.status(401).json({ error: "Unauthorized" });
+    }
+
+    const calResult = await db.getCalendarID(userId);
+    
+    if (!calResult || !calResult.calendar_id) {
+       return res.status(404).json({ error: "Calendar not found for user" });
+    }
+    
+    const cal_id = calResult.calendar_id;
+
+    await db.addEvents(cal_id, events);
+
+    return res.status(201).json({ success: true, message: `Added ${events.length} event(s)` });
+  }
+  catch (error) {
+    console.error("Error adding events:", error);
+    return res.status(500).json({ error: "Failed to add events" });
+  }
+});
+
+app.post("/api/add-petition", async (req, res) => {
+
+});
 
 app.get('/api/email-send-test', async(req,res) => {
   try {

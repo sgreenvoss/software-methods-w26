@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import '../../css/eventSidebar.css';
+import { apiPost } from '../../api.js';
 
 export default function EventSidebar({ 
     setDraftEvent, 
@@ -42,6 +43,43 @@ export default function EventSidebar({
         }
 
         // TODO: apiPost to save the event to the DB
+        if (!title || !date || !startTime || !endTime) {
+            alert("Please fill in all fields.");
+            return;
+        }
+
+        const tempEventId = `manual-${Date.now()}`;
+
+        const payload = {
+            events: [
+                {
+                    title: title,
+                    start: new Date(`${date}T${startTime}`).toISOString(),
+                    end: new Date(`${date}T${endTime}`).toISOString(),
+                    event_id: tempEventId
+                }
+            ]
+        };
+
+        try {
+            if (mode === 'blocking') {
+                await apiPost('/api/add-events', payload);
+            }
+            else if (mode === 'petition') {
+                // payload.groupId = petitionGroupId; 
+                // await apiPost('/api/add-petition', payload);
+                // console.log("Petition saved!");
+            }
+
+        // 4. Close the sidebar and clear the form
+        onFinalize();
+
+        } catch (error) {
+            console.error("Error saving event:", error);
+            alert("There was an error saving the event. Please try again.");
+            return;
+        }
+
         console.log("Saving event:", { title, date, startTime, endTime, mode });
         // Once successful, clear the form and close sidebar
         onFinalize(); 
