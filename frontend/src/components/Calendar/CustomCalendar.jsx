@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { apiGet } from '../../api'; // Adjust path based on your folder structure
+import { apiGet } from '../../api';
 import PetitionActionModal from '../Petitions/PetitionActionModal';
 import GoogleEventPriorityModal from './GoogleEventPriorityModal';
 import '../../css/calendar.css';
@@ -169,11 +169,22 @@ export default function CustomCalendar({
   const [isGoogleEventModalOpen, setIsGoogleEventModalOpen] = useState(false);
   const [petitionActionRefreshKey, setPetitionActionRefreshKey] = useState(0);
 
-  // const renderCount = useRef(0);
-  // renderCount.current++;
-  // console.log("Render #", renderCount.current, "rawEvents length:", rawEvents.length);
+  const applyPersonalEvents = (personalEvents, sourcePath) => {
+    if (Array.isArray(personalEvents)) {
+      setRawEvents(personalEvents);
+      return;
+    }
 
-  // --- EFFECT 1: Fetch Personal Events ---
+    if (personalEvents && personalEvents.error) {
+      console.warn("Backend rejected token:", personalEvents.error);
+      setRawEvents([]);
+      window.location.href = '/login';
+      return;
+    }
+
+    console.warn(`Unexpected data format for personal events received from ${sourcePath}`, personalEvents);
+    setRawEvents([]);
+  };
 
   useEffect(() => {
     const fetchCurrentUser = async () => {
@@ -191,22 +202,11 @@ export default function CustomCalendar({
   }, []);
 
   useEffect(() => {
-    const fetchPersonalEvents = async () => {
+    const syncPersonalEvents = async () => {
       setLoading(true);
       try {
         const personalEvents = await apiGet('/api/events');
-        if (Array.isArray(personalEvents)) {
-            setRawEvents(personalEvents);
-          }
-          else if (personalEvents && personalEvents.error) {
-            console.warn("Backend rejected token:", personalEvents.error);
-            setRawEvents([]);
-            window.location.href = '/login'; // IDK
-          }
-          else {
-            console.warn("Unexpected data format for personal events recieved from api/events", personalEvents);
-            setRawEvents([]);
-          }
+        applyPersonalEvents(personalEvents, '/api/events');
       } catch (error) {
         console.error('Failed to fetch personal events:', error);
         setRawEvents([]);
@@ -215,8 +215,29 @@ export default function CustomCalendar({
       }
     };
     
-    fetchPersonalEvents();
-  }, [weekStart, eventRefreshSignal]); 
+    syncPersonalEvents();
+  }, []);
+
+  useEffect(() => {
+    if (eventRefreshSignal === 0) {
+      return;
+    }
+
+    const fetchStoredPersonalEvents = async () => {
+      setLoading(true);
+      try {
+        const personalEvents = await apiGet('/api/get-events');
+        applyPersonalEvents(personalEvents, '/api/get-events');
+      } catch (error) {
+        console.error('Failed to refresh personal events:', error);
+        setRawEvents([]);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchStoredPersonalEvents();
+  }, [eventRefreshSignal]);
 
   useEffect(() => {
     setAvailabilityView('StrictView');
@@ -597,7 +618,6 @@ export default function CustomCalendar({
 // This keeps the "Business Logic" separate from the "View"
 function processEvents(rawEvents) {
   if (!Array.isArray(rawEvents)) return [];
-  console.log("in the processing events function");
   const processed = [];
   rawEvents.forEach(event => {
     const normalizedMode = event.mode === 'petition'

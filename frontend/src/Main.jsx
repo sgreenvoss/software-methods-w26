@@ -21,7 +21,6 @@ export default function Main() {
     // live draft preview of event being created/edited.
     const [draftEvent, setDraftEvent] = useState(null);
   
-    // 1. Move fetchGroups INSIDE so it can see setGroupsList
     const [eventMode, setEventMode] = useState('blocking');
     const [eventRefreshSignal, setEventRefreshSignal] = useState(0);
     const [petitionGroupId, setPetitionGroupId] = useState('');
@@ -30,22 +29,9 @@ export default function Main() {
     const activeGroup = groupsList.find((group) => Number(group.group_id) === Number(selectedGroupId)) || null;
     
 
-    // grab all of the events using api/events on login
-    const fetchEvents = async () => {
-        try {
-            await apiGet('/api/events');
-        } catch (error) {
-            console.error('Error loading events:', error);
-        }
-    }
-
     const fetchGroups = async () => {
         try {
-            // 1. Hit the ACTUAL endpoint
             const response = await apiGet('/user/groups'); 
-            
-            // 2. The backend returns { success: true, groups: [...] }
-            // We need to extract the groups array specifically.
             if (response && response.success && Array.isArray(response.groups)) {
                 setGroupsList(response.groups);
             } else {
@@ -71,7 +57,6 @@ export default function Main() {
         }
     };
 
-    // 2. Move handleLogout INSIDE
     const handleLogout = async () => {
         try {
             await apiPost('/logout'); 
@@ -82,12 +67,9 @@ export default function Main() {
     };
 
     useEffect(() => {
-        fetchEvents();
         fetchGroups();
         fetchPendingInvite();
     }, []);
-
-    console.log("2. Main.jsx current selectedGroupId:", selectedGroupId);
 
 
     // Toggle the sidebar open/closed

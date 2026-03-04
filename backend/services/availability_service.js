@@ -34,7 +34,6 @@ const availabilityService = {
     }
 
     // 4. Ch. 7: MVC Separation - Delegate pure math to the Algorithm "Model"
-    console.log("DATA FED TO ALGORITHM:", JSON.stringify(participants, null, 2)); // Debug log to verify input format
     const blocks = computeAvailabilityBlocksAllViews({
       windowStartMs,
       windowEndMs,

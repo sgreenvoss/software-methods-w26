@@ -116,7 +116,7 @@ function overlaps(aStart, aEnd, bStart, bEnd) {
  * @param {number} args.windowEndMs
  * @param {ParticipantSnapshot[]} args.participants
  * @param {number} [args.granularityMinutes=DEFAULT_G_MINUTES]
- * @param {string} [args.priority=BlockingLevel.B3] - min blocking level; B1=lenient, B2=flexible, B3=strict
+ * @param {string} [args.priority=BlockingLevel.B3] - min blocking level; B1=strict, B2=flexible, B3=lenient
  * @returns {AvailabilityBlock[]}
  */
 function computeAvailabilityBlocks({
@@ -288,9 +288,9 @@ function computeAvailabilityBlocksAllViews({
    * Key detail: we build lists via ROUTING rules, not by rerunning filters.
    * That way each event is clamped once and pushed to the views it affects.
    *
-   * Routing: StrictView ALL events considered busy
-   *          FlexibleView ALL B2, B3 events considered busy
-   *          LenientView ALL B1, B2, B3 events considered busy
+   * Routing: StrictView treats B1, B2, and B3 as busy
+   *          FlexibleView treats B2 and B3 as busy
+   *          LenientView treats only B3 as busy
    *
    * @type {Map<UserId, {B1:{startMs:number,endMs:number}[],B2:{startMs:number,endMs:number}[],B3:{startMs:number,endMs:number}[]}>}
    */
@@ -300,7 +300,7 @@ function computeAvailabilityBlocksAllViews({
     const userId = p.userId;
     const rawEvents = Array.isArray(p.events) ? p.events : [];
 
-    const lists = { StrictView: [], FlexibleView: [], LenientView: [] }; // Fixing Priority. Naming conventions for clarity. 02-22 1.1
+    const lists = { StrictView: [], FlexibleView: [], LenientView: [] };
 
     for (const ev of rawEvents) {
       if (!ev) continue;
@@ -323,15 +323,14 @@ function computeAvailabilityBlocksAllViews({
         lists.LenientView.push({ startMs, endMs });
       }
       else if (level === BlockingLevel.B2) {
-        // (Mediium Priority / Flexible) A B2 event counts as busy for StrictView and FlexibleView.
+        // A B2 event counts as busy for StrictView and FlexibleView.
         lists.StrictView.push({ startMs, endMs });
         lists.FlexibleView.push({ startMs, endMs });
       }
       else {
-        // Only B1 events effect all views, so push to StrictView only
+        // A B1 event only counts as busy for StrictView.
         lists.StrictView.push({ startMs, endMs });
       }
-      // Fixing Routing For Priority Level clarity. 02-22. 1.1
     }
     const merged = {
       StrictView: mergeIntervals(lists.StrictView),

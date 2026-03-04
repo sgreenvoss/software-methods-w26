@@ -11,13 +11,14 @@ function assertPriorityValue(value) {
 
 function mapDbEventForApi(event) {
   return {
-    title: event.event_name,
-    start: event.event_start,
-    end: event.event_end,
-    event_id: event.gcal_event_id,
-    // cal_event.priority is the persisted source of truth and should
-    // already be a valid 1|2|3 value at this point.
-    priority: assertPriorityValue(event.priority),
+      title: event.event_name,
+      start: event.event_start,
+      end: event.event_end,
+      // event_id is the source id (Google id or manual-* id), not cal_event.event_id.
+      event_id: event.gcal_event_id,
+      // cal_event.priority is the persisted source of truth and should
+      // already be a valid 1|2|3 value at this point.
+      priority: assertPriorityValue(event.priority),
   };
 }
 
@@ -83,12 +84,8 @@ function createEventController({ db, google, oauth2Client }) {
     return true;
   }
 
+  // /api/events is the expensive path: sync Google into stored rows, then return the stored result.
   async function getEvents(req, res) {
-    console.log('Session ID:', req.sessionID);
-    console.log('Session data:', req.session);
-    console.log('userid:', req.session && req.session.userId);
-    console.log('isAuthenticated:', req.session && req.session.isAuthenticated);
-
     try {
       const isValid = await ensureValidToken(req, res);
       if (!isValid) return;
@@ -109,7 +106,6 @@ function createEventController({ db, google, oauth2Client }) {
 
     try {
       const user = await db.getUserByID(req.session.userId);
-      console.log('user in /api/events: ', user);
       if (!user || !user.refresh_token) {
         return res.status(401).json({ error: "No tokens found. Please re-authenticate." });
       }
@@ -223,6 +219,7 @@ function createEventController({ db, google, oauth2Client }) {
     }
   }
 
+  // /api/get-events is the cheap read path: return stored rows only, with no Google sync.
   async function getStoredEvents(req, res) {
     try {
       if (!req.session || !req.session.userId || !req.session.isAuthenticated) {
