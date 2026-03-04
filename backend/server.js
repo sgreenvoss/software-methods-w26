@@ -26,12 +26,11 @@ const frontend = process.env.FRONTEND_URL;
 const app = express();
 const isProduction = process.env.NODE_ENV === 'production';
 
-if (!isProduction) {
-  app.use(cors({
-    origin: 'http://localhost:3000',
-    credentials: true
-  }));
-}
+app.use(cors({
+  origin: isProduction ? 'https://socialscheduler.me' : 'http://localhost:3000',
+  credentials: true
+}));
+
 
 app.use(express.json());
 app.use(cookieParser(process.env.SESSION_SECRET));
@@ -89,6 +88,7 @@ app.get('/', (req, res) => {
 });
 
 app.get('/login', (req, res) => {
+
   res.sendFile(path.join(__dirname, "..", "frontend", "build", "index.html"));
 });
 
