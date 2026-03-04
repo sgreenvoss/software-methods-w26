@@ -57,7 +57,10 @@ function mapPetitionToCalendarEvent(petition, activeGroupId, weekStart) {
       : (groupSize > 0 && acceptedCount === groupSize)
         ? 'ACCEPTED_ALL'
         : 'OPEN';
-  const status = petition.status ?? computedStatus;
+  const status = typeof petition.status === 'string' && petition.status.trim()
+    ? petition.status
+    : computedStatus;
+  const titleRaw = petition.title || 'Petition';
 
   return {
     event_id: `petition-${petitionId}`,
@@ -65,10 +68,8 @@ function mapPetitionToCalendarEvent(petition, activeGroupId, weekStart) {
     petitionId,
     groupId: petitionGroupId,
     createdByUserId: Number(petition.created_by_user_id ?? petition.createdByUserId ?? null),
-    title: activeGroupId
-      ? (petition.title || 'Petition')
-      : (petition.group_name ? `${petition.group_name}: ${petition.title || 'Petition'}` : (petition.title || 'Petition')),
-    titleRaw: petition.title || 'Petition',
+    title: titleRaw,
+    titleRaw,
     start: petition.start_time ?? petition.start ?? petition.startMs,
     end: petition.end_time ?? petition.end ?? petition.endMs,
     start_time: petition.start_time ?? petition.start ?? petition.startMs,
@@ -78,7 +79,9 @@ function mapPetitionToCalendarEvent(petition, activeGroupId, weekStart) {
     groupSize,
     currentUserResponse: petition.current_user_response ?? petition.currentUserResponse ?? null,
     status,
-    groupName: petition.group_name ?? petition.groupName ?? ''
+    groupName: petition.group_name ?? petition.groupName ?? '',
+    is_creator: typeof petition.is_creator === 'boolean' ? petition.is_creator : null,
+    isCreator: typeof petition.is_creator === 'boolean' ? petition.is_creator : null
   };
 }
 
@@ -93,6 +96,7 @@ export default function CustomCalendar({ groupId, draftEvent }) {
   const [selectedPetition, setSelectedPetition] = useState(null);
   const [isPetitionModalOpen, setIsPetitionModalOpen] = useState(false);
   const [petitionActionRefreshKey, setPetitionActionRefreshKey] = useState(0);
+  const [currentUserId, setCurrentUserId] = useState(null);
   const petitionDraftActive = draftEvent?.mode === 'petition';
 
   // const renderCount = useRef(0);
@@ -195,6 +199,21 @@ export default function CustomCalendar({ groupId, draftEvent }) {
   }, [groupId, weekStart]);
 
   useEffect(() => {
+    const fetchCurrentUser = async() => {
+      try {
+        const response = await apiGet('/api/me');
+        const userId = response?.user?.user_id;
+        setCurrentUserId(userId != null ? Number(userId) : null);
+      } catch (error) {
+        console.error('Failed to load current user for petition actions:', error);
+        setCurrentUserId(null);
+      }
+    };
+
+    fetchCurrentUser();
+  }, []);
+
+  useEffect(() => {
     const fetchVisiblePetitions = async() => {
       const endpoint = groupId ? `/api/groups/${groupId}/petitions` : '/api/petitions';
 
@@ -279,6 +298,20 @@ export default function CustomCalendar({ groupId, draftEvent }) {
     }
   };
 
+  const getDisplayTitle = (event) => {
+    if (event.mode !== 'petition') {
+      return event.title;
+    }
+
+    const baseTitle = event.titleRaw || event.title || 'Petition';
+    if (groupId) {
+      return baseTitle;
+    }
+
+    const groupLabel = event.groupName || (event.groupId ? `Group ${event.groupId}` : '');
+    return groupLabel ? `${groupLabel}: ${baseTitle}` : baseTitle;
+  };
+
   return (
     <div id="calendar-container">
       {/* 1. CALENDAR HEADER (Navigation) */}
@@ -332,7 +365,7 @@ export default function CustomCalendar({ groupId, draftEvent }) {
                       case 'petition':
                         backgroundColor = '#ffa963';
                         opacity = 0.6;
-                        zIndex = 2;
+                        zIndex = 3;
                         break;
                       case 'blocking':
                         backgroundColor = '#34333c';
@@ -344,7 +377,7 @@ export default function CustomCalendar({ groupId, draftEvent }) {
                         const calculatedLightness = Math.max(35, 90 - (event.availLvl * 12));
                         backgroundColor = `hsl(145, 65%, ${calculatedLightness}%)`;
                         opacity = 0.5;
-                        zIndex = 4
+                        zIndex = 3;
                         break;
                       default:
                         backgroundColor = '#6395ee';
@@ -367,7 +400,7 @@ export default function CustomCalendar({ groupId, draftEvent }) {
                           
                         }}
                       >
-                        {event.title}
+                        {getDisplayTitle(event)}
                       </div>
                     );
                   })}
@@ -380,6 +413,7 @@ export default function CustomCalendar({ groupId, draftEvent }) {
       <PetitionActionModal
         open={isPetitionModalOpen}
         petition={selectedPetition}
+        currentUserId={currentUserId}
         onClose={handleClosePetitionModal}
         onActionComplete={handlePetitionActionComplete}
       />
@@ -428,6 +462,8 @@ function processEvents(rawEvents) {
         currentUserResponse: event.currentUserResponse ?? null,
         status: event.status ?? null,
         groupName: event.groupName ?? '',
+        is_creator: typeof event.is_creator === 'boolean' ? event.is_creator : null,
+        isCreator: typeof event.isCreator === 'boolean' ? event.isCreator : null,
         // isAvail: event.isAvail || false
       });
       current = nextDayStart;

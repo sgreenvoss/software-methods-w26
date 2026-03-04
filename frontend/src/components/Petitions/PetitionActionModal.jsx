@@ -37,6 +37,7 @@ function formatDateTimeRange(petition) {
 export default function PetitionActionModal({
   open,
   petition,
+  currentUserId,
   onClose,
   onActionComplete
 }) {
@@ -58,10 +59,27 @@ export default function PetitionActionModal({
     petition.petition_id ??
     petition.id
   );
+
+  const creatorId = Number(
+    petition.createdByUserId ??
+    petition.created_by_user_id ??
+    petition.created_by_person_id
+  );
+
+  const currentUserIdNum = currentUserId == null ? NaN : Number(currentUserId);
+  const isCreator = typeof petition.is_creator === 'boolean'
+    ? petition.is_creator
+    : typeof petition.isCreator === 'boolean'
+      ? petition.isCreator
+    : (Number.isFinite(currentUserIdNum) && Number.isFinite(creatorId) && creatorId === currentUserIdNum);
+
   const currentUserResponse =
     petition.currentUserResponse ??
     petition.current_user_response ??
     null;
+
+  const normalizedCurrentUserResponse = String(currentUserResponse || '').toUpperCase();
+
   const acceptedCount = Number(
     petition.acceptedCount ??
     petition.accepted_count ??
@@ -77,6 +95,7 @@ export default function PetitionActionModal({
     petition.group_size ??
     0
   );
+
   const computedStatus =
     declinedCount > 0
       ? 'FAILED'
@@ -84,20 +103,38 @@ export default function PetitionActionModal({
         ? 'ACCEPTED_ALL'
         : 'OPEN';
 
-  const status = petition.status ?? computedStatus;
+  const status = typeof petition.status === 'string' && petition.status.trim()
+    ? petition.status
+    : computedStatus;
+
   const groupName = petition.groupName ?? petition.group_name ?? '';
   const title = petition.titleRaw ?? petition.title ?? 'Petition';
 
-  const acceptDisabled =
-    submitting ||
-    status !== 'OPEN' ||
-    currentUserResponse === 'ACCEPTED' ||
-    currentUserResponse === 'ACCEPT';
-  const declineDisabled =
-    submitting ||
-    status !== 'OPEN' ||
-    currentUserResponse === 'DECLINED' ||
-    currentUserResponse === 'DECLINE';
+  const hasKnownGroupSize = Number.isFinite(groupSize) && groupSize > 0;
+  const pendingCount = hasKnownGroupSize
+    ? Math.max(groupSize - acceptedCount - declinedCount, 0)
+    : null;
+
+  const hasResponded =
+    normalizedCurrentUserResponse === 'ACCEPTED' ||
+    normalizedCurrentUserResponse === 'DECLINED' ||
+    normalizedCurrentUserResponse === 'ACCEPT' ||
+    normalizedCurrentUserResponse === 'DECLINE';
+
+  const participantButtonsDisabled = submitting || status !== 'OPEN' || hasResponded;
+
+  const currentResponseLabel = (() => {
+    if (normalizedCurrentUserResponse === 'ACCEPTED' || normalizedCurrentUserResponse === 'ACCEPT') {
+      return 'Accepted';
+    }
+    if (normalizedCurrentUserResponse === 'DECLINED' || normalizedCurrentUserResponse === 'DECLINE') {
+      return 'Declined';
+    }
+    return '';
+  })();
+
+  const acceptLabel = currentResponseLabel === 'Accepted' ? 'Accept (Selected)' : 'Accept';
+  const declineLabel = currentResponseLabel === 'Declined' ? 'Decline (Selected)' : 'Decline';
 
   const handleRespond = async(responseValue) => {
     try {
@@ -126,6 +163,31 @@ export default function PetitionActionModal({
     }
   };
 
+  const handleDelete = async() => {
+    try {
+      setSubmitting(true);
+      setInlineError('');
+
+      const response = await fetch(`/api/petitions/${petitionId}`, {
+        method: 'DELETE',
+        credentials: 'include'
+      });
+
+      const data = await getJsonOrNull(response);
+      if (!response.ok) {
+        setInlineError(data?.error || 'Failed to delete petition.');
+        return;
+      }
+
+      onActionComplete();
+    } catch (error) {
+      console.error('Petition delete failed:', error);
+      setInlineError('Failed to delete petition.');
+    } finally {
+      setSubmitting(false);
+    }
+  };
+
   return (
     <div className="petition-modal-backdrop" onClick={onClose}>
       <div className="petition-modal" onClick={(e) => e.stopPropagation()}>
@@ -140,9 +202,10 @@ export default function PetitionActionModal({
           <p><strong>Group:</strong> {groupName || `Group ${petition.groupId ?? petition.group_id}`}</p>
           <p><strong>When:</strong> {formatDateTimeRange(petition)}</p>
           <p><strong>Status:</strong> {status}</p>
-          <p><strong>Responses:</strong> {acceptedCount} accepted / {declinedCount} declined / {groupSize} total</p>
-          {currentUserResponse ? (
-            <p><strong>Your response:</strong> {currentUserResponse}</p>
+          <p><strong>Responses:</strong> {acceptedCount} accepted / {declinedCount} declined / {hasKnownGroupSize ? `${groupSize} total` : 'total unknown'}</p>
+          <p><strong>Pending:</strong> {hasKnownGroupSize ? pendingCount : 'unknown'}</p>
+          {currentResponseLabel ? (
+            <p><strong>Your response:</strong> {currentResponseLabel}</p>
           ) : null}
           {inlineError ? (
             <p className="petition-inline-error">{inlineError}</p>
@@ -150,20 +213,32 @@ export default function PetitionActionModal({
         </div>
 
         <div className="petition-modal-actions">
-          <button
-            className="petition-accept-btn"
-            onClick={() => handleRespond('ACCEPT')}
-            disabled={acceptDisabled}
-          >
-            Accept
-          </button>
-          <button
-            className="petition-decline-btn"
-            onClick={() => handleRespond('DECLINE')}
-            disabled={declineDisabled}
-          >
-            Decline
-          </button>
+          {isCreator ? (
+            <button
+              className="petition-danger-btn"
+              onClick={handleDelete}
+              disabled={submitting}
+            >
+              Delete Petition
+            </button>
+          ) : (
+            <>
+              <button
+                className="petition-accept-btn"
+                onClick={() => handleRespond('ACCEPT')}
+                disabled={participantButtonsDisabled}
+              >
+                {acceptLabel}
+              </button>
+              <button
+                className="petition-decline-btn"
+                onClick={() => handleRespond('DECLINE')}
+                disabled={participantButtonsDisabled}
+              >
+                {declineLabel}
+              </button>
+            </>
+          )}
           <button className="petition-secondary-btn" onClick={onClose} disabled={submitting}>
             Close
           </button>

@@ -157,6 +157,11 @@ button:disabled {
   color: #ffffff;
 }
 
+.petition-danger-btn {
+  background: #6c757d;
+  color: #ffffff;
+}
+
 .petition-modal-actions button:disabled {
   opacity: 0.6;
   cursor: not-allowed;

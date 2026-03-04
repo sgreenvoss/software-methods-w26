@@ -638,6 +638,64 @@ const respondToPetition = async({ petitionId, userId, response }) => {
     }
 }
 
+const deletePetitionByCreator = async({ petitionId, userId }) => {
+    const client = await pool.connect();
+    try {
+        await client.query("BEGIN");
+
+        const petitionResult = await client.query(
+            `
+            SELECT petition_id, created_by_user_id
+            FROM petitions
+            WHERE petition_id = $1
+            FOR UPDATE
+            `,
+            [petitionId]
+        );
+
+        const petition = petitionResult.rows[0];
+        if (!petition) {
+            const err = new Error("Petition not found");
+            err.status = 404;
+            throw err;
+        }
+
+        if (Number(petition.created_by_user_id) !== Number(userId)) {
+            const err = new Error("Forbidden");
+            err.status = 403;
+            throw err;
+        }
+
+        await client.query(
+            `
+            DELETE FROM petition_responses
+            WHERE petition_id = $1
+            `,
+            [petitionId]
+        );
+
+        await client.query(
+            `
+            DELETE FROM petitions
+            WHERE petition_id = $1
+            `,
+            [petitionId]
+        );
+
+        await client.query("COMMIT");
+        return { ok: true, petitionId };
+    } catch (error) {
+        try {
+            await client.query("ROLLBACK");
+        } catch (rollbackError) {
+            console.error("rollback failed while deleting petition", rollbackError);
+        }
+        throw error;
+    } finally {
+        client.release();
+    }
+}
+
 // STELLA TODO: changePriority
 
 module.exports = {
@@ -671,5 +729,6 @@ module.exports = {
     createPetition,
     listGroupPetitions,
     listUserPetitions,
-    respondToPetition
+    respondToPetition,
+    deletePetitionByCreator
 }

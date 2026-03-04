@@ -12,9 +12,6 @@ const pgSession = require('connect-pg-simple')(session);
 const email = require('./emailer'); 
 const groupModule = require("./groups");
 
-// Algoritihm inports
-const { fetchAndMapGroupEvents } = require('./algorithm/algorithm_adapter');
-const { computeAvailabilityBlocksAllViews } = require('./algorithm/algorithm');
 // Load the .env file, determine whether on production or local dev
 require('dotenv').config({
   path: process.env.NODE_ENV === 'production' ? '.env.production' : '.env.development'

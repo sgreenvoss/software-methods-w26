@@ -62,6 +62,23 @@ function normalizeResponse(input) {
   return null;
 }
 
+function decoratePetitionForUser(petition, userId) {
+  if (!petition || typeof petition !== "object") {
+    return petition;
+  }
+
+  const creatorId = Number(
+    petition.created_by_user_id ??
+    petition.createdByUserId ??
+    petition.created_by_person_id
+  );
+
+  return {
+    ...petition,
+    is_creator: Number.isFinite(creatorId) && Number(creatorId) === Number(userId)
+  };
+}
+
 module.exports = function registerPetitionRoutes(app, { db }) {
   app.post("/api/groups/:groupId/petitions", requireAuth, requireGroupMember(db), async (req, res) => {
     try {
@@ -92,7 +109,7 @@ module.exports = function registerPetitionRoutes(app, { db }) {
         blockingLevel
       });
 
-      return res.status(201).json(petition);
+      return res.status(201).json(decoratePetitionForUser(petition, req.userId));
     } catch (error) {
       console.error("create petition error:", error);
       return sendApiError(res, error.status || 500, error.message || "Failed to create petition");
@@ -105,7 +122,11 @@ module.exports = function registerPetitionRoutes(app, { db }) {
         groupId: req.groupId,
         userId: req.userId
       });
-      return res.status(200).json(petitions);
+      return res.status(200).json(
+        Array.isArray(petitions)
+          ? petitions.map((petition) => decoratePetitionForUser(petition, req.userId))
+          : []
+      );
     } catch (error) {
       console.error("list group petitions error:", error);
       return sendApiError(res, 500, "Failed to list group petitions");
@@ -115,7 +136,11 @@ module.exports = function registerPetitionRoutes(app, { db }) {
   app.get("/api/petitions", requireAuth, async (req, res) => {
     try {
       const petitions = await db.listUserPetitions({ userId: req.userId });
-      return res.status(200).json(petitions);
+      return res.status(200).json(
+        Array.isArray(petitions)
+          ? petitions.map((petition) => decoratePetitionForUser(petition, req.userId))
+          : []
+      );
     } catch (error) {
       console.error("list user petitions error:", error);
       return sendApiError(res, 500, "Failed to list user petitions");
@@ -140,10 +165,29 @@ module.exports = function registerPetitionRoutes(app, { db }) {
         response
       });
 
-      return res.status(200).json(petition);
+      return res.status(200).json(decoratePetitionForUser(petition, req.userId));
     } catch (error) {
       console.error("respond to petition error:", error);
       return sendApiError(res, error.status || 500, error.message || "Failed to respond to petition");
+    }
+  });
+
+  app.delete("/api/petitions/:petitionId", requireAuth, async (req, res) => {
+    try {
+      const petitionId = Number(req.params.petitionId);
+      if (!Number.isInteger(petitionId) || petitionId <= 0) {
+        return sendApiError(res, 400, "Invalid petitionId");
+      }
+
+      const result = await db.deletePetitionByCreator({
+        petitionId,
+        userId: req.userId
+      });
+
+      return res.status(200).json(result);
+    } catch (error) {
+      console.error("delete petition error:", error);
+      return sendApiError(res, error.status || 500, error.message || "Failed to delete petition");
     }
   });
 };
