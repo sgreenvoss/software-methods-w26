@@ -129,6 +129,8 @@ export default function CustomCalendar({ groupId, draftEvent }) {
   const [groupAvailability, setGroupAvailability] = useState([]);
   const [selectedEvent, setSelectedEvent] = useState(null);
 
+  // const [displayMode, setDisplayMode] = useState("personal");
+
   const refreshPersonalEvents = async () => {
     const personalEvents = await apiGet('/api/get-events');
     if (Array.isArray(personalEvents)) {
@@ -172,6 +174,7 @@ export default function CustomCalendar({ groupId, draftEvent }) {
     };
     
     fetchPersonalEvents();
+    // setDisplayMode("personal");
   }, [weekStart]); 
 
   // --- EFFECT 2: Fetch Group Availability ---
@@ -232,6 +235,7 @@ export default function CustomCalendar({ groupId, draftEvent }) {
     };
     
     fetchGroupEvents();
+    // setDisplayMode("avail");
   }, [groupId, weekStart]);
 
   const handlePrevWeek = () => {
@@ -332,11 +336,11 @@ export default function CustomCalendar({ groupId, draftEvent }) {
                         zIndex = 4
                         break;
                       default:
+                        // backgroundColor = (displayMode == "personal") ? '#6395ee' : '#a6c0ee';
                         backgroundColor = '#6395ee';
                         opacity = 1;
                         zIndex = 3;
                     }
-                    if (event.id.startsWith("manual-")) backgroundColor = '#6f6e76';
 
                     const isClickable = event.mode !== 'avail' && event.mode !== 'petition' && !event.isPreview;
 
