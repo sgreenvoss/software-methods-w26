@@ -10,13 +10,14 @@ export default function UsernameCreation() {
 
     const handleCheckboxChange = (e) => {
         const { value, checked } = e.target;
+        const calendar = calendars.find(cal => cal.id === value);
 
         if (checked) {
             // add calendar to array if checked
-            setSelectedCals((prev) => [...prev, value]);
+            setSelectedCals((prev) => [...prev, calendar]);
         } else {
             // remove value from array if unchecked
-            setSelectedCals((prev) => prev.filter((cal) => cal !== value));
+            setSelectedCals((prev) => prev.filter((cal) => cal.id !== value));
         }
     };
 
@@ -27,6 +28,11 @@ export default function UsernameCreation() {
         const usernameSymbols = /^[a-zA-Z0-9_.]+$/
 
         const errors = [];
+        if (selectedCals.length < 1) {
+            errors.push('Please select at least one calendar.')
+            setErrors(errors);
+            return;
+        }
         if (!usernameSize.test(username)) {
             errors.push('Username must be between 4-16 characters');
         }
@@ -55,9 +61,13 @@ export default function UsernameCreation() {
     useEffect(() => {
         const getCals = async () => {
             const cals = await apiGet('/api/calendars');
-            console.log(cals);
             const updatedCals = cals.map((cal) => {
-                return {summary: cal.summary, checked: false};
+                return {
+                    id: cal.id,
+                    summary: cal.summary,
+                    displayName: cal.primary ? 'primary (Your name on Google Calendar)' : cal.summary,
+                    checked: false
+                };
             });
             setCalendars(updatedCals);
         }
@@ -81,21 +91,25 @@ export default function UsernameCreation() {
             <li>Username may not contain special characters except for '.' and '_'</li>
         </ul>
 
+        <p>
+            IMPORTANT: Please select the calendars you wish to import from your Google account
+            This may not be changed.
+        </p>
         {calendars.map((calendar) => (
-            <div key={calendar.summary}>
+            <div key={calendar.id}>
                 <label>
                     <input
                         type="checkbox"
-                        value={calendar.summary}
-                        checked={selectedCals.includes(calendar.summary)}
+                        value={calendar.id}
+                        checked={selectedCals.some(cal => cal.id === calendar.id)}
                         onChange={handleCheckboxChange}
                     />
-                    {calendar.summary}
+                    {calendar.displayName}
                 </label>
             </div>
         ))}
         <div>
-            <p>Selected Calendars: {selectedCals.join(', ')}</p>
+            <p>Selected Calendars: {selectedCals.map(cal => cal.displayName).join(', ')}</p>
         </div>
         </>
     )

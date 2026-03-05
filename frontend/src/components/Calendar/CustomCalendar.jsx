@@ -18,16 +18,12 @@ function isCurrentWeek(date) {
 }
 
 
-export default function CustomCalendar({ groupId, draftEvent }) {
+export default function CustomCalendar({ refreshTrigger, groupId, draftEvent }) {
   // --- STATE (The "Controller" Data) ---
   const [weekStart, setWeekStart] = useState(getStartOfWeek(new Date()));
   const [rawEvents, setRawEvents] = useState([]);
   const [loading, setLoading] = useState(true);
   const [groupAvailability, setGroupAvailability] = useState([]);
-
-  // const renderCount = useRef(0);
-  // renderCount.current++;
-  // console.log("Render #", renderCount.current, "rawEvents length:", rawEvents.length);
 
   // --- EFFECT 1: Fetch Personal Events ---
 
@@ -35,11 +31,7 @@ export default function CustomCalendar({ groupId, draftEvent }) {
     const fetchPersonalEvents = async () => {
       setLoading(true);
       try {
-        try {
-          await apiGet('/api/events');
-        } catch (syncErr) {
-          console.error("Failed syncing events:", syncErr);
-        }
+
         const personalEvents = await apiGet('/api/get-events');
         if (Array.isArray(personalEvents)) {
             setRawEvents(personalEvents);
@@ -62,7 +54,7 @@ export default function CustomCalendar({ groupId, draftEvent }) {
     };
     
     fetchPersonalEvents();
-  }, [weekStart]); 
+  }, [weekStart, refreshTrigger]); 
 
   // --- EFFECT 2: Fetch Group Availability ---
 
@@ -122,7 +114,7 @@ export default function CustomCalendar({ groupId, draftEvent }) {
     };
     
     fetchGroupEvents();
-  }, [groupId, weekStart]);
+  }, [refreshTrigger, groupId, weekStart]);
 
   const handlePrevWeek = () => {
     const newDate = new Date(weekStart);

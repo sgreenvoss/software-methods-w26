@@ -9,8 +9,10 @@ import {apiGet, apiPost} from './api';
 export default function Main() {
     const [selectedGroupId, setSelectedGroupId] = useState(null);
     const [groupsList, setGroupsList] = useState([]); 
+
+    // refresh signals
     const [groupsRefreshSignal, setGroupsRefreshSignal] = useState(0);
-    // const [view, setView] = useState('calendar'); -- old 
+    const [calRefreshSignal, setCalRefreshSignal] = useState(0);
     
     const [isGroupsSidebarOpen, setIsGroupsSidebarOpen] = useState(false);
     const [isEventSidebarOpen, setIsEventSidebarOpen] = useState(false);
@@ -24,7 +26,6 @@ export default function Main() {
     // 1. Move fetchGroups INSIDE so it can see setGroupsList
     const [eventMode, setEventMode] = useState('blocking');
     const [petitionGroupId, setPetitionGroupId] = useState('');
-    
 
     // grab all of the events using api/events on login
     const fetchEvents = async () => {
@@ -123,6 +124,12 @@ export default function Main() {
         setIsEventSidebarOpen(true);   // Open event sidebar
     };
 
+    const handleSyncCals = async () => {
+        await apiGet("/api/events");
+        setCalRefreshSignal(prev => prev + 1);
+    }
+
+
     // displays two buttons that will bring up either Calendar or Group
     return (
         <div id="app-wrapper">
@@ -133,6 +140,9 @@ export default function Main() {
                 onAccept={() => handleInviteDecision('accept')}
                 onDecline={() => handleInviteDecision('decline')}
             />
+            <section id="syncCals">
+                <button onClick={handleSyncCals}>Sync Calendars</button>
+            </section>
             <section id="logout">
                 <button onClick={handleLogout} id="logoutBtn">Logout</button>
             </section>
@@ -190,7 +200,7 @@ export default function Main() {
 
                 {/* The Calendar always renders.*/}
                 <section className="calendar-main">
-                    <Calendar draftEvent={draftEvent} groupId={selectedGroupId}/>
+                    <Calendar refreshTrigger={calRefreshSignal} draftEvent={draftEvent} groupId={selectedGroupId}/>
                 </section>
 
                 {/* The Event sidebar, which is used for both creating and editing events. */}
@@ -207,7 +217,7 @@ export default function Main() {
                                 setIsEventSidebarOpen(false);
                                 setDraftEvent(null);
                                 // trigger a calendar refresh here
-                                <Calendar draftEvent={draftEvent} selectedGroupId={selectedGroupId}/>
+                                <Calendar refreshTrigger={calRefreshSignal} draftEvent={draftEvent} selectedGroupId={selectedGroupId}/>
                             }}
                         />
                     </aside>
