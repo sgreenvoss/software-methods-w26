@@ -7,10 +7,18 @@
 
 // Map DB priority integers to the algorithm's BlockingLevel strings
 const priorityMapping = {
-    1: "B1", // Lax
-    2: "B2", // Flexible
-    3: "B3"  // Strict
+    1: "B1",
+    2: "B2",
+    3: "B3"
 };
+
+function normalizeBlockingLevel(level) {
+    const normalized = typeof level === "string" ? level.trim().toUpperCase() : "";
+    if (normalized === "B1" || normalized === "B2" || normalized === "B3") {
+        return normalized;
+    }
+    return "B3";
+}
 
 /**
  * Transforms flat SQL rows into the nested array required by the algorithm.
@@ -21,7 +29,7 @@ function mapDatabaseRowsToParticipants(dbRows) {
     const participantMap = new Map();
 
     for (const row of dbRows) {
-        const { user_id, event_start, event_end, priority } = row;
+        const { user_id, event_start, event_end } = row;
 
         // 1. Ensure the user exists in the map (even if they have no events)
         if (!participantMap.has(user_id)) {
@@ -33,10 +41,13 @@ function mapDatabaseRowsToParticipants(dbRows) {
 
         // 2. If the LEFT JOIN returned an actual event, format and push it
         if (event_start && event_end) {
+            const levelFromSql = normalizeBlockingLevel(row.blocking_level);
+            const levelFromPriority = priorityMapping[row.priority] || "B3";
             participantMap.get(user_id).events.push({
                 startMs: new Date(event_start).getTime(),
                 endMs: new Date(event_end).getTime(),
-                blockingLevel: priorityMapping[priority] || "B3" // Default to lenient if missing
+                // Prefer blocking_level from SQL; fallback to priority for compatibility.
+                blockingLevel: row.blocking_level == null ? levelFromPriority : levelFromSql
             });
         }
     }
@@ -59,18 +70,67 @@ async function fetchAndMapGroupEvents(db, groupId, windowStartMs, windowEndMs) {
     const endTimestamp = new Date(windowEndMs).toISOString();
 
     const query = `
-        SELECT 
-            gm.user_id, 
-            ce.event_start, 
-            ce.event_end, 
-            ce.priority
-        FROM group_match gm
-        LEFT JOIN calendar c ON c.user_id = gm.user_id
-        LEFT JOIN cal_event ce ON ce.calendar_id = c.calendar_id
-            AND ce.event_end > $1
-            AND ce.event_start < $2
-        WHERE gm.group_id = $3
-        ORDER BY gm.user_id ASC, ce.event_start ASC;
+        WITH group_users AS (
+            SELECT gm.user_id
+            FROM group_match gm
+            WHERE gm.group_id = $3
+        ),
+        calendar_rows AS (
+            SELECT
+                gu.user_id,
+                ce.event_start,
+                ce.event_end,
+                CASE
+                    WHEN ce.priority = 1 THEN 'B1'
+                    WHEN ce.priority = 2 THEN 'B2'
+                    WHEN ce.priority = 3 THEN 'B3'
+                    ELSE 'B3'
+                END AS blocking_level
+            FROM group_users gu
+            LEFT JOIN calendar c
+                ON c.user_id = gu.user_id
+            LEFT JOIN cal_event ce
+                ON ce.calendar_id = c.calendar_id
+               AND ce.event_end > $1
+               AND ce.event_start < $2
+        ),
+        petition_rows AS (
+            SELECT
+                pr.user_id,
+                p.start_time AS event_start,
+                p.end_time AS event_end,
+                COALESCE(p.blocking_level, 'B3') AS blocking_level
+            FROM petitions p
+            JOIN petition_responses pr
+                ON pr.petition_id = p.petition_id
+               AND pr.response = 'ACCEPTED'
+            JOIN group_users gu
+                ON gu.user_id = pr.user_id
+            WHERE p.end_time > $1
+              AND p.start_time < $2
+              AND NOT EXISTS (
+                  SELECT 1
+                  FROM petition_responses pr_declined
+                  WHERE pr_declined.petition_id = p.petition_id
+                    AND pr_declined.response = 'DECLINED'
+              )
+        ),
+        event_rows AS (
+            SELECT user_id, event_start, event_end, blocking_level
+            FROM calendar_rows
+            UNION ALL
+            SELECT user_id, event_start, event_end, blocking_level
+            FROM petition_rows
+        )
+        SELECT
+            gu.user_id,
+            er.event_start,
+            er.event_end,
+            er.blocking_level
+        FROM group_users gu
+        LEFT JOIN event_rows er
+            ON er.user_id = gu.user_id
+        ORDER BY gu.user_id ASC, er.event_start ASC NULLS FIRST;
     `;
 
     const values = [startTimestamp, endTimestamp, groupId];

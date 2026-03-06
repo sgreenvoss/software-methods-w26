@@ -1,42 +1,131 @@
-const pool = require('../../db'); // Your actual Postgres connection
-const { fetchAndMapGroupEvents } = require('./algorithm_adapter');
+const { fetchAndMapGroupEvents, mapDatabaseRowsToParticipants } = require('./algorithm_adapter');
 
-describe('Algorithm Adapter - DB Integration', () => {
-    
-    // 1. SETUP (Optional): Insert fake users/events into a test DB here if needed
-    beforeAll(async () => {
-        // e.g., await pool.query('INSERT INTO group_match...');
+describe('algorithm_adapter', () => {
+    test('normalizes blocking levels from SQL rows and defaults invalid values to B3', () => {
+        const rows = [
+            {
+                user_id: 10,
+                event_start: '2026-03-01T10:00:00.000Z',
+                event_end: '2026-03-01T11:00:00.000Z',
+                blocking_level: 'b1'
+            },
+            {
+                user_id: 10,
+                event_start: '2026-03-01T11:00:00.000Z',
+                event_end: '2026-03-01T12:00:00.000Z',
+                blocking_level: 'B2'
+            },
+            {
+                user_id: 10,
+                event_start: '2026-03-01T12:00:00.000Z',
+                event_end: '2026-03-01T13:00:00.000Z',
+                blocking_level: 'invalid'
+            },
+            {
+                user_id: 10,
+                event_start: '2026-03-01T13:00:00.000Z',
+                event_end: '2026-03-01T14:00:00.000Z',
+                blocking_level: null
+            }
+        ];
+
+        const participants = mapDatabaseRowsToParticipants(rows);
+        expect(participants).toHaveLength(1);
+        expect(participants[0].events.map((event) => event.blockingLevel)).toEqual([
+            'B1',
+            'B2',
+            'B3',
+            'B3'
+        ]);
     });
 
-    // 2. TEARDOWN (Mandatory): Kill the DB connection so Jest can exit safely
-    afterAll(async () => {
-        // If pool has an .end() method, call it. 
-        // If it's a wrapper, try pool.pool.end() or similar.
-        if (pool && typeof pool.end === 'function') {
-            await pool.end();
-        } else if (pool && pool.pool && typeof pool.pool.end === 'function') {
-            await pool.pool.end();
-        } else {
-            console.warn("Could not find a way to close the DB connection. Jest might hang.");
-        }
+    test('preserves selected-group users with no calendar rows and no petition rows', () => {
+        const rows = [
+            {
+                user_id: 21,
+                event_start: null,
+                event_end: null,
+                blocking_level: null
+            },
+            {
+                user_id: 22,
+                event_start: '2026-03-01T08:00:00.000Z',
+                event_end: '2026-03-01T09:00:00.000Z',
+                blocking_level: 'B3'
+            }
+        ];
+
+        const participants = mapDatabaseRowsToParticipants(rows);
+        expect(participants).toHaveLength(2);
+
+        const byUser = new Map(participants.map((participant) => [participant.userId, participant]));
+        expect(byUser.get(21)).toBeDefined();
+        expect(byUser.get(21).events).toEqual([]);
+        expect(byUser.get(22).events).toHaveLength(1);
     });
 
-    // 3. THE ACTUAL TEST
-    it('should successfully fetch from Postgres and map to the Participant array', async () => {
-        const groupId = 1; // Assuming group 1 exists in your DB
-        const windowStartMs = Date.now();
-        const windowEndMs = windowStartMs + (7 * 24 * 60 * 60 * 1000);
+    test('builds petition-aware query with accepted filtering, declined exclusion, and no petition-group restriction', async() => {
+        const fakeDb = {
+            query: jest.fn().mockResolvedValue({
+                rows: [
+                    { user_id: 1, event_start: null, event_end: null, blocking_level: null }
+                ]
+            })
+        };
 
-        // Hit the actual database
-        const participants = await fetchAndMapGroupEvents(pool, groupId, windowStartMs, windowEndMs);
+        const windowStartMs = Date.parse('2026-03-01T00:00:00.000Z');
+        const windowEndMs = Date.parse('2026-03-08T00:00:00.000Z');
+        const groupId = 77;
 
-        // Verify the Adapter did its job
+        const participants = await fetchAndMapGroupEvents(fakeDb, groupId, windowStartMs, windowEndMs);
         expect(Array.isArray(participants)).toBe(true);
-        
-        // If we know group 1 has users, we can test the structure
-        if (participants.length > 0) {
-            expect(participants[0]).toHaveProperty('userId');
-            expect(Array.isArray(participants[0].events)).toBe(true);
-        }
+
+        expect(fakeDb.query).toHaveBeenCalledTimes(1);
+        const [sql, values] = fakeDb.query.mock.calls[0];
+
+        expect(values).toEqual([
+            new Date(windowStartMs).toISOString(),
+            new Date(windowEndMs).toISOString(),
+            groupId
+        ]);
+
+        expect(sql).toMatch(/petition_rows/i);
+        expect(sql).toMatch(/pr\.response\s*=\s*'ACCEPTED'/i);
+        expect(sql).toMatch(/NOT EXISTS/i);
+        expect(sql).toMatch(/pr_declined\.response\s*=\s*'DECLINED'/i);
+        expect(sql).toMatch(/FROM\s+group_users\s+gu\s+LEFT\s+JOIN\s+event_rows\s+er/i);
+
+        // Must include cross-group accepted petitions: no selected-group filter on petitions.
+        expect(sql).not.toMatch(/p\.group_id\s*=\s*\$\d+/i);
+    });
+
+    test('keeps calendar overlap semantics while mapping calendar-derived blocking levels', async() => {
+        const fakeDb = {
+            query: jest.fn().mockResolvedValue({
+                rows: [
+                    {
+                        user_id: 5,
+                        event_start: '2026-03-03T12:00:00.000Z',
+                        event_end: '2026-03-03T13:00:00.000Z',
+                        blocking_level: 'B2'
+                    }
+                ]
+            })
+        };
+
+        const participants = await fetchAndMapGroupEvents(
+            fakeDb,
+            9,
+            Date.parse('2026-03-01T00:00:00.000Z'),
+            Date.parse('2026-03-08T00:00:00.000Z')
+        );
+
+        expect(participants).toHaveLength(1);
+        expect(participants[0].events).toHaveLength(1);
+        expect(participants[0].events[0].blockingLevel).toBe('B2');
+
+        const sql = fakeDb.query.mock.calls[0][0];
+        expect(sql).toMatch(/ce\.event_end\s*>\s*\$1/i);
+        expect(sql).toMatch(/ce\.event_start\s*<\s*\$2/i);
     });
 });
