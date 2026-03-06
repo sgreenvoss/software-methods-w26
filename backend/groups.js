@@ -21,6 +21,7 @@ const db = require("./db/dbInterface");
 const inviteToken = require("./inviteToken");
 const registerGroupRoutes = require("./routes/group_routes");
 const registerInviteRoutes = require("./routes/invite_routes");
+const registerPetitionRoutes = require("./routes/petition_routes");
 const { createInviteStateService } = require("./services/invite_state_service");
 
 module.exports = function(app) {
@@ -37,4 +38,5 @@ module.exports = function(app) {
   */
   registerGroupRoutes(app, { db });
   registerInviteRoutes(app, { db, inviteToken, inviteState });
+  registerPetitionRoutes(app, { db });
 };

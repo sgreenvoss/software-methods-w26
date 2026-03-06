@@ -11,10 +11,8 @@ const url = require('url');
 const pgSession = require('connect-pg-simple')(session);
 const email = require('./emailer'); 
 const groupModule = require("./groups");
+const petitionRoutes = require("./routes/petition_routes");
 
-// Algoritihm inports
-const { fetchAndMapGroupEvents } = require('./algorithm/algorithm_adapter');
-const { computeAvailabilityBlocksAllViews } = require('./algorithm/algorithm');
 // Load the .env file, determine whether on production or local dev
 require('dotenv').config({
   path: process.env.NODE_ENV === 'production' ? '.env.production' : '.env.development'
@@ -528,8 +526,7 @@ app.get('/api/get-events', async (req, res) => {
       title: event.event_name,
       start: event.event_start,
       end: event.event_end,
-      event_id: event.gcal_event_id,
-      priority: event.priority
+      event_id: event.gcal_event_id
     }));
     
     return res.json(formattedEvents);
@@ -579,45 +576,94 @@ app.post("/api/add-events", async (req, res) => {
   }
 });
 
-// --- CHANGE BLOCKING LEVEL ENDPOINT ---
-app.post('/api/change-blocking-lvl', async (req, res) => {
-    try {
-        const { event_id, priority } = req.body;
-
-        if (!event_id || priority === undefined) {
-            return res.status(400).json({ error: "Missing event_id or priority" });
-        }
-
-        await db.updateEventPriority(event_id, parseInt(priority));
-        
-        return res.status(200).json({ success: true, message: "Blocking level updated" });
-    } catch (error) {
-        console.error("Error updating blocking level:", error);
-        return res.status(500).json({ error: "Failed to update blocking level" });
-    }
-});
-
-// --- DELETE EVENT ENDPOINT ---
-app.post('/api/delete-event', async (req, res) => {
-    try {
-        const { event_id } = req.body;
-
-        if (!event_id) {
-            return res.status(400).json({ error: "Missing event_id" });
-        }
-
-        await db.deleteEventByGcalEventId(event_id);
-        
-        return res.status(200).json({ success: true, message: "Event deleted" });
-    } catch (error) {
-        console.error("Error deleting event:", error);
-        return res.status(500).json({ error: "Failed to delete event" });
-    }
-});
-
-
 app.post("/api/add-petition", async (req, res) => {
+  function normalizeLegacyBlockingLevel(rawValue) {
+    if (rawValue == null) return undefined;
 
+    const text = String(rawValue).trim().toUpperCase();
+    if (text === "1" || text === "B1") return "B1";
+    if (text === "2" || text === "B2") return "B2";
+    if (text === "3" || text === "B3") return "B3";
+    return rawValue;
+  }
+
+  function normalizeLegacyPetitionPayload(body) {
+    const firstEvent = Array.isArray(body?.events) ? body.events[0] : null;
+
+    return {
+      groupId: body?.groupId ?? body?.group_id ?? body?.petitionGroupId ?? body?.group,
+      title: body?.title ?? body?.event_name ?? firstEvent?.title ?? firstEvent?.event_name,
+      start: body?.start ?? body?.startMs ?? body?.start_time ?? firstEvent?.start ?? firstEvent?.start_time,
+      end: body?.end ?? body?.endMs ?? body?.end_time ?? firstEvent?.end ?? firstEvent?.end_time,
+      blocking_level: normalizeLegacyBlockingLevel(
+        body?.blocking_level ??
+        body?.blockingLevel ??
+        body?.priority ??
+        firstEvent?.blocking_level ??
+        firstEvent?.blockingLevel ??
+        firstEvent?.priority
+      )
+    };
+  }
+
+  try {
+    petitionRoutes.ensureTraceId(res);
+
+    if (!req.session || !req.session.userId || !req.session.isAuthenticated) {
+      return petitionRoutes.sendApiError(req, res, 401, "Unauthorized");
+    }
+
+    const normalized = normalizeLegacyPetitionPayload(req.body);
+    const userId = Number(req.session.userId);
+    const groupId = Number(normalized.groupId);
+
+    if (!Number.isInteger(groupId) || groupId <= 0) {
+      return petitionRoutes.sendApiError(
+        req,
+        res,
+        400,
+        "groupId is required for legacy petition creation",
+        {
+          code: "LEGACY_PETITION_PAYLOAD_INVALID",
+          requiredField: "groupId"
+        }
+      );
+    }
+
+    const group = await db.getGroupById(groupId);
+    if (!group) {
+      return petitionRoutes.sendApiError(req, res, 404, "Group not found");
+    }
+
+    const inGroup = await db.isUserInGroup(userId, groupId);
+    if (!inGroup) {
+      return petitionRoutes.sendApiError(req, res, 403, "Forbidden");
+    }
+
+    const parsed = petitionRoutes.parseCreatePetitionInput(normalized);
+    const petition = await db.createPetition({
+      groupId,
+      creatorUserId: userId,
+      title: parsed.title,
+      startMs: parsed.startMs,
+      endMs: parsed.endMs,
+      blockingLevel: parsed.blockingLevel
+    });
+
+    return res.status(201).json(petitionRoutes.decoratePetitionForUser(petition, userId));
+  } catch (error) {
+    const resolved = petitionRoutes.resolvePetitionApiError(error, "Failed to create petition");
+    console.error("[LegacyPetitionAlias]", {
+      traceId: res.locals?.traceId || null,
+      path: req.originalUrl,
+      userId: req.session?.userId ?? null,
+      errorMessage: error?.message || String(error)
+    });
+    return petitionRoutes.sendApiError(req, res, resolved.status, resolved.message, {
+      ...resolved.extra,
+      compatEndpoint: "/api/add-petition"
+    });
+  }
 });
 
 app.get('/api/email-send-test', async(req,res) => {
@@ -666,7 +712,22 @@ app.get('*', (req, res) => {
   }
 });
 
-app.listen(PORT, async () => {
-  console.log(`Server running on port ${PORT}`);
-});
+async function startServer() {
+  console.log("[Startup] Verifying petition schema...");
+  try {
+    await db.ensurePetitionSchema();
+    console.log("[Startup] Petition schema ready: petitions and petition_responses tables verified.");
+  } catch (error) {
+    console.error("[Startup] Petition schema readiness check failed. Exiting.", {
+      errorMessage: error?.message || String(error),
+      errorCode: error?.code || error?.appCode || null
+    });
+    process.exit(1);
+  }
 
+  app.listen(PORT, async () => {
+    console.log(`Server running on port ${PORT}`);
+  });
+}
+
+startServer();

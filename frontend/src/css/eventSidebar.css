@@ -33,3 +33,21 @@
     background-color: #00b894;
     color: white;
 }
+
+.priority-select-dropdown {
+  margin-top: 6px;
+  margin-bottom: 8px;
+  min-width: 180px;
+}
+
+.preflight-message {
+  min-height: 18px;
+  margin: 6px 0 4px;
+  font-size: 0.82rem;
+  color: #4b5563;
+}
+
+.preflight-error {
+  color: #b42318;
+  font-weight: 600;
+}

@@ -9,7 +9,8 @@ async function parseJsonResponse(response) {
   return {
     ok: response.ok,
     status: response.status,
-    data
+    data,
+    traceId: response.headers.get('x-trace-id') || null
   };
 }
 
@@ -20,6 +21,13 @@ export async function apiGet(path) {
   });
   const parsed = await parseJsonResponse(response);
   return parsed.data;
+}
+
+export async function apiGetWithMeta(path) {
+  const response = await fetch(path, {
+    credentials: "include"
+  });
+  return parseJsonResponse(response);
 }
 
 export async function apiPost(path, data) {

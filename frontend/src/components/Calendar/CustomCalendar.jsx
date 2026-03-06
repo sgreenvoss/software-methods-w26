@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
-import { apiGet, apiPost } from '../../api'; // Adjust path based on your folder structure
+import { apiGet } from '../../api'; // Adjust path based on your folder structure
+import PetitionActionModal from '../Petitions/PetitionActionModal';
 import '../../css/calendar.css';
 
 // --- HELPER LOGIC (The "Business Logic" or Model Helpers) ---
@@ -17,124 +18,87 @@ function isCurrentWeek(date) {
   return date.getTime() === currWeekStart.getTime();
 }
 
-// --- THE NEW MODAL COMPONENT ---
-function EventClickModal({ event, onClose, onRefresh }) {
-  // Local state for the dropdown
-  const [newPriority, setNewPriority] = useState(event.priority || 1);
-  const [isSaving, setIsSaving] = useState(false);
+function mapPetitionToCalendarEvent(petition, activeGroupId, weekStart) {
+  if (!petition) return null;
 
-  const handleSave = async () => {
-    setIsSaving(true);
-    try {
-      // Send the update to the backend
-      // You will need to create this route in server.js!
-      await apiPost('/api/change-blocking-lvl', {
-        event_id: event.id,
-        priority: parseInt(newPriority)
-      });
-      
-      onRefresh(); // Trigger a calendar refetch
-      onClose();   // Close the modal
-    } catch (error) {
-      console.error("Failed to update priority", error);
-      alert("Failed to update blocking level.");
-    } finally {
-      setIsSaving(false);
-    }
-  };
+  const petitionGroupId = Number(petition.group_id ?? petition.groupId);
+  const petitionId = Number(petition.petition_id ?? petition.petitionId ?? petition.id);
 
-  const handleDelete = async () => {
-    const confirmDelete = window.confirm(`Are you sure you want to delete "${event.title}"?`);
-    if (!confirmDelete) return;
+  const startValue = petition.start_time ?? petition.start ?? petition.startMs;
+  const endValue = petition.end_time ?? petition.end ?? petition.endMs;
+  const startDate = typeof startValue === 'number'
+    ? new Date(startValue)
+    : new Date(Date.parse(startValue));
+  const endDate = typeof endValue === 'number'
+    ? new Date(endValue)
+    : new Date(Date.parse(endValue));
 
-    setIsSaving(true);
-    try {
-      await apiPost('/api/delete-event', {
-        event_id: event.id
-      });
-      
-      onRefresh(); 
-      onClose();   
-    } catch (error) {
-      console.error("Failed to delete event", error);
-      alert("Failed to delete the event.");
-    } finally {
-      setIsSaving(false);
-    }
+  const startMs = startDate.getTime();
+  const endMs = endDate.getTime();
+  if (!Number.isFinite(startMs) || !Number.isFinite(endMs)) return null;
+
+  if (activeGroupId && Number(activeGroupId) !== petitionGroupId) {
+    return null;
   }
 
-  return (
-    <div className="modal-overlay">
-      <div className="modal-content" style={{ maxWidth: '350px' }}>
-        <h2 style={{ marginTop: 0 }}>{event.title}</h2>
-        <p><strong>Start:</strong> {event.start.toLocaleString()}</p>
-        <p><strong>End:</strong> {event.end.toLocaleString()}</p>
-        <p><strong>Priority:</strong> {event.priority.toLocaleString()}</p>
-        
-        <div style={{ margin: '15px 0' }}>
-          <label><strong>Blocking Level:</strong></label>
-          <select 
-            value={newPriority} 
-            onChange={(e) => setNewPriority(e.target.value)}
-            style={{ width: '100%', padding: '8px', marginTop: '5px' }}
-          >
-            <option value={1}>Low (Optional)</option>
-            <option value={2}>Medium (Felxable)</option>
-            <option value={3}>High (Immovable)</option>
-          </select>
-        </div>
+  const weekStartMs = weekStart.getTime();
+  const weekEndMs = weekStartMs + (7 * 24 * 60 * 60 * 1000);
+  if (endMs <= weekStartMs || startMs >= weekEndMs) {
+    return null;
+  }
 
-        {/*Action Buttons */}
-        <div className="modal-actions">
-          <button 
-            onClick={handleDelete} 
-            disabled={isSaving}
-            style={{ 
-              backgroundColor: '#d63031', 
-              color: 'white', 
-              border: 'none', 
-              padding: '8px 16px', 
-              borderRadius: '4px', 
-              cursor: 'pointer' 
-            }}
-          >
-            Delete Event
-          </button>
+  const acceptedCount = Number(petition.accepted_count ?? petition.acceptedCount ?? 0);
+  const declinedCount = Number(petition.declined_count ?? petition.declinedCount ?? 0);
+  const groupSize = Number(petition.group_size ?? petition.groupSize ?? 0);
 
-          <button 
-            onClick={onClose} 
-            disabled={isSaving}
-          >
-            Cancel
-          </button>
+  const computedStatus =
+    declinedCount > 0
+      ? 'FAILED'
+      : (groupSize > 0 && acceptedCount === groupSize)
+        ? 'ACCEPTED_ALL'
+        : 'OPEN';
+  const status = typeof petition.status === 'string' && petition.status.trim()
+    ? petition.status
+    : computedStatus;
+  const titleRaw = petition.title || 'Petition';
 
-          <button 
-            className="primary-btn" 
-            onClick={handleSave} 
-            disabled={isSaving}
-          >
-            {isSaving ? 'Saving...' : 'Save Changes'}
-          </button>
-        </div>
-      </div>
-    </div>
-  );
+  return {
+    event_id: `petition-${petitionId}`,
+    mode: 'petition',
+    petitionId,
+    groupId: petitionGroupId,
+    createdByUserId: Number(petition.created_by_user_id ?? petition.createdByUserId ?? null),
+    title: titleRaw,
+    titleRaw,
+    start: petition.start_time ?? petition.start ?? petition.startMs,
+    end: petition.end_time ?? petition.end ?? petition.endMs,
+    start_time: petition.start_time ?? petition.start ?? petition.startMs,
+    end_time: petition.end_time ?? petition.end ?? petition.endMs,
+    acceptedCount,
+    declinedCount,
+    groupSize,
+    currentUserResponse: petition.current_user_response ?? petition.currentUserResponse ?? null,
+    status,
+    groupName: petition.group_name ?? petition.groupName ?? '',
+    is_creator: typeof petition.is_creator === 'boolean' ? petition.is_creator : null,
+    isCreator: typeof petition.is_creator === 'boolean' ? petition.is_creator : null
+  };
 }
 
-export default function CustomCalendar({ groupId, draftEvent, refreshTrigger }) {
+
+export default function CustomCalendar({ groupId, draftEvent }) {
   // --- STATE (The "Controller" Data) ---
   const [weekStart, setWeekStart] = useState(getStartOfWeek(new Date()));
   const [rawEvents, setRawEvents] = useState([]);
   const [loading, setLoading] = useState(true);
   const [groupAvailability, setGroupAvailability] = useState([]);
-  const [selectedEvent, setSelectedEvent] = useState(null);
+  const [visiblePetitions, setVisiblePetitions] = useState([]);
+  const [selectedPetition, setSelectedPetition] = useState(null);
+  const [isPetitionModalOpen, setIsPetitionModalOpen] = useState(false);
+  const [petitionActionRefreshKey, setPetitionActionRefreshKey] = useState(0);
+  const [currentUserId, setCurrentUserId] = useState(null);
+  const petitionDraftActive = draftEvent?.mode === 'petition';
 
-  const refreshPersonalEvents = async () => {
-    const personalEvents = await apiGet('/api/get-events');
-    if (Array.isArray(personalEvents)) {
-      setRawEvents(personalEvents);
-    }
-  };
   // const renderCount = useRef(0);
   // renderCount.current++;
   // console.log("Render #", renderCount.current, "rawEvents length:", rawEvents.length);
@@ -172,7 +136,7 @@ export default function CustomCalendar({ groupId, draftEvent, refreshTrigger }) 
     };
     
     fetchPersonalEvents();
-  }, [weekStart, refreshTrigger]); 
+  }, [weekStart]); 
 
   // --- EFFECT 2: Fetch Group Availability ---
 
@@ -232,7 +196,63 @@ export default function CustomCalendar({ groupId, draftEvent, refreshTrigger }) 
     };
     
     fetchGroupEvents();
-  }, [groupId, weekStart, refreshTrigger]);
+  }, [groupId, weekStart]);
+
+  useEffect(() => {
+    const fetchCurrentUser = async() => {
+      try {
+        const response = await apiGet('/api/me');
+        const userId = response?.user?.user_id;
+        setCurrentUserId(userId != null ? Number(userId) : null);
+      } catch (error) {
+        console.error('Failed to load current user for petition actions:', error);
+        setCurrentUserId(null);
+      }
+    };
+
+    fetchCurrentUser();
+  }, []);
+
+  useEffect(() => {
+    const fetchVisiblePetitions = async() => {
+      const endpoint = groupId ? `/api/groups/${groupId}/petitions` : '/api/petitions';
+
+      try {
+        const response = await apiGet(endpoint);
+        if (!Array.isArray(response)) {
+          setVisiblePetitions([]);
+          return;
+        }
+
+        const mappedPetitions = response
+          .map((petition) => mapPetitionToCalendarEvent(petition, groupId, weekStart))
+          .filter(Boolean);
+
+        setVisiblePetitions(mappedPetitions);
+      } catch (error) {
+        console.error('Failed to fetch petitions:', error);
+        setVisiblePetitions([]);
+      }
+    };
+
+    fetchVisiblePetitions();
+  }, [groupId, weekStart, petitionActionRefreshKey, petitionDraftActive]);
+
+  const handlePetitionClick = (petitionEvent) => {
+    setSelectedPetition(petitionEvent);
+    setIsPetitionModalOpen(true);
+  };
+
+  const handleClosePetitionModal = () => {
+    setIsPetitionModalOpen(false);
+    setSelectedPetition(null);
+  };
+
+  const handlePetitionActionComplete = () => {
+    setIsPetitionModalOpen(false);
+    setSelectedPetition(null);
+    setPetitionActionRefreshKey((v) => v + 1);
+  };
 
   const handlePrevWeek = () => {
     const newDate = new Date(weekStart);
@@ -255,7 +275,8 @@ export default function CustomCalendar({ groupId, draftEvent, refreshTrigger }) 
   // --- PREPARING THE VIEW ---
   const events = processEvents(finalRawEvents);
   const groupEvents = processEvents(groupAvailability);
-  const allEvents = events.concat(groupEvents);
+  const petitionEvents = processEvents(visiblePetitions);
+  const allEvents = events.concat(groupEvents, petitionEvents);
 
   const days = Array.from({ length: 7 }, (_, i) => {
     const d = new Date(weekStart);
@@ -263,6 +284,33 @@ export default function CustomCalendar({ groupId, draftEvent, refreshTrigger }) 
     return d;
   });
   const hours = Array.from({ length: 24 }, (_, i) => i);
+
+  const getPetitionStatusClass = (event) => {
+    if (event.mode !== 'petition') return '';
+
+    switch (event.status) {
+      case 'FAILED':
+        return 'petition-failed';
+      case 'ACCEPTED_ALL':
+        return 'petition-accepted-all';
+      default:
+        return 'petition-open';
+    }
+  };
+
+  const getDisplayTitle = (event) => {
+    if (event.mode !== 'petition') {
+      return event.title;
+    }
+
+    const baseTitle = event.titleRaw || event.title || 'Petition';
+    if (groupId) {
+      return baseTitle;
+    }
+
+    const groupLabel = event.groupName || (event.groupId ? `Group ${event.groupId}` : '');
+    return groupLabel ? `${groupLabel}: ${baseTitle}` : baseTitle;
+  };
 
   return (
     <div id="calendar-container">
@@ -317,7 +365,7 @@ export default function CustomCalendar({ groupId, draftEvent, refreshTrigger }) 
                       case 'petition':
                         backgroundColor = '#ffa963';
                         opacity = 0.6;
-                        zIndex = 2;
+                        zIndex = 3;
                         break;
                       case 'blocking':
                         backgroundColor = '#34333c';
@@ -328,37 +376,31 @@ export default function CustomCalendar({ groupId, draftEvent, refreshTrigger }) 
                         // backgroundColor = '#2ecc71';
                         const calculatedLightness = Math.max(35, 90 - (event.availLvl * 12));
                         backgroundColor = `hsl(145, 65%, ${calculatedLightness}%)`;
-                        opacity = 0.9;
-                        zIndex = 4
+                        opacity = 0.5;
+                        zIndex = 3;
                         break;
                       default:
                         backgroundColor = '#6395ee';
                         opacity = 1;
                         zIndex = 3;
                     }
-                    if (!event.isPreview && event.id.startsWith("manual-")) backgroundColor = '#6f6e76';
-
-                    const isClickable = event.mode !== 'avail' && event.mode !== 'petition' && !event.isPreview;
-
                     return (
                       <div
                         key={idx}
-                        className={`calendar-event ${event.isAllDay ? 'all-day-event' : ''}`}
-                        // Make it clickable!
-                        onClick={() => {
-                          if (isClickable) setSelectedEvent(event);
-                        }}
+                        className={`calendar-event ${event.isAllDay ? 'all-day-event' : ''} ${event.mode === 'petition' ? `petition-event ${getPetitionStatusClass(event)}` : ''}`}
+                        onClick={event.mode === 'petition' ? () => handlePetitionClick(event) : undefined}
                         style={{
                           height: `${Math.max(1, visualHeight)}px`,
                           top: `${startMins}px`,
                           opacity: event.isAllDay ? 0.6 : opacity,
-                          zIndex: event.isAllDay ? 1 : zIndex,
+                          zIndex: event.isAllDay ? 1 :zIndex,
                           backgroundColor: backgroundColor,
                           border: event.isPreview ? '2px dashed #333' : 'none',
-                          cursor: isClickable ? 'pointer' : 'default' // Add a pointer cursor so users know it's clickable
+                          cursor: event.mode === 'petition' ? 'pointer' : 'default'
+                          
                         }}
                       >
-                        {event.title}
+                        {getDisplayTitle(event)}
                       </div>
                     );
                   })}
@@ -368,14 +410,13 @@ export default function CustomCalendar({ groupId, draftEvent, refreshTrigger }) 
         ))}
       </div>
       {loading && <p>Loading events...</p>}
-
-      {selectedEvent && (
-        <EventClickModal 
-          event={selectedEvent} 
-          onClose={() => setSelectedEvent(null)}
-          onRefresh={refreshPersonalEvents}
-        />
-      )}
+      <PetitionActionModal
+        open={isPetitionModalOpen}
+        petition={selectedPetition}
+        currentUserId={currentUserId}
+        onClose={handleClosePetitionModal}
+        onActionComplete={handlePetitionActionComplete}
+      />
     </div>
   );
 }
@@ -403,13 +444,27 @@ function processEvents(rawEvents) {
         start: new Date(current),
         end: new Date(effectiveEnd),
         id: event.event_id,
-        // event_id: event.gcal_event_id,
-        priority: event.priority || 1,
+        event_id: event.event_id,
         isAllDay: (effectiveEnd - current) >= 24 * 60 * 60 * 1000,
         isEndOfDay: effectiveEnd.getTime() === nextDayStart.getTime(),
         isPreview: event.isPreview || false,
         availLvl: event.availLvl || 0, // for group availability heatmap
         mode: event.mode || 'normal', // 'normal', 'blocking', 'petition', 'avail'
+        petitionId: event.petitionId ?? null,
+        groupId: event.groupId ?? null,
+        createdByUserId: event.createdByUserId ?? null,
+        titleRaw: event.titleRaw ?? event.title,
+        start_time: event.start_time ?? event.start,
+        end_time: event.end_time ?? event.end,
+        acceptedCount: event.acceptedCount ?? 0,
+        declinedCount: event.declinedCount ?? 0,
+        groupSize: event.groupSize ?? 0,
+        currentUserResponse: event.currentUserResponse ?? null,
+        status: event.status ?? null,
+        groupName: event.groupName ?? '',
+        is_creator: typeof event.is_creator === 'boolean' ? event.is_creator : null,
+        isCreator: typeof event.isCreator === 'boolean' ? event.isCreator : null,
+        // isAvail: event.isAvail || false
       });
       current = nextDayStart;
     }
