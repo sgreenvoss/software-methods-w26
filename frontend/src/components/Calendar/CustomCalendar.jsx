@@ -3,6 +3,14 @@ import { apiGet } from '../../api'; // Adjust path based on your folder structur
 import PetitionActionModal from '../Petitions/PetitionActionModal';
 import '../../css/calendar.css';
 
+const AVAILABILITY_VIEWS = ['StrictView', 'FlexibleView', 'LenientView'];
+const DEFAULT_GROUP_VIEW = 'FlexibleView';
+const BLOCKING_LEVELS = Object.freeze({
+  B1: 'B1',
+  B2: 'B2',
+  B3: 'B3'
+});
+
 // --- HELPER LOGIC (The "Business Logic" or Model Helpers) ---
 function getStartOfWeek(date) {
   const d = new Date(date);
@@ -91,13 +99,19 @@ export default function CustomCalendar({ groupId, draftEvent }) {
   const [weekStart, setWeekStart] = useState(getStartOfWeek(new Date()));
   const [rawEvents, setRawEvents] = useState([]);
   const [loading, setLoading] = useState(true);
-  const [groupAvailability, setGroupAvailability] = useState([]);
+  const [rawAvailabilityBlocks, setRawAvailabilityBlocks] = useState([]);
+  const [availabilityViewByGroup, setAvailabilityViewByGroup] = useState({});
   const [visiblePetitions, setVisiblePetitions] = useState([]);
   const [selectedPetition, setSelectedPetition] = useState(null);
   const [isPetitionModalOpen, setIsPetitionModalOpen] = useState(false);
   const [petitionActionRefreshKey, setPetitionActionRefreshKey] = useState(0);
   const [currentUserId, setCurrentUserId] = useState(null);
   const petitionDraftActive = draftEvent?.mode === 'petition';
+  const selectedGroupKey = groupId == null ? null : String(groupId);
+  // TEAMNOTE[availability-modes]: Remember each group's in-session mode; first view defaults to FlexibleView.
+  const availabilityView = selectedGroupKey
+    ? (availabilityViewByGroup[selectedGroupKey] || DEFAULT_GROUP_VIEW)
+    : DEFAULT_GROUP_VIEW;
 
   // const renderCount = useRef(0);
   // renderCount.current++;
@@ -142,10 +156,9 @@ export default function CustomCalendar({ groupId, draftEvent }) {
 
   useEffect(() => {
     const fetchGroupEvents = async () => {
-      // If the user clicked "Hide", groupId will be null.
-      // We just clear the state and exit early. No network call needed.
+      // TEAMNOTE[availability-persistence]: Clearing availability here is only for explicit group hide (groupId null), not sidebar/modal toggles.
       if (!groupId || groupId === 0) {
-        setGroupAvailability([]);
+        setRawAvailabilityBlocks([]);
         return; 
       }
 
@@ -163,33 +176,15 @@ export default function CustomCalendar({ groupId, draftEvent }) {
             ? response.blocks
             : null;
 
-        if (response && response.ok && response.blocks) {
-          // 2. Disguise the availability blocks as standard events for your UI
-          const heatmapEvents = response.blocks.map((block, i) => ({
-            title: `Avail: ${block.count}`,
-            availLvl: block.count,
-            start: block.start,
-            end: block.end,
-            event_id: `avail-${i}`,
-            mode: 'avail'
-          }));
-
-          const consolidatedEvents = mergeAvailabilityBlocks(heatmapEvents);
-          const finalHeatmapEvents = consolidatedEvents.map((event, i) => ({ 
-            ...event,
-            event_id: `avail-merged-${i}`
-          }));
-
-          setGroupAvailability(finalHeatmapEvents);
-        } else {
-          // Default: Fetch personal events
-          const personalEvents = await apiGet('/api/get-events');
-          setRawEvents(personalEvents || []);
-          setGroupAvailability([]); // Clear if response is bad
+        if (response && response.ok && Array.isArray(availabilityBlocks)) {
+          setRawAvailabilityBlocks(availabilityBlocks);
+          return;
         }
+
+        setRawAvailabilityBlocks([]);
       } catch (error) {
         console.error('Failed to fetch group availability:', error);
-        setGroupAvailability([]);
+        setRawAvailabilityBlocks([]);
       } finally {
         setLoading(false);
       }
@@ -238,6 +233,18 @@ export default function CustomCalendar({ groupId, draftEvent }) {
     fetchVisiblePetitions();
   }, [groupId, weekStart, petitionActionRefreshKey, petitionDraftActive]);
 
+  const handleAvailabilityViewChange = (nextView) => {
+    if (!selectedGroupKey || !AVAILABILITY_VIEWS.includes(nextView)) {
+      return;
+    }
+
+    setAvailabilityViewByGroup((currentMap) => ({
+      ...currentMap,
+      // TEAMNOTE[availability-modes]: Persist the selected mode per group for this session only.
+      [selectedGroupKey]: nextView
+    }));
+  };
+
   const handlePetitionClick = (petitionEvent) => {
     setSelectedPetition(petitionEvent);
     setIsPetitionModalOpen(true);
@@ -271,6 +278,33 @@ export default function CustomCalendar({ groupId, draftEvent }) {
   if (draftEvent) {
       finalRawEvents.push({ ...draftEvent });
   }
+
+  // TEAMNOTE[availability-modes]: Mode switching reprojects already-fetched blocks and must not trigger a refetch.
+  const projectedAvailability = (groupId ? rawAvailabilityBlocks : []).map((block, i) => {
+    const strictCount = Number.isFinite(block?.count) ? block.count : 0;
+    const strictView = block?.views?.StrictView;
+    const selectedView = block?.views?.[availabilityView];
+    const selectedCount = Number.isFinite(selectedView?.availableCount)
+      ? selectedView.availableCount
+      : Number.isFinite(strictView?.availableCount)
+        ? strictView.availableCount
+        : strictCount;
+
+    return {
+      title: `Avail: ${selectedCount}`,
+      availLvl: selectedCount,
+      start: block.start,
+      end: block.end,
+      event_id: `avail-${i}`,
+      mode: 'avail'
+    };
+  });
+
+  const consolidatedAvailability = mergeAvailabilityBlocks(projectedAvailability);
+  const groupAvailability = consolidatedAvailability.map((event, i) => ({
+    ...event,
+    event_id: `avail-merged-${i}`
+  }));
 
   // --- PREPARING THE VIEW ---
   const events = processEvents(finalRawEvents);
@@ -322,6 +356,33 @@ export default function CustomCalendar({ groupId, draftEvent }) {
         </h2>
         <button onClick={handleNextWeek}>Next →</button>
       </div>
+
+      {groupId ? (
+        <div style={{ display: 'flex', gap: '8px', marginBottom: '10px' }}>
+          {AVAILABILITY_VIEWS.map((viewKey) => {
+            const shortLabel = viewKey.replace('View', '');
+            const isActive = availabilityView === viewKey;
+            return (
+              <button
+                key={viewKey}
+                type="button"
+                aria-pressed={isActive}
+                onClick={() => handleAvailabilityViewChange(viewKey)}
+                style={{
+                  padding: '6px 10px',
+                  fontWeight: isActive ? 700 : 500,
+                  background: isActive ? '#d9f99d' : '#f3f4f6',
+                  border: '1px solid #d1d5db',
+                  borderRadius: '8px',
+                  cursor: 'pointer'
+                }}
+              >
+                {shortLabel}
+              </button>
+            );
+          })}
+        </div>
+      ) : null}
 
       {/* 2. CALENDAR GRID (View) */}
       <div className="calendar-grid">
