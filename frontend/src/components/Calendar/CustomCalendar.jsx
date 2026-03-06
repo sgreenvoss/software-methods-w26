@@ -467,7 +467,7 @@ export default function CustomCalendar({ groupId, draftEvent }) {
                       textColor = event.backgroundColor && typeof event.color === 'string' ? event.color : undefined;
                     }
 
-                    const borderStyle = event.isPreview
+                    const borderValue = event.isPreview
                       ? '2px dashed #333'
                       : (typeof event.borderColor === 'string' && event.borderColor ? `1px solid ${event.borderColor}` : 'none');
                     const combinedClassName = [
@@ -488,7 +488,7 @@ export default function CustomCalendar({ groupId, draftEvent }) {
                           zIndex: event.isAllDay ? 1 :zIndex,
                           backgroundColor: backgroundColor,
                           color: textColor,
-                          border: borderStyle,
+                          border: borderValue,
                           cursor: event.mode === 'petition' ? 'pointer' : 'default'
                           
                         }}
