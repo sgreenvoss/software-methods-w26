@@ -3,6 +3,14 @@ import { apiGet } from '../../api'; // Adjust path based on your folder structur
 import PetitionActionModal from '../Petitions/PetitionActionModal';
 import '../../css/calendar.css';
 
+const AVAILABILITY_VIEWS = ['StrictView', 'FlexibleView', 'LenientView'];
+const DEFAULT_GROUP_VIEW = 'FlexibleView';
+const BLOCKING_LEVELS = Object.freeze({
+  B1: 'B1',
+  B2: 'B2',
+  B3: 'B3'
+});
+
 // --- HELPER LOGIC (The "Business Logic" or Model Helpers) ---
 function getStartOfWeek(date) {
   const d = new Date(date);
@@ -16,6 +24,26 @@ function isCurrentWeek(date) {
   const today = new Date();
   const currWeekStart = getStartOfWeek(today);
   return date.getTime() === currWeekStart.getTime();
+}
+
+function normalizeBlockingLevelFromEvent(event) {
+  const rawLevel = typeof event?.blockingLevel === 'string'
+    ? event.blockingLevel.trim().toUpperCase()
+    : '';
+  if (rawLevel === BLOCKING_LEVELS.B1 || rawLevel === BLOCKING_LEVELS.B2 || rawLevel === BLOCKING_LEVELS.B3) {
+    return rawLevel;
+  }
+
+  const rawPriority = Number(event?.priority);
+  if (rawPriority === 1) return BLOCKING_LEVELS.B1;
+  if (rawPriority === 2) return BLOCKING_LEVELS.B2;
+  return BLOCKING_LEVELS.B3;
+}
+
+function shouldRenderRegularEventAboveAvailability(view, blockingLevel) {
+  if (view === 'StrictView') return true;
+  if (view === 'FlexibleView') return blockingLevel === BLOCKING_LEVELS.B2 || blockingLevel === BLOCKING_LEVELS.B3;
+  return blockingLevel === BLOCKING_LEVELS.B3;
 }
 
 function mapPetitionToCalendarEvent(petition, activeGroupId, weekStart) {
@@ -91,13 +119,19 @@ export default function CustomCalendar({ groupId, draftEvent }) {
   const [weekStart, setWeekStart] = useState(getStartOfWeek(new Date()));
   const [rawEvents, setRawEvents] = useState([]);
   const [loading, setLoading] = useState(true);
-  const [groupAvailability, setGroupAvailability] = useState([]);
+  const [rawAvailabilityBlocks, setRawAvailabilityBlocks] = useState([]);
+  const [availabilityViewByGroup, setAvailabilityViewByGroup] = useState({});
   const [visiblePetitions, setVisiblePetitions] = useState([]);
   const [selectedPetition, setSelectedPetition] = useState(null);
   const [isPetitionModalOpen, setIsPetitionModalOpen] = useState(false);
   const [petitionActionRefreshKey, setPetitionActionRefreshKey] = useState(0);
   const [currentUserId, setCurrentUserId] = useState(null);
   const petitionDraftActive = draftEvent?.mode === 'petition';
+  const selectedGroupKey = groupId == null ? null : String(groupId);
+  // TEAMNOTE[availability-modes]: Remember each group's in-session mode; first view defaults to FlexibleView.
+  const availabilityView = selectedGroupKey
+    ? (availabilityViewByGroup[selectedGroupKey] || DEFAULT_GROUP_VIEW)
+    : DEFAULT_GROUP_VIEW;
 
   // const renderCount = useRef(0);
   // renderCount.current++;
@@ -142,10 +176,9 @@ export default function CustomCalendar({ groupId, draftEvent }) {
 
   useEffect(() => {
     const fetchGroupEvents = async () => {
-      // If the user clicked "Hide", groupId will be null.
-      // We just clear the state and exit early. No network call needed.
+      // TEAMNOTE[availability-persistence]: Clearing availability here is only for explicit group hide (groupId null), not sidebar/modal toggles.
       if (!groupId || groupId === 0) {
-        setGroupAvailability([]);
+        setRawAvailabilityBlocks([]);
         return; 
       }
 
@@ -163,33 +196,15 @@ export default function CustomCalendar({ groupId, draftEvent }) {
             ? response.blocks
             : null;
 
-        if (response && response.ok && response.blocks) {
-          // 2. Disguise the availability blocks as standard events for your UI
-          const heatmapEvents = response.blocks.map((block, i) => ({
-            title: `Avail: ${block.count}`,
-            availLvl: block.count,
-            start: block.start,
-            end: block.end,
-            event_id: `avail-${i}`,
-            mode: 'avail'
-          }));
-
-          const consolidatedEvents = mergeAvailabilityBlocks(heatmapEvents);
-          const finalHeatmapEvents = consolidatedEvents.map((event, i) => ({ 
-            ...event,
-            event_id: `avail-merged-${i}`
-          }));
-
-          setGroupAvailability(finalHeatmapEvents);
-        } else {
-          // Default: Fetch personal events
-          const personalEvents = await apiGet('/api/get-events');
-          setRawEvents(personalEvents || []);
-          setGroupAvailability([]); // Clear if response is bad
+        if (response && response.ok && Array.isArray(availabilityBlocks)) {
+          setRawAvailabilityBlocks(availabilityBlocks);
+          return;
         }
+
+        setRawAvailabilityBlocks([]);
       } catch (error) {
         console.error('Failed to fetch group availability:', error);
-        setGroupAvailability([]);
+        setRawAvailabilityBlocks([]);
       } finally {
         setLoading(false);
       }
@@ -238,6 +253,18 @@ export default function CustomCalendar({ groupId, draftEvent }) {
     fetchVisiblePetitions();
   }, [groupId, weekStart, petitionActionRefreshKey, petitionDraftActive]);
 
+  const handleAvailabilityViewChange = (nextView) => {
+    if (!selectedGroupKey || !AVAILABILITY_VIEWS.includes(nextView)) {
+      return;
+    }
+
+    setAvailabilityViewByGroup((currentMap) => ({
+      ...currentMap,
+      // TEAMNOTE[availability-modes]: Persist the selected mode per group for this session only.
+      [selectedGroupKey]: nextView
+    }));
+  };
+
   const handlePetitionClick = (petitionEvent) => {
     setSelectedPetition(petitionEvent);
     setIsPetitionModalOpen(true);
@@ -271,6 +298,33 @@ export default function CustomCalendar({ groupId, draftEvent }) {
   if (draftEvent) {
       finalRawEvents.push({ ...draftEvent });
   }
+
+  // TEAMNOTE[availability-modes]: Mode switching reprojects already-fetched blocks and must not trigger a refetch.
+  const projectedAvailability = (groupId ? rawAvailabilityBlocks : []).map((block, i) => {
+    const strictCount = Number.isFinite(block?.count) ? block.count : 0;
+    const strictView = block?.views?.StrictView;
+    const selectedView = block?.views?.[availabilityView];
+    const selectedCount = Number.isFinite(selectedView?.availableCount)
+      ? selectedView.availableCount
+      : Number.isFinite(strictView?.availableCount)
+        ? strictView.availableCount
+        : strictCount;
+
+    return {
+      title: `Avail: ${selectedCount}`,
+      availLvl: selectedCount,
+      start: block.start,
+      end: block.end,
+      event_id: `avail-${i}`,
+      mode: 'avail'
+    };
+  });
+
+  const consolidatedAvailability = mergeAvailabilityBlocks(projectedAvailability);
+  const groupAvailability = consolidatedAvailability.map((event, i) => ({
+    ...event,
+    event_id: `avail-merged-${i}`
+  }));
 
   // --- PREPARING THE VIEW ---
   const events = processEvents(finalRawEvents);
@@ -323,6 +377,33 @@ export default function CustomCalendar({ groupId, draftEvent }) {
         <button onClick={handleNextWeek}>Next →</button>
       </div>
 
+      {groupId ? (
+        <div style={{ display: 'flex', gap: '8px', marginBottom: '10px' }}>
+          {AVAILABILITY_VIEWS.map((viewKey) => {
+            const shortLabel = viewKey.replace('View', '');
+            const isActive = availabilityView === viewKey;
+            return (
+              <button
+                key={viewKey}
+                type="button"
+                aria-pressed={isActive}
+                onClick={() => handleAvailabilityViewChange(viewKey)}
+                style={{
+                  padding: '6px 10px',
+                  fontWeight: isActive ? 700 : 500,
+                  background: isActive ? '#d9f99d' : '#f3f4f6',
+                  border: '1px solid #d1d5db',
+                  borderRadius: '8px',
+                  cursor: 'pointer'
+                }}
+              >
+                {shortLabel}
+              </button>
+            );
+          })}
+        </div>
+      ) : null}
+
       {/* 2. CALENDAR GRID (View) */}
       <div className="calendar-grid">
         <div className="corner-cell"></div>
@@ -344,7 +425,7 @@ export default function CustomCalendar({ groupId, draftEvent }) {
                   .filter(e => e.start.toDateString() === day.toDateString() && e.start.getHours() === hour)
                   .map((event, idx) => {
                     // --- hides 0 avail events
-                    if (event.mode == 'avail' && event.availLvl === 0) {
+                    if (event.mode === 'avail' && event.availLvl === 0) {
                       // Don't render 0-availability blocks, they just add clutter
                       return null;
                     }
@@ -359,35 +440,46 @@ export default function CustomCalendar({ groupId, draftEvent }) {
                     if (!event.isEndOfDay && !endsOnHour) visualHeight -= 2;
 
                     let backgroundColor;
+                    let textColor;
                     let opacity;
                     let zIndex;
-                    switch (event.mode) {
-                      case 'petition':
-                        backgroundColor = '#ffa963';
-                        opacity = 0.6;
-                        zIndex = 3;
-                        break;
-                      case 'blocking':
-                        backgroundColor = '#34333c';
-                        opacity = 0.6;
-                        zIndex = 2;
-                        break;
-                      case 'avail':
-                        // backgroundColor = '#2ecc71';
-                        const calculatedLightness = Math.max(35, 90 - (event.availLvl * 12));
-                        backgroundColor = `hsl(145, 65%, ${calculatedLightness}%)`;
-                        opacity = 0.5;
-                        zIndex = 3;
-                        break;
-                      default:
-                        backgroundColor = '#6395ee';
-                        opacity = 1;
-                        zIndex = 3;
+
+                    if (event.mode === 'petition') {
+                      backgroundColor = '#ffa963';
+                      opacity = 0.6;
+                      zIndex = 5;
+                    } else if (event.mode === 'avail') {
+                      const calculatedLightness = Math.max(35, 90 - (event.availLvl * 12));
+                      backgroundColor = `hsl(145, 65%, ${calculatedLightness}%)`;
+                      opacity = 0.5;
+                      zIndex = 3;
+                    } else {
+                      const normalizedBlockingLevel = normalizeBlockingLevelFromEvent(event);
+                      const isAboveAvailability = shouldRenderRegularEventAboveAvailability(availabilityView, normalizedBlockingLevel);
+                      zIndex = isAboveAvailability ? 4 : 2;
+                      opacity = event.mode === 'blocking' ? 0.6 : 1;
+
+                      // TEAMNOTE[availability-modes]: Selected mode determines whether regular events layer above or below availability.
+                      backgroundColor = event.backgroundColor
+                        || (typeof event.color === 'string' && !event.backgroundColor ? event.color : null)
+                        || (event.mode === 'blocking' ? '#34333c' : '#6395ee');
+                      // TEAMNOTE[availability-modes]: Preserve event-provided style fields and only fallback when absent.
+                      textColor = event.backgroundColor && typeof event.color === 'string' ? event.color : undefined;
                     }
+
+                    const borderStyle = event.isPreview
+                      ? '2px dashed #333'
+                      : (typeof event.borderColor === 'string' && event.borderColor ? `1px solid ${event.borderColor}` : 'none');
+                    const combinedClassName = [
+                      'calendar-event',
+                      event.isAllDay ? 'all-day-event' : '',
+                      event.mode === 'petition' ? `petition-event ${getPetitionStatusClass(event)}` : '',
+                      event.className || ''
+                    ].filter(Boolean).join(' ');
                     return (
                       <div
                         key={idx}
-                        className={`calendar-event ${event.isAllDay ? 'all-day-event' : ''} ${event.mode === 'petition' ? `petition-event ${getPetitionStatusClass(event)}` : ''}`}
+                        className={combinedClassName}
                         onClick={event.mode === 'petition' ? () => handlePetitionClick(event) : undefined}
                         style={{
                           height: `${Math.max(1, visualHeight)}px`,
@@ -395,7 +487,8 @@ export default function CustomCalendar({ groupId, draftEvent }) {
                           opacity: event.isAllDay ? 0.6 : opacity,
                           zIndex: event.isAllDay ? 1 :zIndex,
                           backgroundColor: backgroundColor,
-                          border: event.isPreview ? '2px dashed #333' : 'none',
+                          color: textColor,
+                          border: borderStyle,
                           cursor: event.mode === 'petition' ? 'pointer' : 'default'
                           
                         }}
@@ -425,7 +518,6 @@ export default function CustomCalendar({ groupId, draftEvent }) {
 // This keeps the "Business Logic" separate from the "View"
 function processEvents(rawEvents) {
   if (!Array.isArray(rawEvents)) return [];
-  console.log("in the processing events function");
   const processed = [];
   rawEvents.forEach(event => {
     let start = parseLocal(event.start);
@@ -440,6 +532,8 @@ function processEvents(rawEvents) {
       let effectiveEnd = (end < nextDayStart) ? end : nextDayStart;
 
       processed.push({
+        ...event,
+        // TEAMNOTE[availability-modes]: Preserve event metadata so rendering/layering can use priority and custom styles.
         title: event.title,
         start: new Date(current),
         end: new Date(effectiveEnd),
@@ -464,6 +558,13 @@ function processEvents(rawEvents) {
         groupName: event.groupName ?? '',
         is_creator: typeof event.is_creator === 'boolean' ? event.is_creator : null,
         isCreator: typeof event.isCreator === 'boolean' ? event.isCreator : null,
+        priority: event.priority ?? null,
+        blockingLevel: event.blockingLevel ?? null,
+        backgroundColor: event.backgroundColor ?? null,
+        borderColor: event.borderColor ?? null,
+        color: event.color ?? null,
+        className: event.className ?? '',
+        resource: event.resource ?? null,
         // isAvail: event.isAvail || false
       });
       current = nextDayStart;

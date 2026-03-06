@@ -526,7 +526,8 @@ app.get('/api/get-events', async (req, res) => {
       title: event.event_name,
       start: event.event_start,
       end: event.event_end,
-      event_id: event.gcal_event_id
+      event_id: event.gcal_event_id,
+      priority: Number.isFinite(Number(event.priority)) ? Number(event.priority) : null
     }));
     
     return res.json(formattedEvents);
