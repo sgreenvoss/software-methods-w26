@@ -461,7 +461,7 @@ export default function CustomCalendar({ groupId, draftEvent }) {
 
                       // TEAMNOTE[availability-modes]: Selected mode determines whether regular events layer above or below availability.
                       backgroundColor = event.backgroundColor
-                        || (typeof event.color === 'string' && !event.backgroundColor ? event.color : null)
+                        || (typeof event.color === 'string' ? event.color : null)
                         || (event.mode === 'blocking' ? '#34333c' : '#6395ee');
                       // TEAMNOTE[availability-modes]: Preserve event-provided style fields and only fallback when absent.
                       textColor = event.backgroundColor && typeof event.color === 'string' ? event.color : undefined;
