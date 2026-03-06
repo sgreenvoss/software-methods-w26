@@ -5,3 +5,10 @@ node_modules/
 backend/oauth-test/secrets/
 backend/oauth-test/public/events.txt
 .DS_Store
+
+# test coverage artifacts
+coverage/
+**/coverage/
+lcov.info
+coverage-final.json
+clover.xml
