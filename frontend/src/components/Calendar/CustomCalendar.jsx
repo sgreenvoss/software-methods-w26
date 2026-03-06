@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { apiGet } from '../../api'; // Adjust path based on your folder structure
+import { apiGet, apiPost } from '../../api'; // Adjust path based on your folder structure
 import PetitionActionModal from '../Petitions/PetitionActionModal';
 import '../../css/calendar.css';
 
@@ -16,6 +16,92 @@ function isCurrentWeek(date) {
   const today = new Date();
   const currWeekStart = getStartOfWeek(today);
   return date.getTime() === currWeekStart.getTime();
+}
+
+function EventClickModal({ event, onClose, onRefresh }) {
+  const [newPriority, setNewPriority] = useState(event.priority || 1);
+  const [isSaving, setIsSaving] = useState(false);
+
+  const handleSave = async () => {
+    setIsSaving(true);
+    try {
+      await apiPost('/api/change-blocking-lvl', {
+        event_id: event.id,
+        priority: parseInt(newPriority, 10)
+      });
+      onRefresh();
+      onClose();
+    } catch (error) {
+      console.error("Failed to update priority", error);
+      alert("Failed to update blocking level.");
+    } finally {
+      setIsSaving(false);
+    }
+  };
+
+  const handleDelete = async () => {
+    const confirmDelete = window.confirm(`Are you sure you want to delete "${event.title}"?`);
+    if (!confirmDelete) return;
+
+    setIsSaving(true);
+    try {
+      await apiPost('/api/delete-event', { event_id: event.id });
+      onRefresh();
+      onClose();
+    } catch (error) {
+      console.error("Failed to delete event", error);
+      alert("Failed to delete the event.");
+    } finally {
+      setIsSaving(false);
+    }
+  };
+
+  return (
+    <div className="modal-overlay">
+      <div className="modal-content" style={{ maxWidth: '350px' }}>
+        <h2 style={{ marginTop: 0 }}>{event.title}</h2>
+        <p><strong>Start:</strong> {event.start.toLocaleString()}</p>
+        <p><strong>End:</strong> {event.end.toLocaleString()}</p>
+        <p><strong>Priority:</strong> {event.priority.toLocaleString()}</p>
+
+        <div style={{ margin: '15px 0' }}>
+          <label><strong>Blocking Level:</strong></label>
+          <select
+            value={newPriority}
+            onChange={(e) => setNewPriority(e.target.value)}
+            style={{ width: '100%', padding: '8px', marginTop: '5px' }}
+          >
+            <option value={1}>Low (Optional)</option>
+            <option value={2}>Medium (Flexible)</option>
+            <option value={3}>High (Immovable)</option>
+          </select>
+        </div>
+
+        <div className="modal-actions">
+          <button
+            onClick={handleDelete}
+            disabled={isSaving}
+            style={{
+              backgroundColor: '#d63031',
+              color: 'white',
+              border: 'none',
+              padding: '8px 16px',
+              borderRadius: '4px',
+              cursor: 'pointer'
+            }}
+          >
+            Delete Event
+          </button>
+          <button onClick={onClose} disabled={isSaving}>
+            Cancel
+          </button>
+          <button className="primary-btn" onClick={handleSave} disabled={isSaving}>
+            {isSaving ? 'Saving...' : 'Save Changes'}
+          </button>
+        </div>
+      </div>
+    </div>
+  );
 }
 
 function mapPetitionToCalendarEvent(petition, activeGroupId, weekStart) {
@@ -92,12 +178,20 @@ export default function CustomCalendar({ groupId, draftEvent }) {
   const [rawEvents, setRawEvents] = useState([]);
   const [loading, setLoading] = useState(true);
   const [groupAvailability, setGroupAvailability] = useState([]);
+  const [selectedEvent, setSelectedEvent] = useState(null);
   const [visiblePetitions, setVisiblePetitions] = useState([]);
   const [selectedPetition, setSelectedPetition] = useState(null);
   const [isPetitionModalOpen, setIsPetitionModalOpen] = useState(false);
   const [petitionActionRefreshKey, setPetitionActionRefreshKey] = useState(0);
   const [currentUserId, setCurrentUserId] = useState(null);
   const petitionDraftActive = draftEvent?.mode === 'petition';
+
+  const refreshPersonalEvents = async () => {
+    const personalEvents = await apiGet('/api/get-events');
+    if (Array.isArray(personalEvents)) {
+      setRawEvents(personalEvents);
+    }
+  };
 
   // const renderCount = useRef(0);
   // renderCount.current++;
@@ -254,6 +348,10 @@ export default function CustomCalendar({ groupId, draftEvent }) {
     setPetitionActionRefreshKey((v) => v + 1);
   };
 
+  const handleRegularEventActionComplete = () => {
+    refreshPersonalEvents();
+  };
+
   const handlePrevWeek = () => {
     const newDate = new Date(weekStart);
     newDate.setDate(newDate.getDate() - 7);
@@ -384,11 +482,22 @@ export default function CustomCalendar({ groupId, draftEvent }) {
                         opacity = 1;
                         zIndex = 3;
                     }
+                    const isRegularEventClickable = event.mode !== 'avail' && event.mode !== 'petition' && !event.isPreview;
+                    // TEAMNOTE[event-editing]: Restore legacy regular-event click/edit flow removed during petition rewiring.
+                    const handleEventClick = () => {
+                      if (event.mode === 'petition') {
+                        handlePetitionClick(event);
+                        return;
+                      }
+                      if (isRegularEventClickable) {
+                        setSelectedEvent(event);
+                      }
+                    };
                     return (
                       <div
                         key={idx}
                         className={`calendar-event ${event.isAllDay ? 'all-day-event' : ''} ${event.mode === 'petition' ? `petition-event ${getPetitionStatusClass(event)}` : ''}`}
-                        onClick={event.mode === 'petition' ? () => handlePetitionClick(event) : undefined}
+                        onClick={(event.mode === 'petition' || isRegularEventClickable) ? handleEventClick : undefined}
                         style={{
                           height: `${Math.max(1, visualHeight)}px`,
                           top: `${startMins}px`,
@@ -396,7 +505,7 @@ export default function CustomCalendar({ groupId, draftEvent }) {
                           zIndex: event.isAllDay ? 1 :zIndex,
                           backgroundColor: backgroundColor,
                           border: event.isPreview ? '2px dashed #333' : 'none',
-                          cursor: event.mode === 'petition' ? 'pointer' : 'default'
+                          cursor: (event.mode === 'petition' || isRegularEventClickable) ? 'pointer' : 'default'
                           
                         }}
                       >
@@ -410,6 +519,13 @@ export default function CustomCalendar({ groupId, draftEvent }) {
         ))}
       </div>
       {loading && <p>Loading events...</p>}
+      {selectedEvent && (
+        <EventClickModal
+          event={selectedEvent}
+          onClose={() => setSelectedEvent(null)}
+          onRefresh={handleRegularEventActionComplete}
+        />
+      )}
       <PetitionActionModal
         open={isPetitionModalOpen}
         petition={selectedPetition}
@@ -450,6 +566,7 @@ function processEvents(rawEvents) {
         isPreview: event.isPreview || false,
         availLvl: event.availLvl || 0, // for group availability heatmap
         mode: event.mode || 'normal', // 'normal', 'blocking', 'petition', 'avail'
+        priority: event.priority || 1,
         petitionId: event.petitionId ?? null,
         groupId: event.groupId ?? null,
         createdByUserId: event.createdByUserId ?? null,
