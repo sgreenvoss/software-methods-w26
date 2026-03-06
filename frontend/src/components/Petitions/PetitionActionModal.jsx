@@ -50,6 +50,21 @@ export default function PetitionActionModal({
     }
   }, [open, petition]);
 
+  useEffect(() => {
+    if (!open) return undefined;
+
+    const handleKeyDown = (e) => {
+      if (e.key === 'Escape' && !submitting) {
+        onClose();
+      }
+    };
+
+    window.addEventListener('keydown', handleKeyDown);
+    return () => {
+      window.removeEventListener('keydown', handleKeyDown);
+    };
+  }, [open, submitting, onClose]);
+
   if (!open || !petition) {
     return null;
   }
@@ -188,8 +203,14 @@ export default function PetitionActionModal({
     }
   };
 
+  const handleBackdropClose = () => {
+    if (!submitting) {
+      onClose();
+    }
+  };
+
   return (
-    <div className="petition-modal-backdrop" onClick={onClose}>
+    <div className="petition-modal-backdrop" onClick={handleBackdropClose}>
       <div className="petition-modal" onClick={(e) => e.stopPropagation()}>
         <div className="petition-modal-header">
           <h3>{title}</h3>

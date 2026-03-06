@@ -8,6 +8,7 @@ export default function GroupCreatorModal({ onClose, onGroupCreated, onDone }) {
     const [groupName, setGroupName] = useState('');
     // Initialize with one empty string to mimic "addUserRow()" running once at start
     const [usernames, setUsernames] = useState(['']); 
+    const [isCreating, setIsCreating] = useState(false);
 
     // =============================================================================
     // GrInv: 1.0 Implementing Structural framework for groupInvite, (think this is the right startingpoint)
@@ -28,6 +29,19 @@ export default function GroupCreatorModal({ onClose, onGroupCreated, onDone }) {
             if (timeoutId) clearTimeout(timeoutId);
         };
     }, [copyStatus]);
+
+    useEffect(() => {
+        const handleKeyDown = (e) => {
+            if (e.key === 'Escape' && !isCreating) {
+                onClose();
+            }
+        };
+
+        window.addEventListener('keydown', handleKeyDown);
+        return () => {
+            window.removeEventListener('keydown', handleKeyDown);
+        };
+    }, [isCreating, onClose]);
 
     // async ClipBoard Function
     const handleCopyClick = async () => {
@@ -63,6 +77,8 @@ export default function GroupCreatorModal({ onClose, onGroupCreated, onDone }) {
     };
 
     const handleCreate = async () => {
+        if (isCreating) return;
+
         setCreateError("");
         setInviteError("");
         setCopyStatus("idle");
@@ -72,6 +88,7 @@ export default function GroupCreatorModal({ onClose, onGroupCreated, onDone }) {
             return;
         }
 
+        setIsCreating(true);
         try {
             const creationMeta = await apiPostWithMeta(`/group/creation?group_name=${encodeURIComponent(groupName)}`, {});
             const creationResponse = creationMeta.data;
@@ -114,12 +131,20 @@ export default function GroupCreatorModal({ onClose, onGroupCreated, onDone }) {
             setGroupCreated(false);
             setInviteLink("");
             setCreateError("Failed to create group. Check console.");
+        } finally {
+            setIsCreating(false);
+        }
+    };
+
+    const handleBackdropClose = () => {
+        if (!isCreating) {
+            onClose();
         }
     };
 
     return (
-        <div className="modal-overlay">
-            <div className="modal-content">
+        <div className="modal-overlay" onClick={handleBackdropClose}>
+            <div className="modal-content" onClick={(e) => e.stopPropagation()}>
                 {/* ----- GrInv: 1.0 Conditional Rendering for Invite Link Generation ----- */}
 
                 {!groupCreated ? (
@@ -168,9 +193,9 @@ export default function GroupCreatorModal({ onClose, onGroupCreated, onDone }) {
                     )}
 
                     <div className="modal-actions">
-                        <button onClick={onClose}>Cancel</button>
-                        <button className="primary-btn" onClick={handleCreate}>
-                            Create Group!
+                        <button onClick={onClose} disabled={isCreating}>Cancel</button>
+                        <button className="primary-btn" onClick={handleCreate} disabled={isCreating}>
+                            {isCreating ? 'Creating...' : 'Create Group!'}
                         </button>
                     </div>
                 </>

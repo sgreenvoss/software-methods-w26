@@ -22,6 +22,25 @@ function EventClickModal({ event, onClose, onRefresh }) {
   const [newPriority, setNewPriority] = useState(event.priority || 1);
   const [isSaving, setIsSaving] = useState(false);
 
+  useEffect(() => {
+    const handleKeyDown = (e) => {
+      if (e.key === 'Escape' && !isSaving) {
+        onClose();
+      }
+    };
+
+    window.addEventListener('keydown', handleKeyDown);
+    return () => {
+      window.removeEventListener('keydown', handleKeyDown);
+    };
+  }, [isSaving, onClose]);
+
+  const handleBackdropClick = () => {
+    if (!isSaving) {
+      onClose();
+    }
+  };
+
   const handleSave = async () => {
     setIsSaving(true);
     try {
@@ -57,8 +76,8 @@ function EventClickModal({ event, onClose, onRefresh }) {
   };
 
   return (
-    <div className="modal-overlay">
-      <div className="modal-content" style={{ maxWidth: '350px' }}>
+    <div className="modal-overlay" onClick={handleBackdropClick}>
+      <div className="modal-content" style={{ maxWidth: '350px' }} onClick={(e) => e.stopPropagation()}>
         <h2 style={{ marginTop: 0 }}>{event.title}</h2>
         <p><strong>Start:</strong> {event.start.toLocaleString()}</p>
         <p><strong>End:</strong> {event.end.toLocaleString()}</p>

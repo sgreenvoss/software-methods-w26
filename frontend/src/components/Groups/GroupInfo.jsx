@@ -8,6 +8,19 @@ export default function GroupInfoModal({ groupId, groupName, onClose }) {
     const [members, setMembers] = useState([]);
 
     useEffect(() => {
+        const handleKeyDown = (e) => {
+            if (e.key === 'Escape') {
+                onClose();
+            }
+        };
+
+        window.addEventListener('keydown', handleKeyDown);
+        return () => {
+            window.removeEventListener('keydown', handleKeyDown);
+        };
+    }, [onClose]);
+
+    useEffect(() => {
         const loadGroupDetails = async () => {
             setLoading(true);
             try {
@@ -28,8 +41,8 @@ export default function GroupInfoModal({ groupId, groupName, onClose }) {
     }, [groupId]);
 
     return (
-        <div className="modal-overlay">
-            <div className="modal-content">
+        <div className="modal-overlay" onClick={onClose}>
+            <div className="modal-content" onClick={(e) => e.stopPropagation()}>
                 {/* Fallback to 'Group' if name isn't passed */}
                 <h2>{groupName || 'Group'} Info</h2> 
                 
