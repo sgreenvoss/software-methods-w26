@@ -172,7 +172,7 @@ function mapPetitionToCalendarEvent(petition, activeGroupId, weekStart) {
 }
 
 
-export default function CustomCalendar({ groupId, draftEvent }) {
+export default function CustomCalendar({ groupId, draftEvent, refreshTrigger }) {
   // --- STATE (The "Controller" Data) ---
   const [weekStart, setWeekStart] = useState(getStartOfWeek(new Date()));
   const [rawEvents, setRawEvents] = useState([]);
@@ -199,6 +199,7 @@ export default function CustomCalendar({ groupId, draftEvent }) {
 
   // --- EFFECT 1: Fetch Personal Events ---
 
+  // TEAMNOTE[refresh-trigger]: Restore legacy refreshTrigger wiring removed during petition rewiring.
   useEffect(() => {
     const fetchPersonalEvents = async () => {
       setLoading(true);
@@ -230,10 +231,11 @@ export default function CustomCalendar({ groupId, draftEvent }) {
     };
     
     fetchPersonalEvents();
-  }, [weekStart]); 
+  }, [weekStart, refreshTrigger]); 
 
   // --- EFFECT 2: Fetch Group Availability ---
 
+  // TEAMNOTE[refresh-trigger]: Restore legacy refreshTrigger wiring removed during petition rewiring.
   useEffect(() => {
     const fetchGroupEvents = async () => {
       // If the user clicked "Hide", groupId will be null.
@@ -290,7 +292,7 @@ export default function CustomCalendar({ groupId, draftEvent }) {
     };
     
     fetchGroupEvents();
-  }, [groupId, weekStart]);
+  }, [groupId, weekStart, refreshTrigger]);
 
   useEffect(() => {
     const fetchCurrentUser = async() => {
@@ -463,7 +465,7 @@ export default function CustomCalendar({ groupId, draftEvent }) {
                       case 'petition':
                         backgroundColor = '#ffa963';
                         opacity = 0.6;
-                        zIndex = 3;
+                        zIndex = 4;
                         break;
                       case 'blocking':
                         backgroundColor = '#34333c';
@@ -474,7 +476,8 @@ export default function CustomCalendar({ groupId, draftEvent }) {
                         // backgroundColor = '#2ecc71';
                         const calculatedLightness = Math.max(35, 90 - (event.availLvl * 12));
                         backgroundColor = `hsl(145, 65%, ${calculatedLightness}%)`;
-                        opacity = 0.5;
+                        // TEAMNOTE[availability-prominence]: Restore pre-patch availability overlay prominence for readability.
+                        opacity = 0.9;
                         zIndex = 3;
                         break;
                       default:
@@ -482,6 +485,8 @@ export default function CustomCalendar({ groupId, draftEvent }) {
                         opacity = 1;
                         zIndex = 3;
                     }
+                    // TEAMNOTE[manual-block-color]: Restore manual block color distinction removed during petition rewiring.
+                    if (!event.isPreview && event.id.startsWith("manual-")) backgroundColor = '#6f6e76';
                     const isRegularEventClickable = event.mode !== 'avail' && event.mode !== 'petition' && !event.isPreview;
                     // TEAMNOTE[event-editing]: Restore legacy regular-event click/edit flow removed during petition rewiring.
                     const handleEventClick = () => {
