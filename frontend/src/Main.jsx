@@ -22,7 +22,6 @@ export default function Main() {
     const [draftEvent, setDraftEvent] = useState(null);
     const [refreshTrigger, setRefreshTrigger] = useState(0);
 
-    // 1. Move fetchGroups INSIDE so it can see setGroupsList
     const [eventMode, setEventMode] = useState('blocking');
     const [petitionGroupId, setPetitionGroupId] = useState('');
     
@@ -34,15 +33,11 @@ export default function Main() {
         } catch (error) {
             console.error('Error loading events:', error);
         }
-    }
+    };
 
     const fetchGroups = async () => {
         try {
-            // 1. Hit the ACTUAL endpoint
             const response = await apiGet('/user/groups'); 
-            
-            // 2. The backend returns { success: true, groups: [...] }
-            // We need to extract the groups array specifically.
             if (response && response.success && Array.isArray(response.groups)) {
                 setGroupsList(response.groups);
             } else {
@@ -68,7 +63,6 @@ export default function Main() {
         }
     };
 
-    // 2. Move handleLogout INSIDE
     const handleLogout = async () => {
         try {
             await apiPost('/logout'); 
@@ -84,16 +78,13 @@ export default function Main() {
         fetchPendingInvite();
     }, []);
 
-    console.log("2. Main.jsx current selectedGroupId:", selectedGroupId);
-
-
-    // Toggle the sidebar open/closed
     const toggleGroupsSidebar = () => {
         setIsGroupsSidebarOpen(!isGroupsSidebarOpen);
-    }
+    };
+
     const toggleEventSidebar = () => {
         setIsEventSidebarOpen(!isEventSidebarOpen);
-    }
+    };
 
     const handleInviteDecision = async (decision) => {
         setInviteActionLoading(true);
@@ -124,7 +115,6 @@ export default function Main() {
         setIsEventSidebarOpen(true);   // Open event sidebar
     };
 
-    // displays two buttons that will bring up either Calendar or Group
     return (
         <div id="app-wrapper">
             <PendingInviteModal
@@ -141,18 +131,13 @@ export default function Main() {
                 <p id="logo">Social Schedule</p>
                 <p id="beta">beta</p>
             </header>
-
-            {/* <header>
-                <button onClick={() => setView('groups')} id="groupsBtn">Group View</button>
-                <button onClick={() => setView('calendar')} id="calendarBtn">Calendar View</button>
-            </header> */}
             
             <section id="sidebarToggle">
                 <button 
                     onClick={() => {
                         toggleGroupsSidebar();
+                        // TEAMNOTE[availability-persistence]: Sidebar toggles must not clear selected group availability context.
                         if (isEventSidebarOpen) setIsEventSidebarOpen(false);
-                        setSelectedGroupId(null);
                     }} 
                     id="groupsBtn"
                     className={isGroupsSidebarOpen ? 'active-btn' : ''}
@@ -178,18 +163,18 @@ export default function Main() {
             </section>
 
             <main className="main-layout">
-                {/* The Groups sidebar. */}
                 {isGroupsSidebarOpen && (
                     <aside className="groups-sidebar">
                         <Groups
-                            onSelectGroup={(id) => setSelectedGroupId(Number(id))}
+                            selectedGroupId={selectedGroupId}
+                            // TEAMNOTE[availability-persistence]: Only explicit group-row hide should clear this parent-owned selection.
+                            onSelectGroup={(id) => setSelectedGroupId(id == null ? null : Number(id))}
                             onOpenPetition={handleOpenPetition} 
                             refreshSignal={groupsRefreshSignal}
                         />
                     </aside>
                 )}
 
-                {/* The Calendar always renders.*/}
                 <section className="calendar-main">
                     <Calendar 
                         draftEvent={draftEvent} 
@@ -198,7 +183,6 @@ export default function Main() {
                     />
                 </section>
 
-                {/* The Event sidebar, which is used for both creating and editing events. */}
                 {isEventSidebarOpen && (
                     <aside className="event-sidebar">
                         <EventSidebar 
@@ -207,7 +191,7 @@ export default function Main() {
                             setMode={setEventMode}
                             petitionGroupId={petitionGroupId}
                             setPetitionGroupId={setPetitionGroupId}
-                            groupsList={groupsList} // pass groups for dorpdown
+                            groupsList={groupsList}
                             onFinalize={() => {
                                 setIsEventSidebarOpen(false);
                                 setDraftEvent(null);
