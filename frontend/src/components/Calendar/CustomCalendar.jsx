@@ -18,6 +18,11 @@ function isCurrentWeek(date) {
   return date.getTime() === currWeekStart.getTime();
 }
 
+function getAvailabilityColor(availLvl) {
+  const calculatedLightness = Math.max(35, 90 - (availLvl * 12));
+  return `hsl(145, 65%, ${calculatedLightness}%)`;
+}
+
 function EventClickModal({ event, onClose, onRefresh }) {
   const [newPriority, setNewPriority] = useState(event.priority || 1);
   const [isSaving, setIsSaving] = useState(false);
@@ -375,6 +380,10 @@ export default function CustomCalendar({ groupId, draftEvent, refreshTrigger }) 
   // --- PREPARING THE VIEW ---
   const events = processEvents(finalRawEvents);
   const groupEvents = processEvents(groupAvailability);
+  const availabilityLegendLevels = Array.from(new Set(groupEvents
+    .filter((event) => event.mode === 'avail' && Number(event.availLvl) > 0)
+    .map((event) => Number(event.availLvl))))
+    .sort((a, b) => a - b);
   const petitionEvents = processEvents(visiblePetitions);
   const allEvents = events.concat(groupEvents, petitionEvents);
 
@@ -422,6 +431,32 @@ export default function CustomCalendar({ groupId, draftEvent, refreshTrigger }) 
         </h2>
         <button onClick={handleNextWeek}>Next →</button>
       </div>
+      {availabilityLegendLevels.length > 0 && (
+        <div
+          style={{
+            display: 'flex',
+            flexWrap: 'wrap',
+            alignItems: 'center',
+            gap: '10px',
+            marginBottom: '10px'
+          }}
+        >
+          <span style={{ fontSize: '0.85rem', fontWeight: 600 }}>Availability:</span>
+          {availabilityLegendLevels.map((level) => (
+            <span key={level} style={{ display: 'inline-flex', alignItems: 'center', gap: '6px', fontSize: '0.8rem' }}>
+              <span
+                style={{
+                  width: '14px',
+                  height: '14px',
+                  borderRadius: '3px',
+                  backgroundColor: getAvailabilityColor(level)
+                }}
+              />
+              {level}
+            </span>
+          ))}
+        </div>
+      )}
 
       {/* 2. CALENDAR GRID (View) */}
       <div className="calendar-grid">
@@ -464,8 +499,8 @@ export default function CustomCalendar({ groupId, draftEvent, refreshTrigger }) 
                     switch (event.mode) {
                       case 'petition':
                         backgroundColor = '#ffa963';
-                        opacity = 0.6;
-                        zIndex = 4;
+                        opacity = 0.95;
+                        zIndex = 5;
                         break;
                       case 'blocking':
                         backgroundColor = '#34333c';
@@ -473,12 +508,10 @@ export default function CustomCalendar({ groupId, draftEvent, refreshTrigger }) 
                         zIndex = 2;
                         break;
                       case 'avail':
-                        // backgroundColor = '#2ecc71';
-                        const calculatedLightness = Math.max(35, 90 - (event.availLvl * 12));
-                        backgroundColor = `hsl(145, 65%, ${calculatedLightness}%)`;
+                        backgroundColor = getAvailabilityColor(event.availLvl);
                         // TEAMNOTE[availability-prominence]: Restore pre-patch availability overlay prominence for readability.
-                        opacity = 0.9;
-                        zIndex = 3;
+                        opacity = 0.5;
+                        zIndex = 4;
                         break;
                       default:
                         backgroundColor = '#6395ee';
@@ -514,7 +547,7 @@ export default function CustomCalendar({ groupId, draftEvent, refreshTrigger }) 
                           
                         }}
                       >
-                        {getDisplayTitle(event)}
+                        {event.mode === 'avail' ? null : getDisplayTitle(event)}
                       </div>
                     );
                   })}
