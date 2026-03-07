@@ -1,11 +1,14 @@
 import React, { useState, useEffect } from 'react';
-import { apiGet } from '../../api.js';
+import { apiGet, apiPost } from '../../api.js';
 // Reuse the same modal CSS you already have
 import '../../css/groupsModal.css'; 
 
 export default function GroupInfoModal({ groupId, groupName, onClose }) {
     const [loading, setLoading] = useState(true);
     const [members, setMembers] = useState([]);
+    const [inviteLink, setInviteLink] = useState("");
+    const [copyStatus, setCopyStatus] = useState("idle");
+    
 
     useEffect(() => {
         const loadGroupDetails = async () => {
@@ -15,6 +18,7 @@ export default function GroupInfoModal({ groupId, groupName, onClose }) {
                 if (response && response.success) {
                     setMembers(response.members);
                 }
+                await makeInviteLink()
             } catch (error) {
                 console.error("Error loading group details:", error);
             } finally {
@@ -26,6 +30,48 @@ export default function GroupInfoModal({ groupId, groupName, onClose }) {
             loadGroupDetails();
         }
     }, [groupId]);
+
+    useEffect(() => {
+        let timeoutId;
+        if (copyStatus === 'success' || copyStatus === 'error') {
+            timeoutId = setTimeout(() => {
+                setCopyStatus('idle');
+            }, 2000); // Reset status after 2 seconds -- also allows for cutoff if close modal
+        }
+        return () => {
+            if (timeoutId) clearTimeout(timeoutId);
+        };
+    }, [copyStatus]);
+
+    // this is copied from the GroupCreator.
+    const handleCopyClick = async () => {
+        if (!inviteLink) {
+            setCopyStatus("error");
+            return;
+        }
+
+        setCopyStatus("copying");
+        try {
+            await navigator.clipboard.writeText(inviteLink);
+            setCopyStatus("success");
+        } catch (err) {
+            console.error("Failed to copy!", err);
+            setCopyStatus("error");
+        }
+    };
+
+    const makeInviteLink = async () => {
+        setCopyStatus("idle");
+        const inviteResponse = await apiPost("/group/invite", {
+            group_id: groupId
+        });
+
+        if (inviteResponse.invite) {
+            setInviteLink(inviteResponse.invite)
+        } 
+
+    }
+
 
     return (
         <div className="modal-overlay">
@@ -49,6 +95,22 @@ export default function GroupInfoModal({ groupId, groupName, onClose }) {
                         )}
                     </ul>
                 )}
+                <h3>Invite new members:</h3>
+                <div className="invite-link-container" style={{ display: 'flex', gap: '10px', margin: '20px 0' }}>
+                        <input
+                            type="text"
+                            value={inviteLink}
+                            readOnly
+                            style={{ flex: 1, padding: '8px' }}
+                        />
+                        <button
+                            onClick={handleCopyClick}
+                            disabled={!inviteLink || copyStatus === 'copying'}
+                        >
+                            {copyStatus === 'success' ? 'Copied!' : 
+                            copyStatus === 'error' ? 'Error' : 'Copy'}
+                        </button>
+                </div>
 
                 <div className="modal-actions">
                     <button className="primary-btn" onClick={onClose}>
