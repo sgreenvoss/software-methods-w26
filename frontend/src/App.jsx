@@ -17,15 +17,10 @@ export default function App() {
         const checkUser = async () => {
             try {
                 const data = await apiGet('/api/me');
-                console.log("we are here, the data is", data);
-                if (data.user) {
-                    console.log(data.user.username);
-                    console.log(data.user.email);
-                }
                 setUser(data.user);
-                setLoading(false); 
             } catch (error) {
                 console.error('Error fetching user:', error);
+            } finally {
                 setLoading(false);
             }
         };
@@ -34,11 +29,14 @@ export default function App() {
 
     // check if we have to load
     // either go to login or to homepage
-    if (user === null) {
-        return <Login />
-    } else if (user.username === "New user!") {
-        return <UsernameCreation />
-    } else {
-        return <Main />
+    if (loading) {
+        return <div>Loading...</div>
     }
+    if (!user) {
+        return <Login />
+    }
+    if (user.username === "New user!") {
+        return <UsernameCreation />
+    }
+    return <Main />
 }

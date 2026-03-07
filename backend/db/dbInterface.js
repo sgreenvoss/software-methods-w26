@@ -130,14 +130,16 @@ const insertUpdateUser = async(google_id, email, first_name, last_name, username
     return result.rows[0].user_id;
 }
 
-const addCalendar = async(user_id, calendar_name="primary") => {
+const addCalendar = async(user_id, calendar_name="primary", google_calendar_id="primary") => {
     const result = await pool.query(
-        `INSERT INTO calendar (user_id, calendar_name)
-        VALUES ($1, $2)
-        ON CONFLICT DO NOTHING`,
+        `INSERT INTO calendar (user_id, calendar_name, google_calendar_id)
+        VALUES ($1, $2, $3)
+        ON CONFLICT DO NOTHING
+        RETURNING calendar_id, user_id, calendar_name, google_calendar_id`,
         [
             user_id,
-            calendar_name
+            calendar_name,
+            google_calendar_id
         ]
     );
     console.log('inserted calendar:', result.rows[0]);
@@ -151,6 +153,15 @@ const getCalendarID = async(user_id) => {
         [user_id]
     );
     return result.rows[0];
+}
+
+const getCalendarsByUserID = async(user_id) => {
+    const result = await pool.query(
+        `SELECT calendar_id, calendar_name, google_calendar_id FROM calendar
+        WHERE user_id = $1`,
+        [user_id]
+    );
+    return result.rows;
 }
 
 const addEvents = async(cal_id, events, priority=3) => {
@@ -809,6 +820,7 @@ module.exports = {
     deleteEventsByIds,
     updateEvent,
     getCalendarID,
+    getCalendarsByUserID,
     updateTokens,
     createGroup,
     createGroupWithCreator,

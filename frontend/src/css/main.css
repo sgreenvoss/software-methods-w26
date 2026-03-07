@@ -27,6 +27,8 @@ header {
   justify-content: center; /* Centers  horizontally */
   align-items: center;     /* Centers  vertically */
   gap: 20px;               /* Adds equal space between elements */
+  padding: 10px;
+  min-height: 60px;
 }
 
 /* 2. Shared button styles */
@@ -68,8 +70,11 @@ button {
   background-color: #2a7ab0;
 }
 
-#logout {
-  text-align: right;
+#manButtons {
+  display: flex;
+  justify-content: flex-end;
+  gap: 15px;
+  padding: 10px;
 }
 
 #sidebarToggle {
@@ -78,12 +83,6 @@ button {
   align-items: center;
 }
 
-/* #calendarBtn {
-  background-color: #2ecc71;
-  color: white;
-  width: 100%;
-} */
-
 button:hover {
   opacity: 0.8;
 }
@@ -91,14 +90,14 @@ button:hover {
 #beta {
   color: cornflowerblue;
   font-weight:bolder;
-  font-size: 30px;
-  margin-left: 40px;
+  font-size: 24px;
+  margin-left: 10px;
 }
 
 #logo {
   color:darkslategray;
   font-weight:bolder;
-  font-size:70px;
+  font-size: 40px;
 }
 
 #app-wrapper {

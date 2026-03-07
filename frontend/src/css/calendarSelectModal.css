@@ -1,0 +1,179 @@
+/* Modal Overlay */
+.calendar-modal-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background-color: rgba(0, 0, 0, 0.5);
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    z-index: 1000;
+}
+
+/* Modal Content */
+.calendar-modal-content {
+    background-color: white;
+    padding: 30px;
+    border-radius: 10px;
+    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+    max-width: 500px;
+    max-height: 80vh;
+    overflow-y: auto;
+}
+
+.calendar-modal-content h2 {
+    margin-top: 0;
+    margin-bottom: 15px;
+}
+
+.calendar-modal-description {
+    color: #666;
+    margin-bottom: 20px;
+}
+
+/* Calendar Items */
+.calendar-items-container {
+    margin: 20px 0;
+    border-top: 1px solid #ccc;
+    padding-top: 20px;
+}
+
+.calendar-item {
+    margin-bottom: 10px;
+}
+
+.calendar-item label {
+    display: flex;
+    align-items: center;
+    cursor: pointer;
+}
+
+.calendar-item input[type="checkbox"] {
+    margin-right: 10px;
+}
+
+.calendar-item label span {
+    margin-left: 10px;
+}
+
+/* Error Messages */
+.calendar-modal-errors {
+    margin-top: 10px;
+}
+
+.calendar-modal-errors p {
+    color: #d63031;
+    margin: 8px 0;
+    font-size: 14px;
+}
+
+/* Button Container */
+.calendar-modal-buttons {
+    display: flex;
+    gap: 10px;
+    margin-top: 20px;
+    justify-content: flex-end;
+}
+
+.calendar-modal-buttons button {
+    padding: 10px 20px;
+    border: none;
+    border-radius: 5px;
+    cursor: pointer;
+    font-size: 14px;
+    transition: opacity 0.2s;
+}
+
+.calendar-modal-buttons button:disabled {
+    cursor: not-allowed;
+    opacity: 0.6;
+}
+
+.calendar-modal-buttons button:hover:not(:disabled) {
+    opacity: 0.8;
+}
+
+.calendar-modal-btn-back {
+    background-color: #e5e5e5;
+    color: #333;
+}
+
+.calendar-modal-btn-confirm {
+    background-color: #2ecc71;
+    color: white;
+}
+
+/* Mobile Responsive */
+@media (max-width: 768px) {
+    .calendar-modal-content {
+        padding: 20px;
+        max-width: 90vw;
+        max-height: 90vh;
+        margin: 20px;
+    }
+
+    .calendar-modal-content h2 {
+        font-size: 20px;
+        margin-bottom: 10px;
+    }
+
+    .calendar-modal-description {
+        font-size: 14px;
+    }
+
+    .calendar-modal-buttons {
+        flex-direction: column;
+        gap: 10px;
+    }
+
+    .calendar-modal-buttons button {
+        width: 100%;
+        padding: 12px 15px;
+        font-size: 16px;
+    }
+
+    .calendar-item label span {
+        font-size: 14px;
+    }
+}
+
+@media (max-width: 480px) {
+    .calendar-modal-content {
+        padding: 15px;
+        max-width: 95vw;
+        border-radius: 8px;
+    }
+
+    .calendar-modal-content h2 {
+        font-size: 18px;
+    }
+
+    .calendar-modal-description {
+        font-size: 13px;
+        margin-bottom: 15px;
+    }
+
+    .calendar-items-container {
+        margin: 15px 0;
+        padding-top: 15px;
+    }
+
+    .calendar-item {
+        margin-bottom: 12px;
+    }
+
+    .calendar-modal-buttons {
+        margin-top: 15px;
+    }
+
+    .calendar-modal-buttons button {
+        padding: 10px 12px;
+        font-size: 14px;
+    }
+
+    .calendar-item input[type="checkbox"] {
+        flex-shrink: 0;
+    }
+}

@@ -172,7 +172,7 @@ function mapPetitionToCalendarEvent(petition, activeGroupId, weekStart) {
 }
 
 
-export default function CustomCalendar({ groupId, draftEvent, refreshTrigger }) {
+export default function CustomCalendar({ refreshTrigger, groupId, draftEvent }) {
   // --- STATE (The "Controller" Data) ---
   const [weekStart, setWeekStart] = useState(getStartOfWeek(new Date()));
   const [rawEvents, setRawEvents] = useState([]);
@@ -193,10 +193,6 @@ export default function CustomCalendar({ groupId, draftEvent, refreshTrigger }) 
     }
   };
 
-  // const renderCount = useRef(0);
-  // renderCount.current++;
-  // console.log("Render #", renderCount.current, "rawEvents length:", rawEvents.length);
-
   // --- EFFECT 1: Fetch Personal Events ---
 
   // TEAMNOTE[refresh-trigger]: Restore legacy refreshTrigger wiring removed during petition rewiring.
@@ -204,11 +200,7 @@ export default function CustomCalendar({ groupId, draftEvent, refreshTrigger }) 
     const fetchPersonalEvents = async () => {
       setLoading(true);
       try {
-        try {
-          await apiGet('/api/events');
-        } catch (syncErr) {
-          console.error("Failed syncing events:", syncErr);
-        }
+
         const personalEvents = await apiGet('/api/get-events');
         if (Array.isArray(personalEvents)) {
             setRawEvents(personalEvents);
@@ -292,7 +284,7 @@ export default function CustomCalendar({ groupId, draftEvent, refreshTrigger }) 
     };
     
     fetchGroupEvents();
-  }, [groupId, weekStart, refreshTrigger]);
+  }, [refreshTrigger, groupId, weekStart]);
 
   useEffect(() => {
     const fetchCurrentUser = async() => {
