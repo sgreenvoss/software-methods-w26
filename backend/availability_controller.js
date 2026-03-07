@@ -1,4 +1,5 @@
 const availabilityService = require('./services/availability_service');
+const db = require('./db/dbInterface');
 
 const availabilityController = {
   async getAvailability(req, res) {
@@ -16,8 +17,16 @@ const availabilityController = {
 
       // 3. Convert to Numbers and pass to Service
       // If windowStartMs is missing, Number(undefined) is NaN, which triggers your 400
+      const parsedGroupId = Number(groupId);
       const start = Number(windowStartMs);
       const end = Number(windowEndMs);
+
+      if (!Number.isInteger(parsedGroupId) || parsedGroupId <= 0) {
+        return res.status(400).json({
+          ok: false,
+          error: "Invalid groupId"
+        });
+      }
 
       if (isNaN(start) || isNaN(end)) {
         return res.status(400).json({ 
@@ -26,8 +35,17 @@ const availabilityController = {
         });
       }
 
+      const userId = Number(req.session.userId);
+      const isMember = await db.isUserInGroup(userId, parsedGroupId);
+      if (!isMember) {
+        return res.status(403).json({
+          ok: false,
+          error: "Forbidden"
+        });
+      }
+
       const data = await availabilityService.getGroupAvailability(
-        groupId.toString(),
+        parsedGroupId.toString(),
         start,
         end
       );

@@ -1,7 +1,21 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { apiGet, apiPost } from '../../api'; // Adjust path based on your folder structure
 import PetitionActionModal from '../Petitions/PetitionActionModal';
 import '../../css/calendar.css';
+
+const AVAILABILITY_VIEWS = ['StrictView', 'FlexibleView', 'LenientView'];
+const DEFAULT_GROUP_VIEW = 'FlexibleView';
+const FALLBACK_VIEW = 'StrictView';
+const BLOCKING_LEVELS = Object.freeze({
+  B1: 'B1',
+  B2: 'B2',
+  B3: 'B3'
+});
+const AVAILABILITY_VIEW_LABELS = {
+  StrictView: 'Strict',
+  FlexibleView: 'Flexible',
+  LenientView: 'Lenient'
+};
 
 // --- HELPER LOGIC (The "Business Logic" or Model Helpers) ---
 function getStartOfWeek(date) {
@@ -18,8 +32,61 @@ function isCurrentWeek(date) {
   return date.getTime() === currWeekStart.getTime();
 }
 
+function getAvailabilityColor(availableCount) {
+  const calculatedLightness = Math.max(35, 90 - (availableCount * 12));
+  return `hsl(145, 65%, ${calculatedLightness}%)`;
+}
+
+function getViewStatsFromBlock(block, viewKey) {
+  if (!block || typeof block !== 'object') {
+    return { availableCount: 0, totalCount: 0 };
+  }
+
+  const strictView = block?.views?.StrictView;
+  const selectedView = block?.views?.[viewKey];
+
+  const availableCount = Number.isFinite(selectedView?.availableCount)
+    ? selectedView.availableCount
+    : Number.isFinite(strictView?.availableCount)
+      ? strictView.availableCount
+      : Number.isFinite(block?.count)
+        ? block.count
+        : 0;
+
+  const totalCount = Number.isFinite(selectedView?.totalCount)
+    ? selectedView.totalCount
+    : Number.isFinite(strictView?.totalCount)
+      ? strictView.totalCount
+      : Number.isFinite(block?.totalCount)
+        ? block.totalCount
+        : 0;
+
+  return { availableCount, totalCount };
+}
+
+function normalizeBlockingLevelFromEvent(event) {
+  const rawLevel = typeof event?.blockingLevel === 'string'
+    ? event.blockingLevel.trim().toUpperCase()
+    : '';
+  if (rawLevel === BLOCKING_LEVELS.B1 || rawLevel === BLOCKING_LEVELS.B2 || rawLevel === BLOCKING_LEVELS.B3) {
+    return rawLevel;
+  }
+
+  const rawPriority = Number(event?.priority);
+  if (rawPriority === 1) return BLOCKING_LEVELS.B1;
+  if (rawPriority === 2) return BLOCKING_LEVELS.B2;
+  return BLOCKING_LEVELS.B3;
+}
+
+function shouldRenderRegularEventAboveAvailability(view, blockingLevel) {
+  if (view === 'StrictView') return true;
+  if (view === 'FlexibleView') return blockingLevel === BLOCKING_LEVELS.B2 || blockingLevel === BLOCKING_LEVELS.B3;
+  return blockingLevel === BLOCKING_LEVELS.B3;
+}
+
 function EventClickModal({ event, onClose, onRefresh }) {
-  const [newPriority, setNewPriority] = useState(event.priority || 1);
+  const initialPriority = Number.isFinite(Number(event?.priority)) ? Number(event.priority) : 1;
+  const [newPriority, setNewPriority] = useState(initialPriority);
   const [isSaving, setIsSaving] = useState(false);
 
   const handleSave = async () => {
@@ -62,7 +129,7 @@ function EventClickModal({ event, onClose, onRefresh }) {
         <h2 style={{ marginTop: 0 }}>{event.title}</h2>
         <p><strong>Start:</strong> {event.start.toLocaleString()}</p>
         <p><strong>End:</strong> {event.end.toLocaleString()}</p>
-        <p><strong>Priority:</strong> {event.priority.toLocaleString()}</p>
+        <p><strong>Priority:</strong> {initialPriority.toLocaleString()}</p>
 
         <div style={{ margin: '15px 0' }}>
           <label><strong>Blocking Level:</strong></label>
@@ -177,7 +244,8 @@ export default function CustomCalendar({ refreshTrigger, groupId, draftEvent }) 
   const [weekStart, setWeekStart] = useState(getStartOfWeek(new Date()));
   const [rawEvents, setRawEvents] = useState([]);
   const [loading, setLoading] = useState(true);
-  const [groupAvailability, setGroupAvailability] = useState([]);
+  const [rawAvailabilityBlocks, setRawAvailabilityBlocks] = useState([]);
+  const [availabilityViewByGroup, setAvailabilityViewByGroup] = useState({});
   const [selectedEvent, setSelectedEvent] = useState(null);
   const [visiblePetitions, setVisiblePetitions] = useState([]);
   const [selectedPetition, setSelectedPetition] = useState(null);
@@ -185,6 +253,11 @@ export default function CustomCalendar({ refreshTrigger, groupId, draftEvent }) 
   const [petitionActionRefreshKey, setPetitionActionRefreshKey] = useState(0);
   const [currentUserId, setCurrentUserId] = useState(null);
   const petitionDraftActive = draftEvent?.mode === 'petition';
+  const selectedGroupKey = groupId == null ? null : String(groupId);
+  const selectedAvailabilityView = selectedGroupKey
+    ? (availabilityViewByGroup[selectedGroupKey] || DEFAULT_GROUP_VIEW)
+    : DEFAULT_GROUP_VIEW;
+  const latestAvailabilityRequestRef = useRef(0);
 
   const refreshPersonalEvents = async () => {
     const personalEvents = await apiGet('/api/get-events');
@@ -229,13 +302,20 @@ export default function CustomCalendar({ refreshTrigger, groupId, draftEvent }) 
 
   // TEAMNOTE[refresh-trigger]: Restore legacy refreshTrigger wiring removed during petition rewiring.
   useEffect(() => {
+    let isCancelled = false;
+
     const fetchGroupEvents = async () => {
       // If the user clicked "Hide", groupId will be null.
       // We just clear the state and exit early. No network call needed.
       if (!groupId || groupId === 0) {
-        setGroupAvailability([]);
+        latestAvailabilityRequestRef.current += 1;
+        setRawAvailabilityBlocks([]);
+        setLoading(false);
         return; 
       }
+
+      const requestId = latestAvailabilityRequestRef.current + 1;
+      latestAvailabilityRequestRef.current = requestId;
 
       setLoading(true);
       try {
@@ -251,39 +331,33 @@ export default function CustomCalendar({ refreshTrigger, groupId, draftEvent }) 
             ? response.blocks
             : null;
 
-        if (response && response.ok && response.blocks) {
-          // 2. Disguise the availability blocks as standard events for your UI
-          const heatmapEvents = response.blocks.map((block, i) => ({
-            title: `Avail: ${block.count}`,
-            availLvl: block.count,
-            start: block.start,
-            end: block.end,
-            event_id: `avail-${i}`,
-            mode: 'avail'
-          }));
+        if (isCancelled || latestAvailabilityRequestRef.current !== requestId) {
+          return;
+        }
 
-          const consolidatedEvents = mergeAvailabilityBlocks(heatmapEvents);
-          const finalHeatmapEvents = consolidatedEvents.map((event, i) => ({ 
-            ...event,
-            event_id: `avail-merged-${i}`
-          }));
-
-          setGroupAvailability(finalHeatmapEvents);
+        if (response && response.ok && Array.isArray(availabilityBlocks)) {
+          setRawAvailabilityBlocks(availabilityBlocks);
         } else {
-          // Default: Fetch personal events
-          const personalEvents = await apiGet('/api/get-events');
-          setRawEvents(personalEvents || []);
-          setGroupAvailability([]); // Clear if response is bad
+          setRawAvailabilityBlocks([]);
         }
       } catch (error) {
+        if (isCancelled || latestAvailabilityRequestRef.current !== requestId) {
+          return;
+        }
         console.error('Failed to fetch group availability:', error);
-        setGroupAvailability([]);
+        setRawAvailabilityBlocks([]);
       } finally {
-        setLoading(false);
+        if (!isCancelled && latestAvailabilityRequestRef.current === requestId) {
+          setLoading(false);
+        }
       }
     };
     
     fetchGroupEvents();
+
+    return () => {
+      isCancelled = true;
+    };
   }, [refreshTrigger, groupId, weekStart]);
 
   useEffect(() => {
@@ -326,6 +400,17 @@ export default function CustomCalendar({ refreshTrigger, groupId, draftEvent }) 
     fetchVisiblePetitions();
   }, [groupId, weekStart, petitionActionRefreshKey, petitionDraftActive]);
 
+  const handleAvailabilityViewChange = (viewKey) => {
+    if (!selectedGroupKey || !AVAILABILITY_VIEWS.includes(viewKey)) {
+      return;
+    }
+
+    setAvailabilityViewByGroup((currentMap) => ({
+      ...currentMap,
+      [selectedGroupKey]: viewKey
+    }));
+  };
+
   const handlePetitionClick = (petitionEvent) => {
     setSelectedPetition(petitionEvent);
     setIsPetitionModalOpen(true);
@@ -363,6 +448,51 @@ export default function CustomCalendar({ refreshTrigger, groupId, draftEvent }) 
   if (draftEvent) {
       finalRawEvents.push({ ...draftEvent });
   }
+
+  const hasMultiViewAvailability = rawAvailabilityBlocks.some(
+    (block) => block && typeof block.views === 'object' && block.views !== null
+  );
+  const effectiveAvailabilityView = hasMultiViewAvailability && AVAILABILITY_VIEWS.includes(selectedAvailabilityView)
+    ? selectedAvailabilityView
+    : FALLBACK_VIEW;
+
+  const projectedAvailability = (groupId ? rawAvailabilityBlocks : []).map((block, i) => {
+    const { availableCount } = getViewStatsFromBlock(block, effectiveAvailabilityView);
+
+    return {
+      title: '',
+      availLvl: availableCount,
+      start: block.start,
+      end: block.end,
+      event_id: `avail-${i}`,
+      mode: 'avail'
+    };
+  });
+
+  const consolidatedAvailability = mergeAvailabilityBlocks(projectedAvailability);
+  const groupAvailability = consolidatedAvailability.map((event, i) => ({
+    ...event,
+    event_id: `avail-merged-${i}`
+  }));
+
+  const availabilityLegendMeta = (groupId ? rawAvailabilityBlocks : []).reduce((meta, block) => {
+    const { availableCount, totalCount } = getViewStatsFromBlock(block, effectiveAvailabilityView);
+    if (availableCount > meta.maxVisibleCount) {
+      meta.maxVisibleCount = availableCount;
+    }
+    if (totalCount > meta.maxTotalCount) {
+      meta.maxTotalCount = totalCount;
+    }
+    return meta;
+  }, { maxVisibleCount: 0, maxTotalCount: 0 });
+
+  let legendMaxCount = availabilityLegendMeta.maxVisibleCount;
+  if (availabilityLegendMeta.maxTotalCount > 0) {
+    legendMaxCount = Math.min(legendMaxCount, availabilityLegendMeta.maxTotalCount);
+  }
+  const legendCounts = legendMaxCount > 0
+    ? Array.from({ length: legendMaxCount }, (_, idx) => idx + 1)
+    : [];
 
   // --- PREPARING THE VIEW ---
   const events = processEvents(finalRawEvents);
@@ -415,6 +545,45 @@ export default function CustomCalendar({ refreshTrigger, groupId, draftEvent }) 
         <button onClick={handleNextWeek}>Next →</button>
       </div>
 
+      {groupId ? (
+        <div className="availability-controls">
+          <div className="availability-view-toggle">
+            {AVAILABILITY_VIEWS.map((viewKey) => {
+              const isActive = effectiveAvailabilityView === viewKey;
+              const isDisabled = !hasMultiViewAvailability && viewKey !== FALLBACK_VIEW;
+              return (
+                <button
+                  key={viewKey}
+                  type="button"
+                  aria-pressed={isActive}
+                  disabled={isDisabled}
+                  onClick={() => handleAvailabilityViewChange(viewKey)}
+                  className={`availability-view-btn ${isActive ? 'availability-view-btn-active' : ''}`}
+                >
+                  {AVAILABILITY_VIEW_LABELS[viewKey]}
+                </button>
+              );
+            })}
+          </div>
+
+          <div className="availability-legend">
+            <span className="availability-legend-label">Available people</span>
+            <div className="availability-legend-swatches">
+              {legendCounts.map((count) => (
+                <span key={count} className="availability-legend-item">
+                  <span
+                    className="availability-legend-swatch"
+                    style={{ backgroundColor: getAvailabilityColor(count) }}
+                  />
+                  <span className="availability-legend-count">{count}</span>
+                </span>
+              ))}
+            </div>
+            <span className="availability-legend-note">Empty = no availability</span>
+          </div>
+        </div>
+      ) : null}
+
       {/* 2. CALENDAR GRID (View) */}
       <div className="calendar-grid">
         <div className="corner-cell"></div>
@@ -436,7 +605,7 @@ export default function CustomCalendar({ refreshTrigger, groupId, draftEvent }) 
                   .filter(e => e.start.toDateString() === day.toDateString() && e.start.getHours() === hour)
                   .map((event, idx) => {
                     // --- hides 0 avail events
-                    if (event.mode == 'avail' && event.availLvl === 0) {
+                    if (event.mode === 'avail' && event.availLvl === 0) {
                       // Don't render 0-availability blocks, they just add clutter
                       return null;
                     }
@@ -451,34 +620,45 @@ export default function CustomCalendar({ refreshTrigger, groupId, draftEvent }) 
                     if (!event.isEndOfDay && !endsOnHour) visualHeight -= 2;
 
                     let backgroundColor;
+                    let textColor;
                     let opacity;
                     let zIndex;
-                    switch (event.mode) {
-                      case 'petition':
-                        backgroundColor = '#ffa963';
-                        opacity = 0.6;
-                        zIndex = 4;
-                        break;
-                      case 'blocking':
-                        backgroundColor = '#34333c';
-                        opacity = 0.6;
-                        zIndex = 2;
-                        break;
-                      case 'avail':
-                        // backgroundColor = '#2ecc71';
-                        const calculatedLightness = Math.max(35, 90 - (event.availLvl * 12));
-                        backgroundColor = `hsl(145, 65%, ${calculatedLightness}%)`;
-                        // TEAMNOTE[availability-prominence]: Restore pre-patch availability overlay prominence for readability.
-                        opacity = 0.9;
-                        zIndex = 3;
-                        break;
-                      default:
-                        backgroundColor = '#6395ee';
-                        opacity = 1;
-                        zIndex = 3;
+
+                    if (event.mode === 'petition') {
+                      backgroundColor = '#ffa963';
+                      opacity = 0.6;
+                      zIndex = 4;
+                    } else if (event.mode === 'avail') {
+                      backgroundColor = getAvailabilityColor(event.availLvl);
+                      opacity = 0.9;
+                      zIndex = 3;
+                    } else {
+                      const normalizedBlockingLevel = normalizeBlockingLevelFromEvent(event);
+                      const isAboveAvailability = shouldRenderRegularEventAboveAvailability(
+                        effectiveAvailabilityView,
+                        normalizedBlockingLevel
+                      );
+                      zIndex = isAboveAvailability ? 4 : 2;
+                      opacity = event.mode === 'blocking' ? 0.6 : 1;
+
+                      backgroundColor = event.backgroundColor
+                        || (typeof event.color === 'string' ? event.color : null)
+                        || (event.mode === 'blocking' ? '#34333c' : '#6395ee');
+                      textColor = event.backgroundColor && typeof event.color === 'string' ? event.color : undefined;
                     }
-                    // TEAMNOTE[manual-block-color]: Restore manual block color distinction removed during petition rewiring.
-                    if (!event.isPreview && event.id.startsWith("manual-")) backgroundColor = '#6f6e76';
+                    if (!event.isPreview && typeof event.id === 'string' && event.id.startsWith('manual-')) {
+                      backgroundColor = '#6f6e76';
+                    }
+
+                    const borderStyle = event.isPreview
+                      ? '2px dashed #333'
+                      : (typeof event.borderColor === 'string' && event.borderColor ? `1px solid ${event.borderColor}` : 'none');
+                    const combinedClassName = [
+                      'calendar-event',
+                      event.isAllDay ? 'all-day-event' : '',
+                      event.mode === 'petition' ? `petition-event ${getPetitionStatusClass(event)}` : '',
+                      event.className || ''
+                    ].filter(Boolean).join(' ');
                     const isRegularEventClickable = event.mode !== 'avail' && event.mode !== 'petition' && !event.isPreview;
                     // TEAMNOTE[event-editing]: Restore legacy regular-event click/edit flow removed during petition rewiring.
                     const handleEventClick = () => {
@@ -493,7 +673,7 @@ export default function CustomCalendar({ refreshTrigger, groupId, draftEvent }) 
                     return (
                       <div
                         key={idx}
-                        className={`calendar-event ${event.isAllDay ? 'all-day-event' : ''} ${event.mode === 'petition' ? `petition-event ${getPetitionStatusClass(event)}` : ''}`}
+                        className={combinedClassName}
                         onClick={(event.mode === 'petition' || isRegularEventClickable) ? handleEventClick : undefined}
                         style={{
                           height: `${Math.max(1, visualHeight)}px`,
@@ -501,12 +681,13 @@ export default function CustomCalendar({ refreshTrigger, groupId, draftEvent }) 
                           opacity: event.isAllDay ? 0.6 : opacity,
                           zIndex: event.isAllDay ? 1 :zIndex,
                           backgroundColor: backgroundColor,
-                          border: event.isPreview ? '2px dashed #333' : 'none',
+                          color: textColor,
+                          border: borderStyle,
                           cursor: (event.mode === 'petition' || isRegularEventClickable) ? 'pointer' : 'default'
                           
                         }}
                       >
-                        {getDisplayTitle(event)}
+                        {event.mode === 'avail' ? null : getDisplayTitle(event)}
                       </div>
                     );
                   })}
@@ -538,7 +719,6 @@ export default function CustomCalendar({ refreshTrigger, groupId, draftEvent }) 
 // This keeps the "Business Logic" separate from the "View"
 function processEvents(rawEvents) {
   if (!Array.isArray(rawEvents)) return [];
-  console.log("in the processing events function");
   const processed = [];
   rawEvents.forEach(event => {
     let start = parseLocal(event.start);
@@ -563,7 +743,12 @@ function processEvents(rawEvents) {
         isPreview: event.isPreview || false,
         availLvl: event.availLvl || 0, // for group availability heatmap
         mode: event.mode || 'normal', // 'normal', 'blocking', 'petition', 'avail'
-        priority: event.priority || 1,
+        priority: Number.isFinite(Number(event.priority)) ? Number(event.priority) : null,
+        blockingLevel: event.blockingLevel ?? null,
+        backgroundColor: event.backgroundColor ?? null,
+        color: event.color ?? null,
+        borderColor: event.borderColor ?? null,
+        className: event.className ?? '',
         petitionId: event.petitionId ?? null,
         groupId: event.groupId ?? null,
         createdByUserId: event.createdByUserId ?? null,

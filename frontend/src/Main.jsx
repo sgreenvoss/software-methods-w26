@@ -85,9 +85,6 @@ export default function Main() {
         fetchPendingInvite();
     }, []);
 
-    console.log("2. Main.jsx current selectedGroupId:", selectedGroupId);
-
-
     // Toggle the sidebar open/closed
     const toggleGroupsSidebar = () => {
         setIsGroupsSidebarOpen(!isGroupsSidebarOpen);
@@ -162,7 +159,6 @@ export default function Main() {
                     onClick={() => {
                         toggleGroupsSidebar();
                         if (isEventSidebarOpen) setIsEventSidebarOpen(false);
-                        setSelectedGroupId(null);
                     }} 
                     id="groupsBtn"
                     className={isGroupsSidebarOpen ? 'active-btn' : ''}
@@ -192,7 +188,8 @@ export default function Main() {
                 {isGroupsSidebarOpen && (
                     <aside className="groups-sidebar">
                         <Groups
-                            onSelectGroup={(id) => setSelectedGroupId(Number(id))}
+                            selectedGroupId={selectedGroupId}
+                            onSelectGroup={(id) => setSelectedGroupId(id == null ? null : Number(id))}
                             onOpenPetition={handleOpenPetition} 
                             refreshSignal={groupsRefreshSignal}
                         />
