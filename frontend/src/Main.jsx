@@ -119,6 +119,8 @@ export default function Main() {
     };
     
     const handleOpenPetition = (groupId) => {
+        // Keep petition target and rendered availability group in sync.
+        setSelectedGroupId(Number(groupId));
         setEventMode('petition');
         setPetitionGroupId(groupId);
         setIsGroupsSidebarOpen(false); // Close groups sidebar
