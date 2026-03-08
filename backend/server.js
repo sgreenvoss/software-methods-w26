@@ -12,6 +12,7 @@ const pgSession = require('connect-pg-simple')(session);
 const email = require('./emailer'); 
 const groupModule = require("./groups");
 const petitionRoutes = require("./routes/petition_routes");
+const { normalizeCalendarEvent } = require("./calendar_event_normalizer");
 
 // Load the .env file, determine whether on production or local dev
 require('dotenv').config({
@@ -509,7 +510,9 @@ app.get("/api/events", async (req, res) => {
           }
         }
 
-        allFormattedEvents = allFormattedEvents.concat(formattedEvents);
+        allFormattedEvents = allFormattedEvents.concat(
+          formattedEvents.map((event) => normalizeCalendarEvent(event))
+        );
 
       } catch(calError) {
         console.error(`Error syncing calendar ${userCal.calendar_name}:`, calError);
@@ -551,7 +554,7 @@ app.get('/api/get-events', async (req, res) => {
       const events = await db.getEventsByCalendarID(userCal.calendar_id);
       
       // transform db format to frontend format
-      const formattedEvents = events.map(event => ({
+      const formattedEvents = events.map(event => normalizeCalendarEvent({
         title: event.event_name,
         start: event.event_start,
         end: event.event_end,

@@ -7,6 +7,10 @@ import '../../css/calendar.css';
 const AVAILABILITY_VIEWS = ['StrictView', 'FlexibleView', 'LenientView'];
 const DEFAULT_GROUP_VIEW = 'FlexibleView';
 const FALLBACK_VIEW = 'StrictView';
+const DEEMPHASIZED_EVENT_OPACITY = 0.5;
+const AVAILABILITY_MIN_OPACITY = 0.35;
+const AVAILABILITY_MAX_OPACITY = 0.82;
+const DAY_MS = 24 * 60 * 60 * 1000;
 const BLOCKING_LEVELS = Object.freeze({
   B1: 'B1',
   B2: 'B2',
@@ -47,8 +51,61 @@ function getAvailabilityColor(availableCount, maxVisibleCount) {
   return `hsl(145, ${saturation}%, ${lightness}%)`;
 }
 
+function getAvailabilityOpacity(availableCount, maxVisibleCount) {
+  if (availableCount <= 0) {
+    return 0;
+  }
+  if (maxVisibleCount <= 1) {
+    return AVAILABILITY_MAX_OPACITY;
+  }
+
+  const t = (availableCount - 1) / (maxVisibleCount - 1);
+  return AVAILABILITY_MIN_OPACITY + ((AVAILABILITY_MAX_OPACITY - AVAILABILITY_MIN_OPACITY) * t);
+}
+
 function formatAvailabilityTooltip(count) {
   return count === 1 ? '1 person available' : `${count} people available`;
+}
+
+function spansMultipleLocalDays(start, end) {
+  if (!Number.isFinite(start?.getTime?.()) || !Number.isFinite(end?.getTime?.()) || end <= start) {
+    return false;
+  }
+
+  const inclusiveEnd = new Date(end.getTime() - 1);
+  return start.getFullYear() !== inclusiveEnd.getFullYear()
+    || start.getMonth() !== inclusiveEnd.getMonth()
+    || start.getDate() !== inclusiveEnd.getDate();
+}
+
+function shouldDeEmphasizeEventSegment(event) {
+  return event?.mode !== 'avail' && (event?.isAllDay || event?.spansMultipleDays);
+}
+
+function isDateOnlyText(value) {
+  return typeof value === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(value);
+}
+
+function isLocalMidnight(date) {
+  return Number.isFinite(date?.getTime?.())
+    && date.getHours() === 0
+    && date.getMinutes() === 0
+    && date.getSeconds() === 0
+    && date.getMilliseconds() === 0;
+}
+
+function getLocalCalendarDayNumber(date) {
+  return Date.UTC(date.getFullYear(), date.getMonth(), date.getDate()) / DAY_MS;
+}
+
+function isWholeLocalDayRange(start, end) {
+  if (!Number.isFinite(start?.getTime?.()) || !Number.isFinite(end?.getTime?.()) || end <= start) {
+    return false;
+  }
+
+  return isLocalMidnight(start)
+    && isLocalMidnight(end)
+    && getLocalCalendarDayNumber(end) > getLocalCalendarDayNumber(start);
 }
 
 function getViewStatsFromBlock(block, viewKey) {
@@ -224,9 +281,7 @@ function mapPetitionToCalendarEvent(petition, activeGroupId, weekStart) {
       : (groupSize > 0 && acceptedCount === groupSize)
         ? 'ACCEPTED_ALL'
         : 'OPEN';
-  const status = typeof petition.status === 'string' && petition.status.trim()
-    ? petition.status
-    : computedStatus;
+  const status = computedStatus;
   const titleRaw = petition.title || 'Petition';
 
   return {
@@ -551,6 +606,29 @@ export default function CustomCalendar({ refreshTrigger, groupId, draftEvent }) 
     }
   };
 
+  const getPetitionStyle = (event) => {
+    switch (event.status) {
+      case 'FAILED':
+        return {
+          backgroundColor: '#9ea3a8',
+          textColor: '#1f1f1f',
+          opacity: 0.72
+        };
+      case 'ACCEPTED_ALL':
+        return {
+          backgroundColor: '#52b788',
+          textColor: '#ffffff',
+          opacity: 0.72
+        };
+      default:
+        return {
+          backgroundColor: '#f4d35e',
+          textColor: '#1f1f1f',
+          opacity: 0.72
+        };
+    }
+  };
+
   const getDisplayTitle = (event) => {
     if (event.mode !== 'petition') {
       return event.title;
@@ -604,7 +682,10 @@ export default function CustomCalendar({ refreshTrigger, groupId, draftEvent }) 
                 <span key={count} className="availability-legend-item">
                   <span
                     className="availability-legend-swatch"
-                    style={{ backgroundColor: getAvailabilityColor(count, legendMaxCount) }}
+                    style={{
+                      backgroundColor: getAvailabilityColor(count, legendMaxCount),
+                      opacity: getAvailabilityOpacity(count, legendMaxCount)
+                    }}
                   />
                   <span className="availability-legend-count">{count}</span>
                 </span>
@@ -656,12 +737,14 @@ export default function CustomCalendar({ refreshTrigger, groupId, draftEvent }) 
                     let zIndex;
 
                     if (event.mode === 'petition') {
-                      backgroundColor = '#ffa963';
-                      opacity = 0.6;
+                      const petitionStyle = getPetitionStyle(event);
+                      backgroundColor = petitionStyle.backgroundColor;
+                      textColor = petitionStyle.textColor;
+                      opacity = petitionStyle.opacity;
                       zIndex = 4;
                     } else if (event.mode === 'avail') {
                       backgroundColor = getAvailabilityColor(event.availLvl, legendMaxCount);
-                      opacity = 0.9;
+                      opacity = getAvailabilityOpacity(event.availLvl, legendMaxCount);
                       zIndex = 3;
                     } else {
                       const normalizedBlockingLevel = normalizeBlockingLevelFromEvent(event);
@@ -690,6 +773,7 @@ export default function CustomCalendar({ refreshTrigger, groupId, draftEvent }) 
                       event.mode === 'petition' ? `petition-event ${getPetitionStatusClass(event)}` : '',
                       event.className || ''
                     ].filter(Boolean).join(' ');
+                    const shouldDeEmphasize = shouldDeEmphasizeEventSegment(event);
                     const isRegularEventClickable = event.mode !== 'avail' && event.mode !== 'petition' && !event.isPreview;
                     // TEAMNOTE[event-editing]: Restore legacy regular-event click/edit flow removed during petition rewiring.
                     const handleEventClick = () => {
@@ -714,8 +798,8 @@ export default function CustomCalendar({ refreshTrigger, groupId, draftEvent }) 
                         style={{
                           height: `${Math.max(1, visualHeight)}px`,
                           top: `${startMins}px`,
-                          opacity: event.isAllDay ? 0.6 : opacity,
-                          zIndex: event.isAllDay ? 1 :zIndex,
+                          opacity: shouldDeEmphasize ? Math.min(opacity, DEEMPHASIZED_EVENT_OPACITY) : opacity,
+                          zIndex: shouldDeEmphasize ? 1 : zIndex,
                           backgroundColor: backgroundColor,
                           color: textColor,
                           border: borderStyle,
@@ -772,9 +856,10 @@ function processEvents(rawEvents) {
   if (!Array.isArray(rawEvents)) return [];
   const processed = [];
   rawEvents.forEach(event => {
-    let start = parseLocal(event.start);
-    let end = parseLocal(event.end);
-    if (end <= start) return;
+    const normalizedRange = normalizeEventRange(event);
+    let start = normalizedRange.start;
+    let end = normalizedRange.end;
+    if (!Number.isFinite(start.getTime()) || !Number.isFinite(end.getTime()) || end <= start) return;
 
     let current = new Date(start);
     while (current < end) {
@@ -789,7 +874,8 @@ function processEvents(rawEvents) {
         end: new Date(effectiveEnd),
         id: event.event_id,
         event_id: event.event_id,
-        isAllDay: (effectiveEnd - current) >= 24 * 60 * 60 * 1000,
+        isAllDay: normalizedRange.isAllDay,
+        spansMultipleDays: normalizedRange.spansMultipleDays,
         isEndOfDay: effectiveEnd.getTime() === nextDayStart.getTime(),
         isPreview: event.isPreview || false,
         availLvl: event.availLvl || 0, // for group availability heatmap
@@ -822,12 +908,51 @@ function processEvents(rawEvents) {
   return processed;
 }
 
-function parseLocal(dateInput) {
+function normalizeEventRange(event) {
+  const hasDateOnlyInputs = isDateOnlyText(event?.start) && isDateOnlyText(event?.end);
+
+  if (event?.isAllDay || hasDateOnlyInputs) {
+    const startDateText = event.allDayStartDate || (hasDateOnlyInputs ? event.start : formatUtcDateOnly(event.start));
+    const endDateText = event.allDayEndDate || (hasDateOnlyInputs ? event.end : formatUtcDateOnly(event.end));
+    const start = parseLocalDateOnly(startDateText);
+    const end = parseLocalDateOnly(endDateText);
+    return {
+      start,
+      end,
+      isAllDay: true,
+      spansMultipleDays: spansMultipleLocalDays(start, end)
+    };
+  }
+
+  const start = parseEventInstant(event?.start);
+  const end = parseEventInstant(event?.end);
+  const isAllDay = isWholeLocalDayRange(start, end);
+  return {
+    start,
+    end,
+    isAllDay,
+    spansMultipleDays: spansMultipleLocalDays(start, end)
+  };
+}
+
+function parseLocalDateOnly(dateInput) {
   if (typeof dateInput === 'string' && dateInput.length === 10) {
     const [y, m, d] = dateInput.split('-').map(Number);
     return new Date(y, m - 1, d);
   }
+  return new Date(NaN);
+}
+
+function parseEventInstant(dateInput) {
   return new Date(dateInput);
+}
+
+function formatUtcDateOnly(dateInput) {
+  const parsed = parseEventInstant(dateInput);
+  if (!Number.isFinite(parsed.getTime())) {
+    return '';
+  }
+  return parsed.toISOString().slice(0, 10);
 }
 
 

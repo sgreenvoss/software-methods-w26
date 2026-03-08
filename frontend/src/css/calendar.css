@@ -185,7 +185,7 @@ button:disabled {
 
 .calendar-event.petition-event.petition-failed {
   background-color: #9ea3a8;
-  color: #ffffff;
+  color: #1f1f1f;
 }
 
 .calendar-event.petition-event.petition-accepted-all {
