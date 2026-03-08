@@ -616,7 +616,7 @@ export default function CustomCalendar({ refreshTrigger, groupId, draftEvent }) 
         };
       case 'ACCEPTED_ALL':
         return {
-          backgroundColor: '#52b788',
+          backgroundColor: '#f97316',
           textColor: '#ffffff',
           opacity: 0.72
         };
