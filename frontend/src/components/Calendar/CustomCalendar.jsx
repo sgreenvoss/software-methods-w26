@@ -143,7 +143,15 @@ function EventClickModal({ event, onClose, onRefresh }) {
         <h2 style={{ marginTop: 0 }}>{event.title}</h2>
         <p><strong>Start:</strong> {event.start.toLocaleString()}</p>
         <p><strong>End:</strong> {event.end.toLocaleString()}</p>
-        <p><strong>Priority:</strong> {initialPriority.toLocaleString()}</p>
+        <p><strong>Priority:</strong> {
+          initialPriority.toLocaleString() == 3 ?
+          "High" :
+            initialPriority.toLocaleString() == 2 ?
+            "Med" :
+              initialPriority.toLocaleString() == 1 ?
+              "Low" :
+                initialPriority.toLocaleString()
+        }</p>
 
         <div style={{ margin: '15px 0' }}>
           <label><strong>Blocking Level:</strong></label>
