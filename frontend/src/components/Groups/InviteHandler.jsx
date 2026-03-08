@@ -1,10 +1,12 @@
-import React, { useEffect } from 'react';
+import React, { useEffect, useContext } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import { apiGet } from '../../api';
+import { ErrorContext } from '../../ErrorContext';
 
 export default function InviteHandler() {
   const location = useLocation();
   const navigate = useNavigate();
+  const { setError } = useContext(ErrorContext);
 
   useEffect(() => {
     const handleJoin = async () => {
@@ -14,7 +16,7 @@ export default function InviteHandler() {
 
       if (!token) {
         console.error("No token found in invitation link.");
-        navigate('/');
+        setError("No token provided in invitation link.")
         return;
       }
 
@@ -32,7 +34,7 @@ export default function InviteHandler() {
         }
       } catch (err) {
         console.error("Failed to process invitation:", err);
-        navigate('/');
+        setError(err.message);
       }
     };
 

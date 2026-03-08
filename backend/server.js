@@ -77,7 +77,7 @@ const PORT = process.env.PORT || 3000;
 // ===================PAGES========================
 
 
-app.get('/', (req, res) => {
+app.post('/', (req, res) => {
   if (typeof req.session.userId !== "undefined") {
     res.sendFile(path.join(__dirname, "..", "frontend", "build", "index.html"));
   } else {
@@ -159,12 +159,12 @@ app.post('/api/select-calendars', async (req, res) => {
   }
 });
 
-app.get('/logout', (req, res) => {
+app.post('/logout', (req, res) => {
   req.session.destroy((err) => {
     if (err) {
-      return console.log(err);
+      return res.status(500).json( {success: false, error: 'Failed to logout'})
     }
-    res.redirect('/login');
+    res.json({ success: true });
   });
 });
 
@@ -806,11 +806,8 @@ const availabilityController = require('./availability_controller');
 // "When someone hits this URL, hand the request over to the Controller"
 app.get('/api/groups/:groupId/availability', availabilityController.getAvailability);
 
-
-
-// Catch-all route for React Router - must be after all API routes
-app.get('*', (req, res) => {
-  // Serve React app for all unmatched routes
+// Catch-all for unmatched routes - serve React app
+app.use((req, res) => {
   if (req.session.userId) {
     res.sendFile(path.join(__dirname, "..", "frontend", "build", "index.html"));
   } else {

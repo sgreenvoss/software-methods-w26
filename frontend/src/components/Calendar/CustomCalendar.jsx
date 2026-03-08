@@ -1,6 +1,7 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useContext } from 'react';
 import { apiGet, apiPost } from '../../api'; // Adjust path based on your folder structure
 import PetitionActionModal from '../Petitions/PetitionActionModal';
+import { ErrorContext } from '../../ErrorContext';
 import '../../css/calendar.css';
 
 // --- HELPER LOGIC (The "Business Logic" or Model Helpers) ---
@@ -186,6 +187,9 @@ export default function CustomCalendar({ refreshTrigger, groupId, draftEvent }) 
   const [currentUserId, setCurrentUserId] = useState(null);
   const petitionDraftActive = draftEvent?.mode === 'petition';
 
+  // error handling
+  const { setError } = useContext(ErrorContext);
+
   const refreshPersonalEvents = async () => {
     const personalEvents = await apiGet('/api/get-events');
     if (Array.isArray(personalEvents)) {
@@ -217,6 +221,7 @@ export default function CustomCalendar({ refreshTrigger, groupId, draftEvent }) 
       } catch (error) {
         console.error('Failed to fetch personal events:', error);
         setRawEvents([]);
+        setError(error.message);
       } finally {
         setLoading(false);
       }
@@ -278,6 +283,7 @@ export default function CustomCalendar({ refreshTrigger, groupId, draftEvent }) 
       } catch (error) {
         console.error('Failed to fetch group availability:', error);
         setGroupAvailability([]);
+        setError(error.message);
       } finally {
         setLoading(false);
       }
@@ -295,6 +301,7 @@ export default function CustomCalendar({ refreshTrigger, groupId, draftEvent }) 
       } catch (error) {
         console.error('Failed to load current user for petition actions:', error);
         setCurrentUserId(null);
+        setError(error.message);
       }
     };
 
@@ -320,6 +327,7 @@ export default function CustomCalendar({ refreshTrigger, groupId, draftEvent }) 
       } catch (error) {
         console.error('Failed to fetch petitions:', error);
         setVisiblePetitions([]);
+        setError(error.message);
       }
     };
 

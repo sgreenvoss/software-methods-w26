@@ -1,16 +1,20 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useContext } from 'react';
+import { BrowserRouter as Router, Routes, Route } from 'react';
 import { apiGet } from './api.js';
 import Login from './Login.jsx';
 import Main from './Main.jsx';
 import UsernameCreation from './UsernameCreation.jsx';
 import InviteHandler from './components/Groups/InviteHandler.jsx';
+import { ErrorProvider, ErrorContext } from './ErrorContext.jsx';
+import ServerError from './pages/ServerError.jsx';
 
 
-// determines which page to serve
-export default function App() {
+// Inner component that uses ErrorContext
+function AppContent() {
     // states
     const [loading, setLoading] = useState(true);
     const [user, setUser] = useState(null);
+    const { error, setError } = useContext(ErrorContext);
 
     // check if user is logged in
     useEffect(() => {
@@ -20,12 +24,18 @@ export default function App() {
                 setUser(data.user);
             } catch (error) {
                 console.error('Error fetching user:', error);
+                setError(error.message || 'Failed to load user');
             } finally {
                 setLoading(false);
             }
         };
         checkUser();
-    }, []);
+    }, [setError]);
+
+    // Show error page if there's an error
+    if (error) {
+        return <ServerError message={error} />;
+    }
 
     // check if we have to load
     // either go to login or to homepage
@@ -39,4 +49,13 @@ export default function App() {
         return <UsernameCreation />
     }
     return <Main />
+}
+
+// Main App component with ErrorProvider wrapper
+export default function App() {
+    return (
+        <ErrorProvider>
+            <AppContent />
+        </ErrorProvider>
+    );
 }

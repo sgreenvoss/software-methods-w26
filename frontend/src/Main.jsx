@@ -1,8 +1,9 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useContext } from 'react';
 import Calendar from './components/Calendar/CustomCalendar';
 import Groups from './components/Groups/Groups';
 import PendingInviteModal from './components/Groups/PendingInviteModal';
 import EventSidebar from './components/Calendar/EventSidebar';
+import { ErrorContext } from './ErrorContext';
 import './css/main.css';
 import {apiGet, apiPost} from './api';
 
@@ -24,9 +25,12 @@ export default function Main() {
     const [draftEvent, setDraftEvent] = useState(null);
     const [refreshTrigger, setRefreshTrigger] = useState(0);
 
-    // 1. Move fetchGroups INSIDE so it can see setGroupsList
+    // Move fetchGroups INSIDE so it can see setGroupsList
     const [eventMode, setEventMode] = useState('blocking');
     const [petitionGroupId, setPetitionGroupId] = useState('');
+
+    // error handling
+    const { setError } = useContext(ErrorContext);
 
     // grab all of the events using api/events on login
     const fetchEvents = async () => {
@@ -35,6 +39,7 @@ export default function Main() {
             setCalRefreshSignal((prev) => prev + 1);
         } catch (error) {
             console.error('Error loading events:', error);
+            setError(err.message);
         }
     }
 
@@ -53,6 +58,7 @@ export default function Main() {
         } catch (err) {
             console.error("Groups fetch failed", err);
             setGroupsList([]);
+            setError(err.message);
         }
     };
 
@@ -67,16 +73,17 @@ export default function Main() {
         } catch (err) {
             console.error("Pending invite fetch failed", err);
             setPendingInvite(null);
+            setError(err.message);
         }
     };
 
     // 2. Move handleLogout INSIDE
     const handleLogout = async () => {
         try {
-            await apiGet('/logout'); 
+            await apiPost('/logout'); 
             window.location.href = '/logout'; 
         } catch (err) {
-            window.location.href = '/logout'; 
+           window.location.href = '/login';
         }
     };
 
