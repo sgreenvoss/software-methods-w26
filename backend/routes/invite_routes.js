@@ -26,6 +26,7 @@ module.exports = function registerInviteRoutes(app, { db, inviteToken, inviteSta
       for (const user of req.body.users) {
         const user_info = await db.getUserByID(user.user_id);
         if (user_info && user_info.email) {
+          console.log("i am emailing", user_info, user_info.email);
           await groupRequest(user_info.email,
                             req.body.sender_user,
                             req.body.shareable_link);
