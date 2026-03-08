@@ -14,12 +14,16 @@ jest.mock('../Petitions/PetitionActionModal', () => function PetitionActionModal
   return null;
 });
 
-function buildAvailabilityResponse(groupTag) {
+function getCurrentWeekDate(hour = 9, minute = 0) {
   const now = new Date();
-  const startOfWeek = new Date(now);
-  startOfWeek.setDate(startOfWeek.getDate() - startOfWeek.getDay());
-  startOfWeek.setHours(9, 0, 0, 0);
-  const blockStart = startOfWeek;
+  const start = new Date(now);
+  start.setDate(start.getDate() - start.getDay());
+  start.setHours(hour, minute, 0, 0);
+  return start;
+}
+
+function buildAvailabilityResponse(groupTag) {
+  const blockStart = getCurrentWeekDate(9, 0);
   const blockEnd = new Date(blockStart.getTime() + (15 * 60 * 1000));
 
   if (groupTag === 'fallback') {
@@ -31,6 +35,37 @@ function buildAvailabilityResponse(groupTag) {
           end: blockEnd.toISOString(),
           count: 2,
           totalCount: 5
+        }
+      ]
+    };
+  }
+
+  if (groupTag === 'contrast') {
+    const secondBlockStart = getCurrentWeekDate(10, 0);
+    const secondBlockEnd = new Date(secondBlockStart.getTime() + (15 * 60 * 1000));
+
+    return {
+      ok: true,
+      blocks: [
+        {
+          start: blockStart.toISOString(),
+          end: blockEnd.toISOString(),
+          count: 2,
+          views: {
+            StrictView: { availableCount: 2, busyCount: 3, totalCount: 5, availabilityFraction: 0.4 },
+            FlexibleView: { availableCount: 2, busyCount: 3, totalCount: 5, availabilityFraction: 0.4 },
+            LenientView: { availableCount: 2, busyCount: 3, totalCount: 5, availabilityFraction: 0.4 }
+          }
+        },
+        {
+          start: secondBlockStart.toISOString(),
+          end: secondBlockEnd.toISOString(),
+          count: 4,
+          views: {
+            StrictView: { availableCount: 4, busyCount: 1, totalCount: 5, availabilityFraction: 0.8 },
+            FlexibleView: { availableCount: 3, busyCount: 2, totalCount: 5, availabilityFraction: 0.6 },
+            LenientView: { availableCount: 2, busyCount: 3, totalCount: 5, availabilityFraction: 0.4 }
+          }
         }
       ]
     };
@@ -75,10 +110,7 @@ function findButton(container, label) {
 }
 
 function getCurrentWeekSlot() {
-  const now = new Date();
-  const start = new Date(now);
-  start.setDate(start.getDate() - start.getDay());
-  start.setHours(9, 0, 0, 0);
+  const start = getCurrentWeekDate(9, 0);
   const end = new Date(start.getTime() + (30 * 60 * 1000));
   return { start: start.toISOString(), end: end.toISOString() };
 }
@@ -97,6 +129,41 @@ function createDeferred() {
     reject = rej;
   });
   return { promise, resolve, reject };
+}
+
+function expectedAvailabilityColor(availableCount, maxVisibleCount) {
+  if (availableCount <= 0) {
+    return 'transparent';
+  }
+  if (maxVisibleCount <= 1) {
+    return 'hsl(145, 78%, 42%)';
+  }
+
+  const t = (availableCount - 1) / (maxVisibleCount - 1);
+  const saturation = 60 + (18 * t);
+  const lightness = 84 - (42 * t);
+  return `hsl(145, ${saturation}%, ${lightness}%)`;
+}
+
+function normalizeCssColor(cssColor) {
+  const swatch = document.createElement('div');
+  swatch.style.backgroundColor = cssColor;
+  return swatch.style.backgroundColor;
+}
+
+function findAvailabilityBlock(container, count) {
+  return Array.from(container.querySelectorAll('.calendar-event[data-event-mode="avail"]')).find(
+    (node) => node.getAttribute('data-availability-count') === String(count)
+  );
+}
+
+function findLegendSwatch(container, count) {
+  const legendItem = Array.from(container.querySelectorAll('.availability-legend-item')).find((node) => {
+    const label = node.querySelector('.availability-legend-count');
+    return label && label.textContent && label.textContent.trim() === String(count);
+  });
+
+  return legendItem ? legendItem.querySelector('.availability-legend-swatch') : null;
 }
 
 describe('CustomCalendar availability view switching', () => {
@@ -137,7 +204,16 @@ describe('CustomCalendar availability view switching', () => {
     jest.clearAllMocks();
   });
 
-  test('mode toggle reprojects locally without refetching availability', async () => {
+  test('mode toggle reprojects colors locally without refetching availability', async () => {
+    apiGet.mockImplementation(async (path) => {
+      if (path === '/api/get-events') return [];
+      if (path === '/api/me') return { user: { user_id: 100 } };
+      if (typeof path === 'string' && path.includes('/api/groups/1/availability?')) return buildAvailabilityResponse('contrast');
+      if (typeof path === 'string' && path === '/api/groups/1/petitions') return [];
+      if (path === '/api/petitions') return [];
+      return [];
+    });
+
     await act(async () => {
       root.render(<CustomCalendar groupId={1} draftEvent={null} />);
     });
@@ -145,14 +221,36 @@ describe('CustomCalendar availability view switching', () => {
 
     const initialCalls = countAvailabilityCalls();
     expect(initialCalls).toBeGreaterThan(0);
+    expect(findAvailabilityBlock(container, 2).style.backgroundColor).toBe(
+      normalizeCssColor(expectedAvailabilityColor(2, 3))
+    );
+    expect(findLegendSwatch(container, 2).style.backgroundColor).toBe(
+      normalizeCssColor(expectedAvailabilityColor(2, 3))
+    );
 
     await act(async () => {
       findButton(container, 'Strict').click();
     });
+    await flushMultiple(2);
+
+    expect(findAvailabilityBlock(container, 2).style.backgroundColor).toBe(
+      normalizeCssColor(expectedAvailabilityColor(2, 4))
+    );
+    expect(findLegendSwatch(container, 2).style.backgroundColor).toBe(
+      normalizeCssColor(expectedAvailabilityColor(2, 4))
+    );
 
     await act(async () => {
       findButton(container, 'Lenient').click();
     });
+    await flushMultiple(2);
+
+    expect(findAvailabilityBlock(container, 2).style.backgroundColor).toBe(
+      normalizeCssColor(expectedAvailabilityColor(2, 2))
+    );
+    expect(findLegendSwatch(container, 2).style.backgroundColor).toBe(
+      normalizeCssColor(expectedAvailabilityColor(2, 2))
+    );
 
     expect(countAvailabilityCalls()).toBe(initialCalls);
   });
@@ -282,6 +380,75 @@ describe('CustomCalendar availability view switching', () => {
     expect(findButton(container, 'Flexible').disabled).toBe(true);
     expect(findButton(container, 'Lenient').disabled).toBe(true);
     expect(container.querySelectorAll('.availability-legend-item').length).toBe(2);
+
+    const fallbackBlock = findAvailabilityBlock(container, 2);
+    const fallbackSwatch = findLegendSwatch(container, 2);
+    expect(fallbackBlock).toBeDefined();
+    expect(fallbackSwatch).not.toBeNull();
+    expect(fallbackBlock.style.backgroundColor).toBe(
+      normalizeCssColor(expectedAvailabilityColor(2, 2))
+    );
+    expect(fallbackSwatch.style.backgroundColor).toBe(
+      normalizeCssColor(expectedAvailabilityColor(2, 2))
+    );
+
+    await act(async () => {
+      fallbackBlock.dispatchEvent(new MouseEvent('mouseover', {
+        bubbles: true,
+        clientX: 30,
+        clientY: 40
+      }));
+    });
+
+    const fallbackTooltip = document.body.querySelector('[data-testid="availability-tooltip"]');
+    expect(fallbackTooltip).not.toBeNull();
+    expect(fallbackTooltip.textContent).toBe('2 people available');
+  });
+
+  test('shows and repositions count tooltip for availability hover', async () => {
+    await act(async () => {
+      root.render(<CustomCalendar groupId={1} draftEvent={null} />);
+    });
+    await flushMultiple();
+
+    const availabilityBlock = findAvailabilityBlock(container, 3);
+    expect(availabilityBlock).toBeDefined();
+
+    await act(async () => {
+      availabilityBlock.dispatchEvent(new MouseEvent('mouseover', {
+        bubbles: true,
+        clientX: 100,
+        clientY: 200
+      }));
+    });
+
+    let tooltip = document.body.querySelector('[data-testid="availability-tooltip"]');
+    expect(tooltip).not.toBeNull();
+    expect(tooltip.textContent).toBe('3 people available');
+    expect(tooltip.style.left).toBe('112px');
+    expect(tooltip.style.top).toBe('210px');
+
+    await act(async () => {
+      availabilityBlock.dispatchEvent(new MouseEvent('mousemove', {
+        bubbles: true,
+        clientX: 140,
+        clientY: 240
+      }));
+    });
+
+    tooltip = document.body.querySelector('[data-testid="availability-tooltip"]');
+    expect(tooltip.style.left).toBe('152px');
+    expect(tooltip.style.top).toBe('250px');
+
+    await act(async () => {
+      availabilityBlock.dispatchEvent(new MouseEvent('mouseout', {
+        bubbles: true,
+        clientX: 140,
+        clientY: 240
+      }));
+    });
+
+    expect(document.body.querySelector('[data-testid="availability-tooltip"]')).toBeNull();
   });
 
   test('stale availability response does not overwrite current group context', async () => {

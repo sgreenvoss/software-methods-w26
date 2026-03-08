@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
+import { createPortal } from 'react-dom';
 import { apiGet, apiPost } from '../../api'; // Adjust path based on your folder structure
 import PetitionActionModal from '../Petitions/PetitionActionModal';
 import '../../css/calendar.css';
@@ -32,9 +33,22 @@ function isCurrentWeek(date) {
   return date.getTime() === currWeekStart.getTime();
 }
 
-function getAvailabilityColor(availableCount) {
-  const calculatedLightness = Math.max(35, 90 - (availableCount * 12));
-  return `hsl(145, 65%, ${calculatedLightness}%)`;
+function getAvailabilityColor(availableCount, maxVisibleCount) {
+  if (availableCount <= 0) {
+    return 'transparent';
+  }
+  if (maxVisibleCount <= 1) {
+    return 'hsl(145, 78%, 42%)';
+  }
+
+  const t = (availableCount - 1) / (maxVisibleCount - 1);
+  const saturation = 60 + (18 * t);
+  const lightness = 84 - (42 * t);
+  return `hsl(145, ${saturation}%, ${lightness}%)`;
+}
+
+function formatAvailabilityTooltip(count) {
+  return count === 1 ? '1 person available' : `${count} people available`;
 }
 
 function getViewStatsFromBlock(block, viewKey) {
@@ -252,6 +266,7 @@ export default function CustomCalendar({ refreshTrigger, groupId, draftEvent }) 
   const [isPetitionModalOpen, setIsPetitionModalOpen] = useState(false);
   const [petitionActionRefreshKey, setPetitionActionRefreshKey] = useState(0);
   const [currentUserId, setCurrentUserId] = useState(null);
+  const [availabilityTooltip, setAvailabilityTooltip] = useState(null);
   const petitionDraftActive = draftEvent?.mode === 'petition';
   const selectedGroupKey = groupId == null ? null : String(groupId);
   const selectedAvailabilityView = selectedGroupKey
@@ -431,6 +446,18 @@ export default function CustomCalendar({ refreshTrigger, groupId, draftEvent }) 
     refreshPersonalEvents();
   };
 
+  const updateAvailabilityTooltip = (mouseEvent, count) => {
+    setAvailabilityTooltip({
+      count,
+      x: mouseEvent.clientX + 12,
+      y: mouseEvent.clientY + 10
+    });
+  };
+
+  const handleAvailabilityTooltipLeave = () => {
+    setAvailabilityTooltip(null);
+  };
+
   const handlePrevWeek = () => {
     const newDate = new Date(weekStart);
     newDate.setDate(newDate.getDate() - 7);
@@ -493,6 +520,10 @@ export default function CustomCalendar({ refreshTrigger, groupId, draftEvent }) 
   const legendCounts = legendMaxCount > 0
     ? Array.from({ length: legendMaxCount }, (_, idx) => idx + 1)
     : [];
+
+  useEffect(() => {
+    setAvailabilityTooltip(null);
+  }, [groupId, weekStart, rawAvailabilityBlocks, effectiveAvailabilityView]);
 
   // --- PREPARING THE VIEW ---
   const events = processEvents(finalRawEvents);
@@ -573,7 +604,7 @@ export default function CustomCalendar({ refreshTrigger, groupId, draftEvent }) 
                 <span key={count} className="availability-legend-item">
                   <span
                     className="availability-legend-swatch"
-                    style={{ backgroundColor: getAvailabilityColor(count) }}
+                    style={{ backgroundColor: getAvailabilityColor(count, legendMaxCount) }}
                   />
                   <span className="availability-legend-count">{count}</span>
                 </span>
@@ -629,7 +660,7 @@ export default function CustomCalendar({ refreshTrigger, groupId, draftEvent }) 
                       opacity = 0.6;
                       zIndex = 4;
                     } else if (event.mode === 'avail') {
-                      backgroundColor = getAvailabilityColor(event.availLvl);
+                      backgroundColor = getAvailabilityColor(event.availLvl, legendMaxCount);
                       opacity = 0.9;
                       zIndex = 3;
                     } else {
@@ -675,6 +706,11 @@ export default function CustomCalendar({ refreshTrigger, groupId, draftEvent }) 
                         key={idx}
                         className={combinedClassName}
                         onClick={(event.mode === 'petition' || isRegularEventClickable) ? handleEventClick : undefined}
+                        onMouseEnter={event.mode === 'avail' ? (mouseEvent) => updateAvailabilityTooltip(mouseEvent, event.availLvl) : undefined}
+                        onMouseMove={event.mode === 'avail' ? (mouseEvent) => updateAvailabilityTooltip(mouseEvent, event.availLvl) : undefined}
+                        onMouseLeave={event.mode === 'avail' ? handleAvailabilityTooltipLeave : undefined}
+                        data-event-mode={event.mode}
+                        data-availability-count={event.mode === 'avail' ? event.availLvl : undefined}
                         style={{
                           height: `${Math.max(1, visualHeight)}px`,
                           top: `${startMins}px`,
@@ -696,6 +732,21 @@ export default function CustomCalendar({ refreshTrigger, groupId, draftEvent }) 
           </React.Fragment>
         ))}
       </div>
+      {availabilityTooltip && typeof document !== 'undefined'
+        ? createPortal(
+            <div
+              className="availability-tooltip"
+              data-testid="availability-tooltip"
+              style={{
+                left: `${availabilityTooltip.x}px`,
+                top: `${availabilityTooltip.y}px`
+              }}
+            >
+              {formatAvailabilityTooltip(availabilityTooltip.count)}
+            </div>,
+            document.body
+          )
+        : null}
       {loading && <p>Loading events...</p>}
       {selectedEvent && (
         <EventClickModal

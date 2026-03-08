@@ -154,6 +154,20 @@
   color: #6b7280;
 }
 
+.availability-tooltip {
+  position: fixed;
+  z-index: 2200;
+  pointer-events: none;
+  padding: 7px 8px;
+  border-radius: 8px;
+  background: rgba(17, 24, 39, 0.92);
+  color: #f9fafb;
+  font-size: 12px;
+  line-height: 1.2;
+  white-space: nowrap;
+  box-shadow: 0 8px 18px rgba(15, 23, 42, 0.22);
+}
+
 button:disabled {
   opacity: 0.5;
   cursor: not-allowed;
