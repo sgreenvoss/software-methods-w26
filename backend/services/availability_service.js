@@ -34,25 +34,37 @@ const availabilityService = {
     }
 
     // 4. Ch. 7: MVC Separation - Delegate pure math to the Algorithm "Model"
-    console.log("DATA FED TO ALGORITHM:", JSON.stringify(participants, null, 2)); // Debug log to verify input format
     const blocks = computeAvailabilityBlocksAllViews({
       windowStartMs,
       windowEndMs,
       participants,
       granularityMinutes: 15
     });
-    // CustomCalendar expects: {start, end, count}
+
+    const normalizeView = (view = {}) => ({
+      availableCount: Number.isFinite(view.availableCount) ? view.availableCount : 0,
+      busyCount: Number.isFinite(view.busyCount) ? view.busyCount : 0,
+      totalCount: Number.isFinite(view.totalCount) ? view.totalCount : participants.length,
+      availabilityFraction: Number.isFinite(view.availabilityFraction) ? view.availabilityFraction : 0
+    });
+
+    // Keep strict-compatible fields while enriching with multi-view data.
     const formattedBlocks = blocks.map((block) => {
-      // Keep strict-view mapping as the default UI projection.
-      // The algorithm already computes counts; we just reshape them.
-      // No algorithm contract changes needed here.
-      const strictView = block.views && block.views.StrictView ? block.views.StrictView : {};
+      const strictView = normalizeView(block.views && block.views.StrictView ? block.views.StrictView : {});
+      const flexibleView = normalizeView(block.views && block.views.FlexibleView ? block.views.FlexibleView : {});
+      const lenientView = normalizeView(block.views && block.views.LenientView ? block.views.LenientView : {});
+
       return {
         start: new Date(block.startMs).toISOString(),
         end: new Date(block.endMs).toISOString(),
-        count: Number.isFinite(strictView.availableCount) ? strictView.availableCount : 0,
-        availabilityFraction: Number.isFinite(strictView.availabilityFraction) ? strictView.availabilityFraction : 0,
-        totalCount: Number.isFinite(strictView.totalCount) ? strictView.totalCount : 0
+        count: strictView.availableCount,
+        availabilityFraction: strictView.availabilityFraction,
+        totalCount: strictView.totalCount,
+        views: {
+          StrictView: strictView,
+          FlexibleView: flexibleView,
+          LenientView: lenientView
+        }
       };
     });
     // Return the clean data to the controller

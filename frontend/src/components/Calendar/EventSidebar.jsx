@@ -266,9 +266,9 @@ export default function EventSidebar({
                 onChange={(e) => setSelectedBlockingLevel(e.target.value)}
                 className="priority-select-dropdown"
             >
-                <option value="B1">Soft (B1)</option>
-                <option value="B2">Important (B2)</option>
-                <option value="B3">Hard (B3)</option>
+                <option value="B1">Low</option>
+                <option value="B2">Med</option>
+                <option value="B3">High</option>
             </select>
             <br />
             <label>Date & Time</label>

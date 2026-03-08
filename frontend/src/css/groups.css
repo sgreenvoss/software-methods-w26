@@ -12,7 +12,8 @@
 .group-row {
   display: flex;
   align-items: center; /* Vertically center text and buttons */
-  justify-content: space-between; /* Pushes name to left, buttons to right */
+  justify-content: space-between; 
+  /* Pushes name to left, buttons to right */
   background-color: white;
   padding: 15px 20px;
   margin-bottom: 10px;
@@ -84,4 +85,21 @@ button:active {
 .group-row {
   font-weight: bold;
   font-size: 20px;
+}
+
+@media (max-width: 900px) {
+
+  .group-row {
+  display: flex;
+  align-items: center; /* Vertically center text and buttons */
+  /* justify-content: space-between;  */
+  /* Pushes name to left, buttons to right */
+  background-color: white;
+  padding: 15px 20px;
+  margin-bottom: 10px;
+  border-radius: 8px;
+  border: 1px solid #e5e5e5;
+  transition: transform 0.2s, box-shadow 0.2s;
+}
+
 }

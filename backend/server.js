@@ -555,28 +555,16 @@ app.get('/api/get-events', async (req, res) => {
         title: event.event_name,
         start: event.event_start,
         end: event.event_end,
-        event_id: event.gcal_event_id
+        event_id: event.gcal_event_id,
+        priority: event.priority != null && Number.isFinite(Number(event.priority))
+          ? Number(event.priority)
+          : null
       }));
 
       allFormattedEvents = allFormattedEvents.concat(formattedEvents);
     }
     
     return res.json(allFormattedEvents);
-    // get calendar and then retrieve events from db
-    const calID = await db.getCalendarID(req.session.userId);
-    const events = await db.getEventsByCalendarID(calID.calendar_id);
-    
-    // transform db format to frontend format
-    const formattedEvents = events.map(event => ({
-      title: event.event_name,
-      start: event.event_start,
-      end: event.event_end,
-      event_id: event.gcal_event_id,
-      // TEAMNOTE[event-priority]: Preserve event priority in payload so regular-event editing and layering remain compatible.
-      priority: event.priority
-    }));
-    
-    return res.json(formattedEvents);
 
   } catch (error) {
     console.error('Error fetching calendar from db', error);

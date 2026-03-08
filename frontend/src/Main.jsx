@@ -23,7 +23,6 @@ export default function Main() {
 
     // live draft preview of event being created/edited.
     const [draftEvent, setDraftEvent] = useState(null);
-    const [refreshTrigger, setRefreshTrigger] = useState(0);
 
     // Move fetchGroups INSIDE so it can see setGroupsList
     const [eventMode, setEventMode] = useState('blocking');
@@ -93,9 +92,6 @@ export default function Main() {
         fetchPendingInvite();
     }, []);
 
-    console.log("2. Main.jsx current selectedGroupId:", selectedGroupId);
-
-
     // Toggle the sidebar open/closed
     const toggleGroupsSidebar = () => {
         setIsGroupsSidebarOpen(!isGroupsSidebarOpen);
@@ -127,6 +123,8 @@ export default function Main() {
     };
     
     const handleOpenPetition = (groupId) => {
+        // Keep petition target and rendered availability group in sync.
+        setSelectedGroupId(Number(groupId));
         setEventMode('petition');
         setPetitionGroupId(groupId);
         setIsGroupsSidebarOpen(false); // Close groups sidebar
@@ -168,7 +166,6 @@ export default function Main() {
                     onClick={() => {
                         toggleGroupsSidebar();
                         if (isEventSidebarOpen) setIsEventSidebarOpen(false);
-                        setSelectedGroupId(null);
                     }} 
                     id="groupsBtn"
                     className={isGroupsSidebarOpen ? 'active-btn' : ''}
@@ -198,7 +195,8 @@ export default function Main() {
                 {isGroupsSidebarOpen && (
                     <aside className="groups-sidebar">
                         <Groups
-                            onSelectGroup={(id) => setSelectedGroupId(Number(id))}
+                            selectedGroupId={selectedGroupId}
+                            onSelectGroup={(id) => setSelectedGroupId(id == null ? null : Number(id))}
                             onOpenPetition={handleOpenPetition} 
                             refreshSignal={groupsRefreshSignal}
                         />
@@ -223,9 +221,8 @@ export default function Main() {
                             onFinalize={() => {
                                 setIsEventSidebarOpen(false);
                                 setDraftEvent(null);
-                                // trigger a calendar refresh here
-                                // setRefreshTrigger(prev => prev + 1);
-                                <Calendar refreshTrigger={calRefreshSignal} draftEvent={draftEvent} selectedGroupId={selectedGroupId}/>
+                                setCalRefreshSignal((prev) => prev + 1);
+                                //<Calendar refreshTrigger={calRefreshSignal} draftEvent={draftEvent} selectedGroupId={selectedGroupId}/>
                             }}
                         />
                     </aside>

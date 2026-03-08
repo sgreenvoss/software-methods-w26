@@ -49,7 +49,7 @@ button {
   color: white;
   /* width:100% */
   width: 37%;
-  min-width: 300px;
+  /* min-width: 300px; */
   max-width: 450px;
 }
 
@@ -58,7 +58,7 @@ button {
   color: white;
   /* width:100% */
   width: 37%;
-  min-width: 300px;
+  /* min-width: 300px; */
   max-width: 450px;
 }
 
@@ -115,7 +115,8 @@ button:hover {
 
 .groups-sidebar {
   width: 35%;
-  min-width: 300px;
+  width: 35%;
+  /* min-width: 300px; */
   max-width: 400px;
   background-color: #f4f5f7;
   border-right: 1px solid #ccc;
@@ -127,7 +128,7 @@ button:hover {
 
 .event-sidebar {
   width: 35%;
-  min-width: 300px;
+  /* min-width: 300px; */
   max-width: 400px;
   background-color: #f4f5f7;
   border-right: 1px solid #ccc;
@@ -142,4 +143,34 @@ button:hover {
   overflow-y: auto; /* Allows calendar to scroll independently */
   padding: 10px;
   background-color: #f4f4f4;
+}
+
+/* --- MOBILE LAYOUT FIX --- */
+/* Target screens smaller than a standard tablet (768px) */
+@media (max-width: 900px) {
+  
+  .main-layout {
+    /* This tells the absolutely positioned sidebars to stick to the edges of this container */
+    position: relative; 
+  }
+
+  button {
+    font-size: 10px;
+  }
+  .groups-sidebar, 
+  .event-sidebar {
+    /* position: absolute; */
+    top: 0;
+    left: 0;
+    width: 60%;          /* Take up the full width of the screen */
+    height: 100%;         /* Take up the full height */
+    z-index: 100;         /* Stack it high so it covers the calendar (which is z-index 1-4) */
+    background-color: var(--your-background-color, #ffffff); /* MUST be solid so calendar doesn't bleed through */
+    
+    /* Optional: Add a subtle shadow so it pops off the background */
+    box-shadow: 0px 4px 10px rgba(0, 0, 0, 0.3);
+    
+    /* Ensure the sidebar itself can scroll if the phone is very short */
+    overflow-y: auto; 
+  }
 }

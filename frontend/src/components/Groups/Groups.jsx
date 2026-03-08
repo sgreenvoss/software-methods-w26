@@ -6,7 +6,7 @@ import { ErrorContext } from '../../ErrorContext.jsx';
 import '../../css/groups.css';
 import '../../css/groupsModal.css';
 
-export default function Groups( {onSelectGroup, onOpenPetition, refreshSignal = 0} ) {
+export default function Groups({ selectedGroupId, onSelectGroup, onOpenPetition, refreshSignal = 0 }) {
     const [groups, setGroups] = useState([]);
     const [showModal, setShowModal] = useState(false);
     const [loading, setLoading] = useState(true);
@@ -43,11 +43,10 @@ export default function Groups( {onSelectGroup, onOpenPetition, refreshSignal = 
     const handleLeaveGroup = async (groupId) => {
         console.log("leaving group", groupId);
         try {
-            await apiPost("/group/leave", { groupId: groupId });
+            await apiPost('/group/leave', { groupId: groupId });
             // Refresh list after leaving
             fetchGroups();
-            if (activeGroupID === groupId) {
-                setActiveGroupID(null);
+            if (Number(selectedGroupId) === Number(groupId)) {
                 onSelectGroup(null);
                 // Deselect group if it was the active one
             }
@@ -78,7 +77,7 @@ export default function Groups( {onSelectGroup, onOpenPetition, refreshSignal = 
             {loading ? <p>Loading...</p> : null}
 
             {groups.map((group) => {
-                const isActive = activeGroupID === group.group_id;
+                const isActive = Number(selectedGroupId) === Number(group.group_id);
                 return (
                 <div key={group.group_id} className="group-row">
                     <span>{group.group_name}</span>
@@ -99,24 +98,20 @@ export default function Groups( {onSelectGroup, onOpenPetition, refreshSignal = 
                             style={{background: isActive ? '#26aa5d' : '#2ecc71'}}
                             onClick={() => {
                                 if (isActive) {
-                                    // If already active, turn it off
-                                    setActiveGroupId(null);
-                                    onSelectGroup(null); // Tell Main to clear the ID
+                                    onSelectGroup(null);
                                 } else {
-                                    // If not active, turn it on
-                                    setActiveGroupId(group.group_id);
-                                    onSelectGroup(group.group_id); // Tell Main to fetch this ID
+                                    onSelectGroup(group.group_id);
                                 }
                             }}
                         >
-                            {isActive ? "Hide" : "View"}
+                            {isActive ? 'Hide' : 'View'}
                         </button>
 
                         <button 
                             id="petitionBtn" 
                             onClick={() => {
                                 console.log("Create petition for group", group.group_id);
-                                onOpenPetition(group.group_id); // handoff to Main to open petition sidebar with this group ID
+                                onOpenPetition(group.group_id);
                             }}
                         >
                             Petition
@@ -130,7 +125,8 @@ export default function Groups( {onSelectGroup, onOpenPetition, refreshSignal = 
                         </button>
                     </div>
                 </div>
-            )})}
+            );
+            })}
 
             {/* Conditionally render the modal */}
             {showModal && (
@@ -145,7 +141,7 @@ export default function Groups( {onSelectGroup, onOpenPetition, refreshSignal = 
                 <GroupInfoModal
                     groupId={infoModalGroup.group_id}
                     groupName={infoModalGroup.group_name}
-                    onClose={() => setInfoModalGroup(null)} // Closes modal on click
+                    onClose={() => setInfoModalGroup(null)}
                 />
             )}
         </section>
