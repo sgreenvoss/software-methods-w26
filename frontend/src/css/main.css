@@ -154,7 +154,10 @@ button:hover {
 /* --- MOBILE LAYOUT FIX --- */
 /* Target screens smaller than a standard tablet (768px) */
 @media (max-width: 900px) {
-  
+  #beta {
+    display: none;
+  }
+
   .main-layout {
     /* This tells the absolutely positioned sidebars to stick to the edges of this container */
     position: relative; 

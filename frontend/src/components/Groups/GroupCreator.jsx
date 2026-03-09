@@ -41,7 +41,7 @@ function UserSearch({ onUserSelect }) {
         {suggestions.length > 0 && (
             <ul className="suggestions">
                 {suggestions.map(user => (
-                    <li 
+                    <li className="suggestion"
                     key={user.id}
                     onClick={() => {
                         console.log("clicked", user);
@@ -94,7 +94,7 @@ export default function GroupCreatorModal({ onClose, onGroupCreated, onDone }) {
     };
 
     const removeUser = (userId) => {
-        setUsernames(usernames.filter(u => u.id !== userId));
+        setUsernames(usernames.filter(u => u.user_id !== userId));
     };
 
     const handleCopyClick = async () => {
