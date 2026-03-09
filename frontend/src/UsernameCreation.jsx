@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { apiGet, apiPost } from './api.js';
-import CalendarSelectionModal from './components/CalendarSelectionModal.jsx';
+import CalendarSelectionModal from './components/CalendarSelectionModal.jsx'; 
 
 export default function UsernameCreation() {
     const [username, setUsername] = useState('');
@@ -90,32 +90,40 @@ export default function UsernameCreation() {
  
     return (
         <>
-        {step === 'username' ? (
-            <div style={{ maxWidth: '500px', margin: '50px auto' }}>
-                <h1>Create Your Username</h1>
-                <form onSubmit={handleSubmit}>
-                    <label>
-                        Username:
-                        <input 
-                            value={username}
-                            onChange={(e) => setUsername(e.target.value)}
-                            disabled={isLoading}
-                        />
-                        <button type="submit" disabled={isLoading}>
-                            {isLoading ? 'Creating...' : 'Next'}
-                        </button>
-                    </label>
-                    {errors && errors.map((err, idx) => (
-                        <p key={idx} style={{color: 'red'}}>{err}</p>
-                    ))}
-                </form>
-                <ul>
-                    <li>Username must be between 4 and 16 characters long.</li>
-                    <li>Username may not contain special characters except for '.' and '_'</li>
-                </ul>
+        <div className="onboarding-container">
+            <div className="login-container">
+                <header>
+                    <p id="logo">Social Scheduler</p>
+                    <p id="beta">beta</p>
+                </header>
             </div>
-        ) : null}
-
+            {step === 'username' ? (
+                <div className='username-creator'>
+                    <h1>Create Your Username</h1>
+                    <form onSubmit={handleSubmit}>
+                        <label>
+                            Username:
+                            <input 
+                                value={username}
+                                onChange={(e) => setUsername(e.target.value)}
+                                disabled={isLoading}
+                                style={{marginLeft:'1em'}}
+                            />
+                            <button type="submit" disabled={isLoading} style={{marginLeft:'1em'}}>
+                                {isLoading ? 'Creating...' : 'Next'}
+                            </button>
+                        </label>
+                        {errors && errors.map((err, idx) => (
+                            <p key={idx} style={{color: 'red'}}>{err}</p>
+                        ))}
+                    </form>
+                    <ul>
+                        <li>Username must be between 4 and 16 characters long.</li>
+                        <li>Username may not contain special characters except for '.' and '_'</li>
+                    </ul>
+                </div>
+            ) : null}
+        </div>
         <CalendarSelectionModal
             isOpen={step === 'calendars'}
             calendars={calendars}

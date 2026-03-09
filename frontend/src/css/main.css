@@ -26,11 +26,11 @@ header {
   display: flex;
   justify-content: center; /* Centers  horizontally */
   align-items: center;     /* Centers  vertically */
-  gap: clamp(5px, 3vw, 20px);  /* Gap scales down on mobile */
+  /* gap: clamp(5px, 3vw, 20px);  Gap scales down on mobile */
   padding: 10px;
   min-height: 60px;
   flex-wrap: wrap;  /* Allows wrapping if needed */
-  overflow-x: hidden;  /* Prevents overflow */
+  overflow-y: hidden;  /* Prevents overflow */
 }
 
 /* 2. Shared button styles */
@@ -90,14 +90,16 @@ button:hover {
 }
 
 #beta {
+  margin:0.5em;
   color: cornflowerblue;
   font-weight:bolder;
   font-size: clamp(14px, 5vw, 24px);  /* Scales from 14px to 24px */
-  margin-left: clamp(5px, 2vw, 10px);  /* Margin also scales */
+  /* margin-left: clamp(5px, 2vw, 10px);  Margin also scales */
   white-space: nowrap;  /* Prevents wrapping */
 }
 
 #logo {
+  margin: 0.5em;
   color:darkslategray;
   font-weight:bolder;
   font-size: clamp(20px, 8vw, 40px);  /* Scales from 20px to 40px */
@@ -144,7 +146,7 @@ button:hover {
 
 .calendar-main {
   flex-grow: 1; /* Takes up all remaining width */
-  overflow-y: hidden;
+  overflow-y: auto;
   padding: 10px;
   background-color: #f4f4f4;
 }
