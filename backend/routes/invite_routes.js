@@ -1,4 +1,6 @@
 const { groupRequest } = require("../emailer.js");
+import { setTimeout as delay } from 'timers/promises';
+
 
 module.exports = function registerInviteRoutes(app, { db, inviteToken, inviteState }) {
   async function getGroupForInvite(groupId) {
@@ -31,6 +33,7 @@ module.exports = function registerInviteRoutes(app, { db, inviteToken, inviteSta
                             req.body.sender_user,
                             req.body.shareable_link);
         }
+        await delay(500); // can only call email api twice per second.
       }
       return res.status(201).json({success: true});
     } catch (error) {

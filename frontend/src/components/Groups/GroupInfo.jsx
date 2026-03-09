@@ -67,7 +67,7 @@ export default function GroupInfoModal({ groupId, groupName, onClose }) {
         });
 
         if (inviteResponse.invite) {
-            setInviteLink(inviteResponse.invite)
+            setInviteLink('https://' + inviteResponse.invite)
         } 
 
     }
