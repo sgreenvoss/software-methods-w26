@@ -144,7 +144,7 @@ button:hover {
 
 .calendar-main {
   flex-grow: 1; /* Takes up all remaining width */
-  overflow-y: auto; /* Allows calendar to scroll independently */
+  overflow-y: hidden;
   padding: 10px;
   background-color: #f4f4f4;
 }

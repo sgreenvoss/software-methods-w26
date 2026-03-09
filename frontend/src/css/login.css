@@ -1,4 +1,4 @@
-header {
+.login-container header {
   display: flex;
   justify-content: center;
   align-items: center;
@@ -13,7 +13,7 @@ header {
   overflow: hidden;
 }
 
-body {
+.login-container body {
   background-image: radial-gradient(circle, rgb(249, 206, 183) 1px, transparent 1px);
   background-size: 20px 20px;
   margin-top: 200px;
