@@ -642,7 +642,7 @@ export default function CustomCalendar({ refreshTrigger, groupId, draftEvent }) 
 
         {hours.map(hour => (
           <React.Fragment key={hour}>
-            <div className="time-label">
+            <div className="time-label" id={`${hour === 0 || hour === 12 ? 12 : hour % 12}:00${hour < 12 ? 'am' : 'pm'}`}>
               {`${hour === 0 || hour === 12 ? 12 : hour % 12}:00${hour < 12 ? 'am' : 'pm'}`}
             </div>
 
