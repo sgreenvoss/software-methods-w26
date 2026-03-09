@@ -1,58 +1,88 @@
 #calendar-container {
   display: flex;
   flex-direction: column;
-  gap: 12px;
-  height: 100%;
-  min-height: 0;
+
+  height: calc(100vh - 80px); 
   width: 100%;
-  background-color: transparent;
+
+  background-color: white; /* Or your preferred background */
+  border-radius: 8px;      /* Optional: rounds the outer corners */
+  overflow: hidden;
 }
 
-.calendar-hero {
-  flex-shrink: 0;
-  background-color: #ffffff;
+.calendar-header {
+  flex-shrink: 0; /* Prevents the header from getting squished when the grid gets big */
+  padding: 15px;
+  border-bottom: 1px solid #ddd;
+  background-color: #f8f9fa; 
+  /* ... keep your existing flex/justify-content rules here ... */
+}
+
+.calendar-grid {
+  display: grid;
+  grid-template-columns: 80px repeat(7, 1fr);
+  width: 100%;
+  position: relative;
+  flex: 1;
+  overflow-y: auto;
+  overflow-x: auto;
+}
+
+.corner-cell {
+  position: sticky;
+  top: 0;
+  z-index: 20; /* Keep it above the events AND the time labels */
+  background-color: white; /* MUST be solid so events don't show through */
+  border-bottom: 1px solid #ddd; /* Adds a nice dividing line */
+}
+
+.calendar-cell {
+  position: relative;
+  min-height: 60px; 
   border: 1px solid #e5e5e5;
-  border-radius: 10px;
-  box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+  /* width: 100%; */
+}
+
+.calendar-event {
+  position: absolute; /* Allows event to cross cell borders*/
+  width: 80%;
+
+  /* background-color: cornflowerblue; */
+  color: white;
+  font-size: 12px;
+
+  padding: 4px; /*for displaying title*/
+  z-index: 10;
+  border-radius: 4px;
   overflow: hidden;
+  box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+}
+
+.day-header {
+  text-align: center;
+  font-weight: bold;
+  position: sticky;
+  top: 0;
+  z-index: 15; /* High enough to cover events (which are z-index 1-4) */
+  background-color: white; /* MUST be solid, or the scrolling events will mix with the text! */
+  border-bottom: 1px solid #ddd;
+}
+
+.time-label {
+  text-align: right;
+  padding-right: 5px;
 }
 
 .calendar-header {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  gap: 16px;
-  padding: 16px 18px;
+  margin-bottom: 10px;
 }
 
-.calendar-nav-btn {
-  padding: 9px 14px;
-  min-width: 110px;
-  border: 1px solid #d5d7da;
-  border-radius: 8px;
-  background: #e5e5e5;
-  color: #34333c;
-  font-size: 15px;
-  line-height: 1.2;
-  box-shadow: none;
-}
-
-.calendar-title-block {
-  flex: 1;
-  min-width: 0;
-  text-align: center;
-}
-
-.calendar-month-title {
-  margin: 0;
-  color: darkslategray;
-  font-size: 1.7rem;
-}
-
-.calendar-week-range {
-  margin: 4px 0 0;
-  color: #6f6e76;
-  font-size: 0.95rem;
+.calendar-header button {
+  padding: 4px 10px;
+  cursor: pointer;
 }
 
 .availability-controls {
@@ -60,32 +90,26 @@
   justify-content: space-between;
   align-items: center;
   gap: 12px;
-  padding: 14px 18px 18px;
+  margin-bottom: 12px;
   flex-wrap: wrap;
-  border-top: 1px solid #e5e5e5;
 }
 
 .availability-view-toggle {
   display: flex;
   gap: 8px;
-  flex-wrap: wrap;
 }
 
 .availability-view-btn {
-  padding: 8px 12px;
+  padding: 6px 10px;
   border: 1px solid #d1d5db;
   border-radius: 8px;
-  background: #e5e5e5;
-  color: #34333c;
-  font-size: 0.9rem;
-  font-weight: 600;
-  box-shadow: none;
+  background: #f8fafc;
+  font-weight: 500;
 }
 
 .availability-view-btn-active {
-  background: #2ecc71;
-  border-color: #26aa5d;
-  color: #ffffff;
+  background: #dcfce7;
+  border-color: #86efac;
   font-weight: 700;
 }
 
@@ -94,17 +118,12 @@
   align-items: center;
   gap: 10px;
   flex-wrap: wrap;
-  padding: 8px 12px;
-  border: 1px solid #e5e5e5;
-  border-radius: 8px;
-  background: #f4f5f7;
   font-size: 12px;
   color: #374151;
 }
 
 .availability-legend-label {
   font-weight: 600;
-  color: darkslategray;
 }
 
 .availability-legend-swatches {
@@ -135,89 +154,6 @@
   color: #6b7280;
 }
 
-.calendar-grid-shell {
-  flex: 1;
-  min-height: 0;
-  background-color: #ffffff;
-  border: 1px solid #e5e5e5;
-  border-radius: 10px;
-  box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
-  overflow: hidden;
-}
-
-.calendar-grid {
-  display: grid;
-  grid-template-columns: 80px repeat(7, 1fr);
-  width: 100%;
-  height: 100%;
-  position: relative;
-  flex: 1;
-  overflow-y: auto;
-  overflow-x: auto;
-}
-
-.corner-cell {
-  position: sticky;
-  top: 0;
-  z-index: 20;
-  background-color: #f4f5f7;
-  border-bottom: 1px solid #d9dee6;
-}
-
-.day-header {
-  text-align: center;
-  font-weight: bold;
-  position: sticky;
-  top: 0;
-  z-index: 15;
-  padding: 12px 8px;
-  background-color: #f4f5f7;
-  border-bottom: 1px solid #d9dee6;
-  color: darkslategray;
-}
-
-.day-header.is-today {
-  background-color: #e8f2ff;
-  border-bottom: 2px solid #3498db;
-  color: #2a7ab0;
-}
-
-.time-label {
-  min-height: 60px;
-  box-sizing: border-box;
-  text-align: right;
-  padding: 10px 10px 0 0;
-  border-right: 1px solid #e5e5e5;
-  border-bottom: 1px solid #e5e5e5;
-  background-color: #fafafa;
-  color: #6f6e76;
-  font-size: 12px;
-}
-
-.calendar-cell {
-  position: relative;
-  min-height: 60px;
-  border: 1px solid #e5e5e5;
-  background-color: #ffffff;
-}
-
-.calendar-cell.is-today {
-  background-color: #f5f9ff;
-}
-
-.calendar-event {
-  position: absolute;
-  width: 80%;
-  color: white;
-  font-size: 12px;
-  line-height: 1.25;
-  padding: 5px 6px;
-  z-index: 10;
-  border-radius: 6px;
-  overflow: hidden;
-  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.12);
-}
-
 .availability-tooltip {
   position: fixed;
   z-index: 2200;
@@ -237,32 +173,6 @@ button:disabled {
   cursor: not-allowed;
 }
 
-@media (max-width: 900px) {
-  .calendar-header {
-    flex-wrap: wrap;
-    justify-content: center;
-  }
-
-  .calendar-title-block {
-    order: -1;
-    flex-basis: 100%;
-  }
-
-  .calendar-nav-btn {
-    flex: 1 1 160px;
-    min-width: 0;
-  }
-
-  .availability-controls {
-    padding: 12px 14px 14px;
-    align-items: flex-start;
-  }
-
-  .availability-legend {
-    width: 100%;
-  }
-}
-
 .calendar-event.petition-event {
   font-weight: 600;
   border: 1px solid rgba(0, 0, 0, 0.15);
@@ -275,7 +185,7 @@ button:disabled {
 
 .calendar-event.petition-event.petition-failed {
   background-color: #9ea3a8;
-  color: #1f1f1f;
+  color: #ffffff;
 }
 
 .calendar-event.petition-event.petition-accepted-all {

@@ -121,24 +121,6 @@ function findCalendarEvent(container, title) {
   );
 }
 
-function buildPetitionEvent({ title, hour, acceptedCount, declinedCount, groupSize, status }) {
-  const start = getCurrentWeekDate(hour, 0);
-  const end = new Date(start.getTime() + (30 * 60 * 1000));
-
-  return {
-    petition_id: `${title}-petition`,
-    group_id: 1,
-    title,
-    start_time: start.toISOString(),
-    end_time: end.toISOString(),
-    accepted_count: acceptedCount,
-    declined_count: declinedCount,
-    group_size: groupSize,
-    status,
-    current_user_response: acceptedCount > 0 ? 'ACCEPTED' : null
-  };
-}
-
 function createDeferred() {
   let resolve;
   let reject;
@@ -161,18 +143,6 @@ function expectedAvailabilityColor(availableCount, maxVisibleCount) {
   const saturation = 60 + (18 * t);
   const lightness = 84 - (42 * t);
   return `hsl(145, ${saturation}%, ${lightness}%)`;
-}
-
-function expectedAvailabilityOpacity(availableCount, maxVisibleCount) {
-  if (availableCount <= 0) {
-    return 0;
-  }
-  if (maxVisibleCount <= 1) {
-    return 0.82;
-  }
-
-  const t = (availableCount - 1) / (maxVisibleCount - 1);
-  return 0.35 + (0.47 * t);
 }
 
 function normalizeCssColor(cssColor) {
@@ -254,16 +224,8 @@ describe('CustomCalendar availability view switching', () => {
     expect(findAvailabilityBlock(container, 2).style.backgroundColor).toBe(
       normalizeCssColor(expectedAvailabilityColor(2, 3))
     );
-    expect(parseFloat(findAvailabilityBlock(container, 2).style.opacity)).toBeCloseTo(
-      expectedAvailabilityOpacity(2, 3),
-      3
-    );
     expect(findLegendSwatch(container, 2).style.backgroundColor).toBe(
       normalizeCssColor(expectedAvailabilityColor(2, 3))
-    );
-    expect(parseFloat(findLegendSwatch(container, 2).style.opacity)).toBeCloseTo(
-      expectedAvailabilityOpacity(2, 3),
-      3
     );
 
     await act(async () => {
@@ -274,16 +236,8 @@ describe('CustomCalendar availability view switching', () => {
     expect(findAvailabilityBlock(container, 2).style.backgroundColor).toBe(
       normalizeCssColor(expectedAvailabilityColor(2, 4))
     );
-    expect(parseFloat(findAvailabilityBlock(container, 2).style.opacity)).toBeCloseTo(
-      expectedAvailabilityOpacity(2, 4),
-      3
-    );
     expect(findLegendSwatch(container, 2).style.backgroundColor).toBe(
       normalizeCssColor(expectedAvailabilityColor(2, 4))
-    );
-    expect(parseFloat(findLegendSwatch(container, 2).style.opacity)).toBeCloseTo(
-      expectedAvailabilityOpacity(2, 4),
-      3
     );
 
     await act(async () => {
@@ -294,43 +248,11 @@ describe('CustomCalendar availability view switching', () => {
     expect(findAvailabilityBlock(container, 2).style.backgroundColor).toBe(
       normalizeCssColor(expectedAvailabilityColor(2, 2))
     );
-    expect(parseFloat(findAvailabilityBlock(container, 2).style.opacity)).toBeCloseTo(
-      expectedAvailabilityOpacity(2, 2),
-      3
-    );
     expect(findLegendSwatch(container, 2).style.backgroundColor).toBe(
       normalizeCssColor(expectedAvailabilityColor(2, 2))
     );
-    expect(parseFloat(findLegendSwatch(container, 2).style.opacity)).toBeCloseTo(
-      expectedAvailabilityOpacity(2, 2),
-      3
-    );
 
     expect(countAvailabilityCalls()).toBe(initialCalls);
-  });
-
-  test('higher availability counts render with higher opacity in both blocks and legend', async () => {
-    apiGet.mockImplementation(async (path) => {
-      if (path === '/api/get-events') return [];
-      if (path === '/api/me') return { user: { user_id: 100 } };
-      if (typeof path === 'string' && path.includes('/api/groups/1/availability?')) return buildAvailabilityResponse('contrast');
-      if (typeof path === 'string' && path === '/api/groups/1/petitions') return [];
-      if (path === '/api/petitions') return [];
-      return [];
-    });
-
-    await act(async () => {
-      root.render(<CustomCalendar groupId={1} draftEvent={null} />);
-    });
-    await flushMultiple();
-
-    const lowerBlock = findAvailabilityBlock(container, 2);
-    const higherBlock = findAvailabilityBlock(container, 3);
-    const lowerSwatch = findLegendSwatch(container, 2);
-    const higherSwatch = findLegendSwatch(container, 3);
-
-    expect(parseFloat(higherBlock.style.opacity)).toBeGreaterThan(parseFloat(lowerBlock.style.opacity));
-    expect(parseFloat(higherSwatch.style.opacity)).toBeGreaterThan(parseFloat(lowerSwatch.style.opacity));
   });
 
   test('restores per-group in-session mode selection and defaults first view to Flexible', async () => {
@@ -439,62 +361,6 @@ describe('CustomCalendar availability view switching', () => {
     expect(customEvent.style.borderColor).toBe('rgb(1, 2, 3)');
   });
 
-  test('renders petition statuses with distinct colors and only accepted-all uses white text', async () => {
-    apiGet.mockImplementation(async (path) => {
-      if (path === '/api/get-events') return [];
-      if (path === '/api/me') return { user: { user_id: 100 } };
-      if (typeof path === 'string' && path.includes('/api/groups/1/availability?')) return { ok: true, blocks: [] };
-      if (path === '/api/groups/1/petitions') {
-        return [
-          buildPetitionEvent({
-            title: 'Open Petition',
-            hour: 9,
-            acceptedCount: 1,
-            declinedCount: 0,
-            groupSize: 4,
-            status: 'OPEN'
-          }),
-          buildPetitionEvent({
-            title: 'Declined Petition',
-            hour: 10,
-            acceptedCount: 1,
-            declinedCount: 1,
-            groupSize: 4,
-            status: 'FAILED'
-          }),
-          buildPetitionEvent({
-            title: 'Accepted Petition',
-            hour: 11,
-            acceptedCount: 4,
-            declinedCount: 0,
-            groupSize: 4,
-            status: 'ACCEPTED_ALL'
-          })
-        ];
-      }
-      if (path === '/api/petitions') return [];
-      return [];
-    });
-
-    await act(async () => {
-      root.render(<CustomCalendar groupId={1} draftEvent={null} />);
-    });
-    await flushMultiple();
-
-    const openPetition = findCalendarEvent(container, 'Open Petition');
-    const declinedPetition = findCalendarEvent(container, 'Declined Petition');
-    const acceptedPetition = findCalendarEvent(container, 'Accepted Petition');
-
-    expect(openPetition.style.backgroundColor).toBe('rgb(244, 211, 94)');
-    expect(openPetition.style.color).toBe('rgb(31, 31, 31)');
-
-    expect(declinedPetition.style.backgroundColor).toBe('rgb(158, 163, 168)');
-    expect(declinedPetition.style.color).toBe('rgb(31, 31, 31)');
-
-    expect(acceptedPetition.style.backgroundColor).toBe('rgb(82, 183, 136)');
-    expect(acceptedPetition.style.color).toBe('rgb(255, 255, 255)');
-  });
-
   test('strict-compatible payload without views falls back to StrictView', async () => {
     apiGet.mockImplementation(async (path) => {
       if (path === '/api/get-events') return [];
@@ -522,16 +388,8 @@ describe('CustomCalendar availability view switching', () => {
     expect(fallbackBlock.style.backgroundColor).toBe(
       normalizeCssColor(expectedAvailabilityColor(2, 2))
     );
-    expect(parseFloat(fallbackBlock.style.opacity)).toBeCloseTo(
-      expectedAvailabilityOpacity(2, 2),
-      3
-    );
     expect(fallbackSwatch.style.backgroundColor).toBe(
       normalizeCssColor(expectedAvailabilityColor(2, 2))
-    );
-    expect(parseFloat(fallbackSwatch.style.opacity)).toBeCloseTo(
-      expectedAvailabilityOpacity(2, 2),
-      3
     );
 
     await act(async () => {

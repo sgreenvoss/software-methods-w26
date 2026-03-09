@@ -53,8 +53,6 @@ button {
   width: 37%;
   /* min-width: 300px; */
   max-width: 450px;
-  border-radius: 10px;
-  box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
 }
 
 #eventBtn {
@@ -64,8 +62,6 @@ button {
   width: 37%;
   /* min-width: 300px; */
   max-width: 450px;
-  border-radius: 10px;
-  box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
 }
 
 #eventBtn:active {
@@ -79,26 +75,14 @@ button {
 #manButtons {
   display: flex;
   justify-content: flex-end;
-  gap: 10px;
-  padding: 12px 16px 6px;
-}
-
-#manButtons button {
-  padding: 8px 14px;
-  border: 1px solid #d5d7da;
-  border-radius: 8px;
-  background-color: #e5e5e5;
-  color: #34333c;
-  font-size: 14px;
-  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.08);
+  gap: 15px;
+  padding: 10px;
 }
 
 #sidebarToggle {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  gap: 12px;
-  padding: 0 16px 10px;
 }
 
 button:hover {
@@ -140,10 +124,10 @@ button:hover {
   width: 35%;
   /* min-width: 300px; */
   max-width: 400px;
-  background-color: #ffffff;
-  border-right: 1px solid #e5e5e5;
+  background-color: #f4f5f7;
+  border-right: 1px solid #ccc;
   overflow-y: auto; /* Allows scrolling if group list gets long */
-  padding: 12px;
+  padding: 10px;
   flex-shrink: 0; /* Prevents sidebar from shrinking too much */
   transition: width 0.3s ease; /* Optional animation if you switch to CSS-based toggling */
 }
@@ -152,29 +136,19 @@ button:hover {
   width: 35%;
   /* min-width: 300px; */
   max-width: 400px;
-  background-color: #ffffff;
-  border-right: 1px solid #e5e5e5;
+  background-color: #f4f5f7;
+  border-right: 1px solid #ccc;
   overflow-y: auto; /* Allows scrolling if group list gets long */
-  padding: 12px;
+  padding: 10px;
   flex-shrink: 0; /* Prevents sidebar from shrinking too much */
   transition: width 0.3s ease; /* Optional animation if you switch to CSS-based toggling */
 }
 
 .calendar-main {
-  display: flex;
   flex-grow: 1; /* Takes up all remaining width */
-  overflow-y: auto; /* Allows calendar to scroll independently */
-  min-width: 0;
-  padding: 0 16px 16px;
-  background-color: #f4f5f7;
-}
-
-.calendar-home-panel {
-  display: flex;
-  flex: 1;
-  height: 100%;
-  min-width: 0;
-  min-height: 0;
+  overflow-y: auto;
+  padding: 10px;
+  background-color: #f4f4f4;
 }
 
 /* --- MOBILE LAYOUT FIX --- */
@@ -192,31 +166,6 @@ button:hover {
   button {
     font-size: 10px;
   }
-
-  #manButtons {
-    flex-wrap: wrap;
-    padding: 10px 12px 4px;
-  }
-
-  #manButtons button {
-    font-size: 12px;
-  }
-
-  #sidebarToggle {
-    flex-wrap: wrap;
-    padding: 0 12px 10px;
-  }
-
-  #groupsBtn,
-  #eventBtn {
-    width: 100%;
-    max-width: none;
-  }
-
-  .calendar-main {
-    padding: 0 12px 12px;
-  }
-
   .groups-sidebar, 
   .event-sidebar {
     /* position: absolute; */

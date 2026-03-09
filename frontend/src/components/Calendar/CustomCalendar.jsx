@@ -8,10 +8,6 @@ import '../../css/calendar.css';
 const AVAILABILITY_VIEWS = ['StrictView', 'FlexibleView', 'LenientView'];
 const DEFAULT_GROUP_VIEW = 'FlexibleView';
 const FALLBACK_VIEW = 'StrictView';
-const DEEMPHASIZED_EVENT_OPACITY = 0.5;
-const AVAILABILITY_MIN_OPACITY = 0.35;
-const AVAILABILITY_MAX_OPACITY = 0.82;
-const DAY_MS = 24 * 60 * 60 * 1000;
 const BLOCKING_LEVELS = Object.freeze({
   B1: 'B1',
   B2: 'B2',
@@ -38,37 +34,6 @@ function isCurrentWeek(date) {
   return date.getTime() === currWeekStart.getTime();
 }
 
-function isSameLocalDay(left, right) {
-  return left.getFullYear() === right.getFullYear()
-    && left.getMonth() === right.getMonth()
-    && left.getDate() === right.getDate();
-}
-
-function formatWeekRange(start, end) {
-  if (!Number.isFinite(start?.getTime?.()) || !Number.isFinite(end?.getTime?.())) {
-    return '';
-  }
-
-  const startMonth = start.toLocaleString('default', { month: 'long' });
-  const endMonth = end.toLocaleString('default', { month: 'long' });
-  const startDay = start.getDate();
-  const endDay = end.getDate();
-  const startYear = start.getFullYear();
-  const endYear = end.getFullYear();
-  const sameMonth = start.getMonth() === end.getMonth() && start.getFullYear() === end.getFullYear();
-  const sameYear = start.getFullYear() === end.getFullYear();
-
-  if (sameMonth) {
-    return `${startMonth} ${startDay} - ${endDay}, ${startYear}`;
-  }
-
-  if (sameYear) {
-    return `${startMonth} ${startDay} - ${endMonth} ${endDay}, ${startYear}`;
-  }
-
-  return `${startMonth} ${startDay}, ${startYear} - ${endMonth} ${endDay}, ${endYear}`;
-}
-
 function getAvailabilityColor(availableCount, maxVisibleCount) {
   if (availableCount <= 0) {
     return 'transparent';
@@ -83,61 +48,8 @@ function getAvailabilityColor(availableCount, maxVisibleCount) {
   return `hsl(145, ${saturation}%, ${lightness}%)`;
 }
 
-function getAvailabilityOpacity(availableCount, maxVisibleCount) {
-  if (availableCount <= 0) {
-    return 0;
-  }
-  if (maxVisibleCount <= 1) {
-    return AVAILABILITY_MAX_OPACITY;
-  }
-
-  const t = (availableCount - 1) / (maxVisibleCount - 1);
-  return AVAILABILITY_MIN_OPACITY + ((AVAILABILITY_MAX_OPACITY - AVAILABILITY_MIN_OPACITY) * t);
-}
-
 function formatAvailabilityTooltip(count) {
   return count === 1 ? '1 person available' : `${count} people available`;
-}
-
-function spansMultipleLocalDays(start, end) {
-  if (!Number.isFinite(start?.getTime?.()) || !Number.isFinite(end?.getTime?.()) || end <= start) {
-    return false;
-  }
-
-  const inclusiveEnd = new Date(end.getTime() - 1);
-  return start.getFullYear() !== inclusiveEnd.getFullYear()
-    || start.getMonth() !== inclusiveEnd.getMonth()
-    || start.getDate() !== inclusiveEnd.getDate();
-}
-
-function shouldDeEmphasizeEventSegment(event) {
-  return event?.mode !== 'avail' && (event?.isAllDay || event?.spansMultipleDays);
-}
-
-function isDateOnlyText(value) {
-  return typeof value === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(value);
-}
-
-function isLocalMidnight(date) {
-  return Number.isFinite(date?.getTime?.())
-    && date.getHours() === 0
-    && date.getMinutes() === 0
-    && date.getSeconds() === 0
-    && date.getMilliseconds() === 0;
-}
-
-function getLocalCalendarDayNumber(date) {
-  return Date.UTC(date.getFullYear(), date.getMonth(), date.getDate()) / DAY_MS;
-}
-
-function isWholeLocalDayRange(start, end) {
-  if (!Number.isFinite(start?.getTime?.()) || !Number.isFinite(end?.getTime?.()) || end <= start) {
-    return false;
-  }
-
-  return isLocalMidnight(start)
-    && isLocalMidnight(end)
-    && getLocalCalendarDayNumber(end) > getLocalCalendarDayNumber(start);
 }
 
 function getViewStatsFromBlock(block, viewKey) {
@@ -321,7 +233,9 @@ function mapPetitionToCalendarEvent(petition, activeGroupId, weekStart) {
       : (groupSize > 0 && acceptedCount === groupSize)
         ? 'ACCEPTED_ALL'
         : 'OPEN';
-  const status = computedStatus;
+  const status = typeof petition.status === 'string' && petition.status.trim()
+    ? petition.status
+    : computedStatus;
   const titleRaw = petition.title || 'Petition';
 
   return {
@@ -639,8 +553,6 @@ export default function CustomCalendar({ refreshTrigger, groupId, draftEvent }) 
     return d;
   });
   const hours = Array.from({ length: 24 }, (_, i) => i);
-  const today = new Date();
-  const weekRangeLabel = formatWeekRange(days[0], days[days.length - 1]);
 
   const getPetitionStatusClass = (event) => {
     if (event.mode !== 'petition') return '';
@@ -652,29 +564,6 @@ export default function CustomCalendar({ refreshTrigger, groupId, draftEvent }) 
         return 'petition-accepted-all';
       default:
         return 'petition-open';
-    }
-  };
-
-  const getPetitionStyle = (event) => {
-    switch (event.status) {
-      case 'FAILED':
-        return {
-          backgroundColor: '#9ea3a8',
-          textColor: '#1f1f1f',
-          opacity: 0.72
-        };
-      case 'ACCEPTED_ALL':
-        return {
-          backgroundColor: '#f97316',
-          textColor: '#ffffff',
-          opacity: 0.72
-        };
-      default:
-        return {
-          backgroundColor: '#f4d35e',
-          textColor: '#1f1f1f',
-          opacity: 0.72
-        };
     }
   };
 
@@ -694,183 +583,170 @@ export default function CustomCalendar({ refreshTrigger, groupId, draftEvent }) 
 
   return (
     <div id="calendar-container">
-      <div className="calendar-hero">
-        {/* 1. CALENDAR HEADER (Navigation) */}
-        <div className="calendar-header">
-          <button className="calendar-nav-btn" onClick={handlePrevWeek} disabled={isCurrentWeek(weekStart)}>← Prev</button>
-          <div className="calendar-title-block">
-            <h2 className="calendar-month-title">
-              {weekStart.toLocaleString("default", { month: "long", year: "numeric" })}
-            </h2>
-            <p className="calendar-week-range">{weekRangeLabel}</p>
-          </div>
-          <button className="calendar-nav-btn" onClick={handleNextWeek}>Next →</button>
-        </div>
-
-        {groupId ? (
-          <div className="availability-controls">
-            <div className="availability-view-toggle">
-              {AVAILABILITY_VIEWS.map((viewKey) => {
-                const isActive = effectiveAvailabilityView === viewKey;
-                const isDisabled = !hasMultiViewAvailability && viewKey !== FALLBACK_VIEW;
-                return (
-                  <button
-                    key={viewKey}
-                    type="button"
-                    aria-pressed={isActive}
-                    disabled={isDisabled}
-                    onClick={() => handleAvailabilityViewChange(viewKey)}
-                    className={`availability-view-btn ${isActive ? 'availability-view-btn-active' : ''}`}
-                  >
-                    {AVAILABILITY_VIEW_LABELS[viewKey]}
-                  </button>
-                );
-              })}
-            </div>
-
-            <div className="availability-legend">
-              <span className="availability-legend-label">Available people</span>
-              <div className="availability-legend-swatches">
-                {legendCounts.map((count) => (
-                  <span key={count} className="availability-legend-item">
-                    <span
-                      className="availability-legend-swatch"
-                      style={{
-                        backgroundColor: getAvailabilityColor(count, legendMaxCount),
-                        opacity: getAvailabilityOpacity(count, legendMaxCount)
-                      }}
-                    />
-                    <span className="availability-legend-count">{count}</span>
-                  </span>
-                ))}
-              </div>
-              <span className="availability-legend-note">Empty = no availability</span>
-            </div>
-          </div>
-        ) : null}
+      {/* 1. CALENDAR HEADER (Navigation) */}
+      <div className="calendar-header">
+        <button onClick={handlePrevWeek} disabled={isCurrentWeek(weekStart)}>← Prev</button>
+        <h2>
+          {weekStart.toLocaleString("default", { month: "long", year: "numeric" })}
+        </h2>
+        <button onClick={handleNextWeek}>Next →</button>
       </div>
 
-      {/* 2. CALENDAR GRID (View) */}
-      <div className="calendar-grid-shell">
-        <div className="calendar-grid">
-          <div className="corner-cell"></div>
-          {days.map((day, i) => (
-            <div key={i} className={`day-header${isSameLocalDay(day, today) ? ' is-today' : ''}`}>
-              {day.toLocaleDateString("default", { weekday: "short", month: "numeric", day: "numeric" })}
-            </div>
-          ))}
+      {groupId ? (
+        <div className="availability-controls">
+          <div className="availability-view-toggle">
+            {AVAILABILITY_VIEWS.map((viewKey) => {
+              const isActive = effectiveAvailabilityView === viewKey;
+              const isDisabled = !hasMultiViewAvailability && viewKey !== FALLBACK_VIEW;
+              return (
+                <button
+                  key={viewKey}
+                  type="button"
+                  aria-pressed={isActive}
+                  disabled={isDisabled}
+                  onClick={() => handleAvailabilityViewChange(viewKey)}
+                  className={`availability-view-btn ${isActive ? 'availability-view-btn-active' : ''}`}
+                >
+                  {AVAILABILITY_VIEW_LABELS[viewKey]}
+                </button>
+              );
+            })}
+          </div>
 
-          {hours.map(hour => (
-            <React.Fragment key={hour}>
-              <div className="time-label">
-                {`${hour === 0 || hour === 12 ? 12 : hour % 12}:00${hour < 12 ? 'am' : 'pm'}`}
-              </div>
-
-              {days.map((day, i) => (
-                <div key={i} className={`calendar-cell${isSameLocalDay(day, today) ? ' is-today' : ''}`}>
-                  {allEvents
-                    .filter(e => e.start.toDateString() === day.toDateString() && e.start.getHours() === hour)
-                    .map((event, idx) => {
-                      // --- hides 0 avail events
-                      if (event.mode === 'avail' && event.availLvl === 0) {
-                        // Don't render 0-availability blocks, they just add clutter
-                        return null;
-                      }
-
-                      const startMins = event.start.getMinutes();
-                      const duration = (event.end - event.start) / (1000 * 60);
-
-                      // precise visual logic
-                      // each grid line (hour) subtracts 2px to height, so add duration/30
-                      let visualHeight = (duration / 30) + duration - 10; // -10 to add padding between events 
-                      const endsOnHour = event.end.getMinutes() === 0 && event.end.getSeconds() === 0;
-                      if (!event.isEndOfDay && !endsOnHour) visualHeight -= 2;
-
-                      let backgroundColor;
-                      let textColor;
-                      let opacity;
-                      let zIndex;
-
-                      if (event.mode === 'petition') {
-                        const petitionStyle = getPetitionStyle(event);
-                        backgroundColor = petitionStyle.backgroundColor;
-                        textColor = petitionStyle.textColor;
-                        opacity = petitionStyle.opacity;
-                        zIndex = 4;
-                      } else if (event.mode === 'avail') {
-                        backgroundColor = getAvailabilityColor(event.availLvl, legendMaxCount);
-                        opacity = getAvailabilityOpacity(event.availLvl, legendMaxCount);
-                        zIndex = 3;
-                      } else {
-                        const normalizedBlockingLevel = normalizeBlockingLevelFromEvent(event);
-                        const isAboveAvailability = shouldRenderRegularEventAboveAvailability(
-                          effectiveAvailabilityView,
-                          normalizedBlockingLevel
-                        );
-                        zIndex = isAboveAvailability ? 4 : 2;
-                        opacity = event.mode === 'blocking' ? 0.6 : 1;
-
-                        backgroundColor = event.backgroundColor
-                          || (typeof event.color === 'string' ? event.color : null)
-                          || (event.mode === 'blocking' ? '#34333c' : '#6395ee');
-                        textColor = event.backgroundColor && typeof event.color === 'string' ? event.color : undefined;
-                      }
-                      if (!event.isPreview && typeof event.id === 'string' && event.id.startsWith('manual-')) {
-                        backgroundColor = '#6f6e76';
-                      }
-
-                      const borderStyle = event.isPreview
-                        ? '2px dashed #333'
-                        : (typeof event.borderColor === 'string' && event.borderColor ? `1px solid ${event.borderColor}` : 'none');
-                      const combinedClassName = [
-                        'calendar-event',
-                        event.isAllDay ? 'all-day-event' : '',
-                        event.mode === 'petition' ? `petition-event ${getPetitionStatusClass(event)}` : '',
-                        event.className || ''
-                      ].filter(Boolean).join(' ');
-                      const shouldDeEmphasize = shouldDeEmphasizeEventSegment(event);
-                      const isRegularEventClickable = event.mode !== 'avail' && event.mode !== 'petition' && !event.isPreview;
-                      // TEAMNOTE[event-editing]: Restore legacy regular-event click/edit flow removed during petition rewiring.
-                      const handleEventClick = () => {
-                        if (event.mode === 'petition') {
-                          handlePetitionClick(event);
-                          return;
-                        }
-                        if (isRegularEventClickable) {
-                          setSelectedEvent(event);
-                        }
-                      };
-                      return (
-                        <div
-                          key={idx}
-                          className={combinedClassName}
-                          onClick={(event.mode === 'petition' || isRegularEventClickable) ? handleEventClick : undefined}
-                          onMouseEnter={event.mode === 'avail' ? (mouseEvent) => updateAvailabilityTooltip(mouseEvent, event.availLvl) : undefined}
-                          onMouseMove={event.mode === 'avail' ? (mouseEvent) => updateAvailabilityTooltip(mouseEvent, event.availLvl) : undefined}
-                          onMouseLeave={event.mode === 'avail' ? handleAvailabilityTooltipLeave : undefined}
-                          data-event-mode={event.mode}
-                          data-availability-count={event.mode === 'avail' ? event.availLvl : undefined}
-                          style={{
-                            height: `${Math.max(1, visualHeight)}px`,
-                            top: `${startMins}px`,
-                            opacity: shouldDeEmphasize ? Math.min(opacity, DEEMPHASIZED_EVENT_OPACITY) : opacity,
-                            zIndex: shouldDeEmphasize ? 1 : zIndex,
-                            backgroundColor: backgroundColor,
-                            color: textColor,
-                            border: borderStyle,
-                            cursor: (event.mode === 'petition' || isRegularEventClickable) ? 'pointer' : 'default'
-                            
-                          }}
-                        >
-                          {event.mode === 'avail' ? null : getDisplayTitle(event)}
-                        </div>
-                      );
-                    })}
-                </div>
+          <div className="availability-legend">
+            <span className="availability-legend-label">Available people</span>
+            <div className="availability-legend-swatches">
+              {legendCounts.map((count) => (
+                <span key={count} className="availability-legend-item">
+                  <span
+                    className="availability-legend-swatch"
+                    style={{ backgroundColor: getAvailabilityColor(count, legendMaxCount) }}
+                  />
+                  <span className="availability-legend-count">{count}</span>
+                </span>
               ))}
-            </React.Fragment>
-          ))}
+            </div>
+            <span className="availability-legend-note">Empty = no availability</span>
+          </div>
         </div>
+      ) : null}
+
+      {/* 2. CALENDAR GRID (View) */}
+      <div className="calendar-grid">
+        <div className="corner-cell"></div>
+        {days.map((day, i) => (
+          <div key={i} className="day-header">
+            {day.toLocaleDateString("default", { weekday: "short", month: "numeric", day: "numeric" })}
+          </div>
+        ))}
+
+        {hours.map(hour => (
+          <React.Fragment key={hour}>
+            <div className="time-label" id={`${hour === 0 || hour === 12 ? 12 : hour % 12}-00${hour < 12 ? 'am' : 'pm'}`}>
+              {`${hour === 0 || hour === 12 ? 12 : hour % 12}:00${hour < 12 ? 'am' : 'pm'}`}
+            </div>
+
+            {days.map((day, i) => (
+              <div key={i} className="calendar-cell">
+                {allEvents
+                  .filter(e => e.start.toDateString() === day.toDateString() && e.start.getHours() === hour)
+                  .map((event, idx) => {
+                    // --- hides 0 avail events
+                    if (event.mode === 'avail' && event.availLvl === 0) {
+                      // Don't render 0-availability blocks, they just add clutter
+                      return null;
+                    }
+
+                    const startMins = event.start.getMinutes();
+                    const duration = (event.end - event.start) / (1000 * 60);
+
+                    // precise visual logic
+                    // each grid line (hour) subtracts 2px to height, so add duration/30
+                    let visualHeight = (duration / 30) + duration - 10; // -10 to add padding between events 
+                    const endsOnHour = event.end.getMinutes() === 0 && event.end.getSeconds() === 0;
+                    if (!event.isEndOfDay && !endsOnHour) visualHeight -= 2;
+
+                    let backgroundColor;
+                    let textColor;
+                    let opacity;
+                    let zIndex;
+
+                    if (event.mode === 'petition') {
+                      backgroundColor = '#ffa963';
+                      opacity = 0.6;
+                      zIndex = 4;
+                    } else if (event.mode === 'avail') {
+                      backgroundColor = getAvailabilityColor(event.availLvl, legendMaxCount);
+                      opacity = 0.9;
+                      zIndex = 3;
+                    } else {
+                      const normalizedBlockingLevel = normalizeBlockingLevelFromEvent(event);
+                      const isAboveAvailability = shouldRenderRegularEventAboveAvailability(
+                        effectiveAvailabilityView,
+                        normalizedBlockingLevel
+                      );
+                      zIndex = isAboveAvailability ? 4 : 2;
+                      opacity = event.mode === 'blocking' ? 0.6 : 1;
+
+                      backgroundColor = event.backgroundColor
+                        || (typeof event.color === 'string' ? event.color : null)
+                        || (event.mode === 'blocking' ? '#34333c' : '#6395ee');
+                      textColor = event.backgroundColor && typeof event.color === 'string' ? event.color : undefined;
+                    }
+                    if (!event.isPreview && typeof event.id === 'string' && event.id.startsWith('manual-')) {
+                      backgroundColor = '#6f6e76';
+                    }
+
+                    const borderStyle = event.isPreview
+                      ? '2px dashed #333'
+                      : (typeof event.borderColor === 'string' && event.borderColor ? `1px solid ${event.borderColor}` : 'none');
+                    const combinedClassName = [
+                      'calendar-event',
+                      event.isAllDay ? 'all-day-event' : '',
+                      event.mode === 'petition' ? `petition-event ${getPetitionStatusClass(event)}` : '',
+                      event.className || ''
+                    ].filter(Boolean).join(' ');
+                    const isRegularEventClickable = event.mode !== 'avail' && event.mode !== 'petition' && !event.isPreview;
+                    // TEAMNOTE[event-editing]: Restore legacy regular-event click/edit flow removed during petition rewiring.
+                    const handleEventClick = () => {
+                      if (event.mode === 'petition') {
+                        handlePetitionClick(event);
+                        return;
+                      }
+                      if (isRegularEventClickable) {
+                        setSelectedEvent(event);
+                      }
+                    };
+                    return (
+                      <div
+                        key={idx}
+                        className={combinedClassName}
+                        onClick={(event.mode === 'petition' || isRegularEventClickable) ? handleEventClick : undefined}
+                        onMouseEnter={event.mode === 'avail' ? (mouseEvent) => updateAvailabilityTooltip(mouseEvent, event.availLvl) : undefined}
+                        onMouseMove={event.mode === 'avail' ? (mouseEvent) => updateAvailabilityTooltip(mouseEvent, event.availLvl) : undefined}
+                        onMouseLeave={event.mode === 'avail' ? handleAvailabilityTooltipLeave : undefined}
+                        data-event-mode={event.mode}
+                        data-availability-count={event.mode === 'avail' ? event.availLvl : undefined}
+                        style={{
+                          height: `${Math.max(1, visualHeight)}px`,
+                          top: `${startMins}px`,
+                          opacity: event.isAllDay ? 0.6 : opacity,
+                          zIndex: event.isAllDay ? 1 :zIndex,
+                          backgroundColor: backgroundColor,
+                          color: textColor,
+                          border: borderStyle,
+                          cursor: (event.mode === 'petition' || isRegularEventClickable) ? 'pointer' : 'default'
+                          
+                        }}
+                      >
+                        {event.mode === 'avail' ? null : getDisplayTitle(event)}
+                      </div>
+                    );
+                  })}
+              </div>
+            ))}
+          </React.Fragment>
+        ))}
       </div>
       {availabilityTooltip && typeof document !== 'undefined'
         ? createPortal(
@@ -912,10 +788,9 @@ function processEvents(rawEvents) {
   if (!Array.isArray(rawEvents)) return [];
   const processed = [];
   rawEvents.forEach(event => {
-    const normalizedRange = normalizeEventRange(event);
-    let start = normalizedRange.start;
-    let end = normalizedRange.end;
-    if (!Number.isFinite(start.getTime()) || !Number.isFinite(end.getTime()) || end <= start) return;
+    let start = parseLocal(event.start);
+    let end = parseLocal(event.end);
+    if (end <= start) return;
 
     let current = new Date(start);
     while (current < end) {
@@ -930,8 +805,7 @@ function processEvents(rawEvents) {
         end: new Date(effectiveEnd),
         id: event.event_id,
         event_id: event.event_id,
-        isAllDay: normalizedRange.isAllDay,
-        spansMultipleDays: normalizedRange.spansMultipleDays,
+        isAllDay: (effectiveEnd - current) >= 24 * 60 * 60 * 1000,
         isEndOfDay: effectiveEnd.getTime() === nextDayStart.getTime(),
         isPreview: event.isPreview || false,
         availLvl: event.availLvl || 0, // for group availability heatmap
@@ -964,51 +838,12 @@ function processEvents(rawEvents) {
   return processed;
 }
 
-function normalizeEventRange(event) {
-  const hasDateOnlyInputs = isDateOnlyText(event?.start) && isDateOnlyText(event?.end);
-
-  if (event?.isAllDay || hasDateOnlyInputs) {
-    const startDateText = event.allDayStartDate || (hasDateOnlyInputs ? event.start : formatUtcDateOnly(event.start));
-    const endDateText = event.allDayEndDate || (hasDateOnlyInputs ? event.end : formatUtcDateOnly(event.end));
-    const start = parseLocalDateOnly(startDateText);
-    const end = parseLocalDateOnly(endDateText);
-    return {
-      start,
-      end,
-      isAllDay: true,
-      spansMultipleDays: spansMultipleLocalDays(start, end)
-    };
-  }
-
-  const start = parseEventInstant(event?.start);
-  const end = parseEventInstant(event?.end);
-  const isAllDay = isWholeLocalDayRange(start, end);
-  return {
-    start,
-    end,
-    isAllDay,
-    spansMultipleDays: spansMultipleLocalDays(start, end)
-  };
-}
-
-function parseLocalDateOnly(dateInput) {
+function parseLocal(dateInput) {
   if (typeof dateInput === 'string' && dateInput.length === 10) {
     const [y, m, d] = dateInput.split('-').map(Number);
     return new Date(y, m - 1, d);
   }
-  return new Date(NaN);
-}
-
-function parseEventInstant(dateInput) {
   return new Date(dateInput);
-}
-
-function formatUtcDateOnly(dateInput) {
-  const parsed = parseEventInstant(dateInput);
-  if (!Number.isFinite(parsed.getTime())) {
-    return '';
-  }
-  return parsed.toISOString().slice(0, 10);
 }
 
 
