@@ -6,7 +6,7 @@ function groupRequest(user_email, from_username, shareable_link)  {
         from: 'hello@socialscheduler.me',
         to: user_email,
         subject: `Want to join ${from_username}'s group?`,
-        html: `<p>Click this link to start meeting with people in ${from_username}'s group on Social Scheduler!</p><a href="${shareable_link}">Link here</a></p>`
+        html: `<p>Click this link to start meeting with people in ${from_username}'s group on Social Scheduler!</p><a href="https://${shareable_link}">Link here</a></p>`
     });
 }  
 
