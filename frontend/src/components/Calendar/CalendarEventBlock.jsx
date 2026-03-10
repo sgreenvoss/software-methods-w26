@@ -46,14 +46,22 @@ export default function CalendarEventBlock({
 
   // Calculate duration entirely based on the clock hands, ignoring elapsed milliseconds
   const durationMins = ((endHour - startHour) * 60) + (endMins - startMins);
-  
+  const durationHours = (durationMins / 60);
+
   // Calculate percentage from top
   const topPercent = (startMins / 60) * 100;
   
+  // calculate the pixel dirft so that event sdont cross the bottom hour line
+  let pixelDrift = durationHours > 3 
+    ? Math.floor((durationHours - 1) / 3) 
+    : (durationHours == 3 ? 1 : 0);
+
   // Calculate height as a percentage of the parent grid cell.
   // add 2px for the grid border thickness for each hour except the first hour
-  const heightPercent = `calc(${(durationMins / 60) * 100}% + 
-                              ${(durationMins / 60) * 2 - 2}px)`;
+  let heightPercent = `
+    calc(${durationHours * 100}% + 
+    ${durationHours * (2) - 2 - pixelDrift}px)
+  `;
 
   // --- VISUAL STYLING LOGIC ---
   // Default fallbacks
