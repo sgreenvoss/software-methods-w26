@@ -203,8 +203,13 @@ export default function Main() {
     };
 
     const handleSyncCals = async () => {
-        await apiGet("/api/events");
-        setCalRefreshSignal(prev => prev + 1);
+        try {
+            await apiGet('/api/events');
+        } catch (error) {
+            console.warn('Sync calendars endpoint failed; forcing UI refresh anyway.', error);
+        } finally {
+            setCalRefreshSignal((prev) => prev + 1);
+        }
     }
 
 

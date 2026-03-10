@@ -164,7 +164,7 @@ export default function CustomCalendar({ refreshTrigger, groupId, draftEvent, on
       }
     };
     fetchVisiblePetitions();
-  }, [groupId, weekStart, petitionActionRefreshKey, petitionDraftActive]);
+  }, [groupId, weekStart, petitionActionRefreshKey, petitionDraftActive, refreshTrigger]);
 
   // --- EVENT HANDLERS ---
   
