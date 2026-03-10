@@ -121,7 +121,7 @@ export default function CalendarEventBlock({
   const finalZIndex = (shouldDeEmphasize && !isAboveAvailability) ? 1 : zIndex;
 
   // Add a dashed border if it's a drag-and-drop preview
-  const borderStyle = event.isPreview ? '2px dashed #333' : (event.borderColor ? `1px solid ${event.borderColor}` : 'none');
+  const borderStyle = event.isPreview ? '2px dashed #333' : (event.borderColor ? `1px solid ${event.borderColor}` : undefined);
   
   // Only standard events can be clicked to open the EventClickModal
   const isRegularEventClickable = event.mode !== 'avail' && event.mode !== 'petition' && !event.isPreview;
