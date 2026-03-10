@@ -181,7 +181,8 @@ export default function EventSidebar({
                         title: trimmedTitle,
                         start: start.toISOString(),
                         end: end.toISOString(),
-                        event_id: tempEventId
+                        event_id: tempEventId,
+                        priority: selectedBlockingLevel === 'B1' ? 1 : selectedBlockingLevel === 'B2' ? 2 : 3
                     }
                 ]
             };
