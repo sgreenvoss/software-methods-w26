@@ -183,10 +183,10 @@
 }
 
 .time-label {
-  min-height: 60px;
+  height: 100%;
   box-sizing: border-box;
   text-align: right;
-  padding: 10px 10px 0 0;
+  padding: 0px 10px 0 0;
   border-right: 1px solid #e5e5e5;
   border-bottom: 1px solid #e5e5e5;
   background-color: #fafafa;
@@ -196,7 +196,7 @@
 
 .calendar-cell {
   position: relative;
-  min-height: 60px;
+  height: 40px;
   border: 1px solid #e5e5e5;
   background-color: #ffffff;
 }
@@ -211,7 +211,8 @@
   color: white;
   font-size: 12px;
   line-height: 1.25;
-  padding: 5px 6px;
+  padding: 5px 5px;
+  box-sizing: border-box;
   z-index: 10;
   border-radius: 6px;
   overflow: hidden;
