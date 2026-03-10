@@ -179,10 +179,11 @@ export default function GroupCreatorModal({ onClose, onGroupCreated, onDone }) {
             <div className="modal-content">
                 {!groupCreated ? (
                     <>
-                        <h2>Create New Group</h2>
+                        <h2 className="modal-title">Create New Group</h2>
 
-                        <label>Group Name:</label>
+                        <label className="modal-label" htmlFor="group-name-input">Group Name</label>
                         <input
+                            id="group-name-input"
                             type="text"
                             placeholder="Enter group name..."
                             className="group-name-input"
@@ -190,7 +191,7 @@ export default function GroupCreatorModal({ onClose, onGroupCreated, onDone }) {
                             onChange={(e) => setGroupName(e.target.value)}
                         />
 
-                        <label>Add Users:</label>
+                        <label className="modal-label">Add Users</label>
                         <UserSearch onUserSelect={handleUserSelect} />
                         {usernames.length > 0 && (
                             <div id="users-container">
@@ -209,13 +210,11 @@ export default function GroupCreatorModal({ onClose, onGroupCreated, onDone }) {
                         )}
 
                         {createError && (
-                            <p style={{ color: 'red', fontSize: '0.85rem', marginTop: '12px' }}>
-                                {createError}
-                            </p>
+                            <p className="modal-error">{createError}</p>
                         )}
 
                         <div className="modal-actions">
-                            <button onClick={onClose}>Cancel</button>
+                            <button className="secondary-btn" onClick={onClose}>Cancel</button>
                             <button className="primary-btn" onClick={handleCreate}>
                                 Create Group!
                             </button>
@@ -223,18 +222,19 @@ export default function GroupCreatorModal({ onClose, onGroupCreated, onDone }) {
                     </>
                 ) : (
                     <> 
-                        <h2>Group Created!</h2>
-                        <p>Share this link to invite others to <strong>{groupName}</strong>:</p>
+                        <h2 className="modal-title">Group Created!</h2>
+                        <p className="modal-description">Share this link to invite others to <strong>{groupName}</strong>:</p>
 
-                        <div className="invite-link-container" style={{ display: 'flex', gap: '10px', margin: '20px 0' }}>
+                        <div className="invite-link-container">
                             <input
                                 type="text"
                                 value={inviteLink}
                                 placeholder={inviteError ? "Invite link unavailable." : ""}
                                 readOnly
-                                style={{ flex: 1, padding: '8px' }}
+                                className="invite-link-input"
                             />
                             <button
+                                className="secondary-btn invite-copy-btn"
                                 onClick={handleCopyClick}
                                 disabled={!inviteLink || copyStatus === 'copying'}
                             >
@@ -244,13 +244,11 @@ export default function GroupCreatorModal({ onClose, onGroupCreated, onDone }) {
                         </div>
 
                         {inviteError && (
-                            <p style={{ color: 'red', fontSize: '0.85rem' }}>
-                                {inviteError}
-                            </p>
+                            <p className="modal-error">{inviteError}</p>
                         )}
 
                         {copyStatus === 'error' && (
-                            <p style={{ color: 'red', fontSize: '0.85rem' }}>
+                            <p className="modal-error">
                                 Failed to copy invite link. Please try copying manually.
                             </p>
                         )}

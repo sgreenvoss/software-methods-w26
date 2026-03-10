@@ -77,33 +77,34 @@ export default function GroupInfoModal({ groupId, groupName, onClose }) {
         <div className="modal-overlay">
             <div className="modal-content">
                 {/* Fallback to 'Group' if name isn't passed */}
-                <h2>{groupName || 'Group'} Info</h2> 
+                <h2 className="modal-title">{groupName || 'Group'} Info</h2> 
                 
-                <h3>Members:</h3>
+                <h3 className="modal-label members-title">Members</h3>
                 {loading ? (
-                    <p>Loading members...</p>
+                    <p className="modal-description">Loading members...</p>
                 ) : (
-                    <ul style={{ paddingLeft: '20px', margin: '10px 0' }}>
+                    <ul className="member-list">
                         {members.length > 0 ? (
                             members.map((member) => (
-                                <li key={member.user_id} style={{ marginBottom: '5px' }}>
+                                <li key={member.user_id} className="member-list-item">
                                     {member.username}
                                 </li>
                             ))
                         ) : (
-                            <p>No members found.</p>
+                            <li className="member-list-empty">No members found.</li>
                         )}
                     </ul>
                 )}
-                <h3>Invite new members:</h3>
-                <div className="invite-link-container" style={{ display: 'flex', gap: '10px', margin: '20px 0' }}>
+                <h3 className="modal-label members-title">Invite new members</h3>
+                <div className="invite-link-container">
                         <input
                             type="text"
                             value={inviteLink}
                             readOnly
-                            style={{ flex: 1, padding: '8px' }}
+                            className="invite-link-input"
                         />
                         <button
+                            className="secondary-btn invite-copy-btn"
                             onClick={handleCopyClick}
                             disabled={!inviteLink || copyStatus === 'copying'}
                         >
