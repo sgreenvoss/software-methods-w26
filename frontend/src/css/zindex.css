@@ -1,3 +1,10 @@
+/*
+calendar events are indexed from 0-99
+other calendar elements are indexed from 100-499
+sidebar elements are indexed from 500 - 999
+modal elements are indexed from 1000+
+*/
+
 .corner-cell {
     z-index: 200;
 }
@@ -32,7 +39,7 @@
 }
 
 .modal-backdrop {
-    z-index: 2000;
+    z-index: 1000;
 }
 
 .calendar-modal-overlay {
@@ -55,5 +62,5 @@
 
 .main-sidebar {
     /* the sidebar elements and modals */
-    z-index: 1000;
+    z-index: 600;
 }
