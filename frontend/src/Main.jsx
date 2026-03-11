@@ -56,6 +56,11 @@ export default function Main() {
 
         setEventMode(targetMode);
 
+        // instantly auto-fill the dropdown with that group's ID!
+        if (selectedGroupId) {
+            setPetitionGroupId(selectedGroupId);
+        }
+
         // If the sidebar is closed, snap it open!
         if (!isEventSidebarOpen) {
             setIsEventSidebarOpen(true);
