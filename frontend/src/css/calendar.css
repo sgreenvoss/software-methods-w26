@@ -283,7 +283,6 @@ button:disabled {
 
 .calendar-event.petition-event {
   font-weight: 600;
-  border: 1px solid rgba(0, 0, 0, 0.15);
 }
 
 .calendar-event.petition-event.petition-open {
