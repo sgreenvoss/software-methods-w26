@@ -127,7 +127,10 @@ export default function CalendarEventBlock({
   const shouldDeEmphasize = shouldDeEmphasizeEventSegment(event);
   const finalOpacity = shouldDeEmphasize ? Math.min(opacity, DEEMPHASIZED_EVENT_OPACITY) : opacity;
   // Push de-emphasized events to the absolute bottom z-index layer
-  const finalZIndex = (shouldDeEmphasize && !isAboveAvailability) ? 1 : zIndex;
+  let finalZIndex = (shouldDeEmphasize && !isAboveAvailability) ? 1 : zIndex;
+  if (event.isPreview) {
+      finalZIndex = 20;
+  }
 
   // Add a dashed border if it's a drag-and-drop preview
   const borderStyle = event.isPreview ? '2px dashed #333' : (event.borderColor ? `1px solid ${event.borderColor}` : undefined);

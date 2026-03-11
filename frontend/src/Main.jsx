@@ -36,7 +36,7 @@ export default function Main() {
     const [username, setUsername] = useState(null);
 
     // The handler we will pass down to the Calendar
-    const handleCalendarCellClick = (clickedDate, hour) => {
+    const handleCalendarCellClick = (clickedDate, hour, targetMode = 'blocking') => {
         // Format the date as YYYY-MM-DD
         const year = clickedDate.getFullYear();
         const month = String(clickedDate.getMonth() + 1).padStart(2, '0');
@@ -53,6 +53,8 @@ export default function Main() {
             startTime: `${startHour}:00`,
             endTime: `${endHour}:00`
         });
+
+        setEventMode(targetMode);
 
         // If the sidebar is closed, snap it open!
         if (!isEventSidebarOpen) {

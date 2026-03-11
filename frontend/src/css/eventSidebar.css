@@ -43,6 +43,7 @@
 /* The Toggle Buttons at the top */
 .mode-toggle {
   display: flex;
+  font-size: 10px;
   justify-content: space-between;
   gap: 10px;
   margin-bottom: 15px;
@@ -51,8 +52,9 @@
 }
 
 .mode-toggle button {
-  flex: 1; /* Makes both buttons take up equal half-width */
+  flex: 1; /*Makes both buttons take up equal half-width*/
   padding: 8px;
+  font-size: 1rem;
 }
 
 #blockingBtn {

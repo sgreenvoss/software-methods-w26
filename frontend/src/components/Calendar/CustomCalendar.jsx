@@ -206,7 +206,7 @@ export default function CustomCalendar({ refreshTrigger, groupId, draftEvent, on
   // 2. Filter the backend blocks against the user's personal calendar
   const projectedAvailability = filterAvailabilityAgainstPersonalEvents(
       rawProjectedAvailability, 
-      finalRawEvents, 
+      rawEvents, 
       effectiveAvailabilityView
   );
 
@@ -333,7 +333,7 @@ export default function CustomCalendar({ refreshTrigger, groupId, draftEvent, on
                   key={i} 
                   className={`calendar-cell${isSameLocalDay(day, today) ? ' is-today' : ''}`}
                   // Fire the handler when the empty cell is clicked
-                  onClick={() => onCellClick && onCellClick(day, hour)}
+                  onClick={() => onCellClick && onCellClick(day, hour, 'blocking')}
                     
                   // Allow things to be dropped here
                   onDragOver={(e) => e.preventDefault()} 
@@ -389,7 +389,7 @@ export default function CustomCalendar({ refreshTrigger, groupId, draftEvent, on
                         onEventClick={handleEventClick}
 
                         onCellClick={(overrideDay, overrideHour) => 
-                          onCellClick && onCellClick(overrideDay || day, overrideHour ?? hour)
+                          onCellClick && onCellClick(overrideDay || day, overrideHour ?? hour, 'petition')
                         }
 
                         onTooltipEnter={(mouseEvent, count) => setAvailabilityTooltip({ count, x: mouseEvent.clientX + 12, y: mouseEvent.clientY + 10 })}
