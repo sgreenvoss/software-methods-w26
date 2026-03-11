@@ -1,16 +1,25 @@
+/*
+App.jsx
+This app connects the user login, creation, and main page and determines which to present to the user
+Created 2026-2-12 by Anna Norris
+This file is part of the frontend
+The Username Creation redirect was added after initial file creation
+*/
+
 import React, { useState, useEffect, useContext } from 'react';
-import { BrowserRouter as Router, Routes, Route } from 'react';
 import { apiGet } from './api.js';
 import Login from './Login.jsx';
 import Main from './Main.jsx';
 import UsernameCreation from './UsernameCreation.jsx';
-import InviteHandler from './components/Groups/InviteHandler.jsx';
 import { ErrorProvider, ErrorContext } from './ErrorContext.jsx';
 import ServerError from './pages/ServerError.jsx';
 
 
-// Inner component that uses ErrorContext
 function AppContent() {
+    /* 
+    Manager that loads the pages presented to the user.
+    */
+
     // states
     const [loading, setLoading] = useState(true);
     const [user, setUser] = useState(null);
@@ -38,7 +47,7 @@ function AppContent() {
     }
 
     // check if we have to load
-    // either go to login or to homepage
+    // either go to login, homepage, or username creation
     if (loading) {
         return <div>Loading...</div>
     }

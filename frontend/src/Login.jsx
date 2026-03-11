@@ -1,9 +1,18 @@
+/* 
+Login.jsx
+Gives user button to continue with Google and info about app
+Created on 2026-2-12 by Anna Norris
+Part of account creation system
+*/
+
 import React, { useState, useEffect } from 'react';
 import './css/login.css';
-// handles login
+
 export default function Login() {
+  // Handles users logging in or creating an account, first page users will see
   const [errorMsg, setErrorMsg] = useState('');
 
+  // check if user has given all permissions
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
     const error = params.get('error');
@@ -13,6 +22,7 @@ export default function Login() {
     }
   }, []);
 
+
   const handleLogin = () => {
       // fix localhost redirect issues with different frontend/backend ports
       const baseURL = process.env.BACKEND_URL || '';
@@ -21,6 +31,7 @@ export default function Login() {
 
   return (
       <>
+      {/* Header for logo */}
       <div className="login-container">
         {errorMsg && <p style={{color: 'red'}}>{errorMsg}</p>}
         <header>
@@ -28,6 +39,7 @@ export default function Login() {
           <p id="beta">beta</p>
         </header>
 
+      {/* contains button and columns with some features */}
         <body>
           <section id="auth">
             <button id="loginBtn" onClick={handleLogin}>Continue with Google!</button>

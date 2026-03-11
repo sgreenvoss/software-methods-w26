@@ -1,8 +1,20 @@
+/*
+UsernameCreation.jsx
+Page for new users to create their username and choose calendars to import
+Created on 2026-2-18 by Anna Norris
+Updated to include calendar selection
+*/
+
 import React, { useState, useEffect } from 'react';
 import { apiGet, apiPost } from './api.js';
 import CalendarSelectionModal from './components/CalendarSelectionModal.jsx'; 
 
 export default function UsernameCreation() {
+    /*
+    Main page to handle username creation
+    Once user creates a username and chooses at least one calendar, they are 
+    redirected to main
+    */
     const [username, setUsername] = useState('');
     const [errors, setErrors] = useState([]);
     const [step, setStep] = useState('username'); // 'username' or 'calendars'
@@ -12,6 +24,7 @@ export default function UsernameCreation() {
     const [selectedCals, setSelectedCals] = useState([]);
 
     const handleCheckboxChange = (calendar) => {
+        // with each calendar, handle whether user selects or deselects calendar choice
         if (selectedCals.some(cal => cal.id === calendar.id)) {
             // remove
             setSelectedCals((prev) => prev.filter((cal) => cal.id !== calendar.id));
@@ -22,11 +35,18 @@ export default function UsernameCreation() {
     };
 
     const handleSubmit = async (e) => {
+        /* 
+        handle input for username and submission
+        checks whether username is valid based on validation rules
+        gets the current input and moves on to calendars modal
+        */
         e.preventDefault();
 
+        // usernames must be 4-16 characters and include only alphabetic chars, _, and .
         const usernameSize = /^.{4,16}$/;
         const usernameSymbols = /^[a-zA-Z0-9_.]+$/
 
+        // test if input is valid
         const validationErrors = [];
         if (!usernameSize.test(username)) {
             validationErrors.push('Username must be between 4-16 characters');
@@ -34,16 +54,21 @@ export default function UsernameCreation() {
         if (!usernameSymbols.test(username)) {
             validationErrors.push('Username must only contain alphabetic letters, digits, and \'_\' and \'.\'');
         }
+        // if the submission is not valid, display what is wrong
         if (validationErrors.length > 0) {
             setErrors(validationErrors);
             return;
         }
         
+        // move on to calendars modal
         setErrors([]);
         setStep('calendars');
     }
 
     const handleSelectCalendars = async () => {
+        /*
+        sends the selected calendars to the backend
+        */
         if (selectedCals.length < 1) {
             setErrors(['Please select at least one calendar.']);
             return;
@@ -73,6 +98,9 @@ export default function UsernameCreation() {
     }
 
     useEffect(() => {
+        /*
+        immediately upon page load, get the calendars for the user and set calendars for modal
+        */
         const getCals = async () => {
             const cals = await apiGet('/api/calendars');
             const updatedCals = cals.map((cal) => {
