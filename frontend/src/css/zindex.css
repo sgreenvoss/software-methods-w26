@@ -5,20 +5,9 @@ sidebar elements are indexed from 500 - 999
 modal elements are indexed from 1000+
 */
 
-.corner-cell {
-    z-index: 200;
-}
-
-.day-header {
-    z-index: 150;
-}
-
-.time-label {
-    z-index: 100;
-}
-
+/* --- CALENDAR EVENTS --- */
 .calendar-event {
-    /*
+    /* (calendarConstants.jsx)
     NORMAL: 20,
     BLOCKING: 30,
     AVAIL: 50,
@@ -26,8 +15,7 @@ modal elements are indexed from 1000+
     DEEMPHASIZE: 10,
     PREVIEW: 60
     */
-
-    z-index: 1;
+    z-index: 1; /* default (this shouldnt happen) */
 }
 
 .calendar-event:hover {
@@ -38,6 +26,30 @@ modal elements are indexed from 1000+
     z-index: 70;
 }
 
+/* --- CALENDAR HEADINGS --- */
+.time-label {
+    z-index: 100;
+}
+
+.day-header {
+    z-index: 150;
+}
+
+.corner-cell {
+    z-index: 200;
+}
+
+/* --- SIDEBARS --- */
+.resize-handle {
+    z-index: 500;
+}
+
+.main-sidebar {
+    /* the sidebar elements and modals */
+    z-index: 600;
+}
+
+/* --- MODALS --- */
 .modal-backdrop {
     z-index: 1000;
 }
@@ -47,20 +59,11 @@ modal elements are indexed from 1000+
     z-index: 1000;
 }
 
-.search-dropdown-menu {
-    z-index: 1100;
-}
-
 .modal-overlay {
     /* the actual modal */
     z-index: 1000;
 }
 
-.resize-handle {
-    z-index: 500;
-}
-
-.main-sidebar {
-    /* the sidebar elements and modals */
-    z-index: 600;
+.search-dropdown-menu {
+    z-index: 1100;
 }
