@@ -8,6 +8,7 @@ import './css/main.css';
 import {apiGet, apiPost} from './api';
 
 export default function Main() {
+    // groups
     const [selectedGroupId, setSelectedGroupId] = useState(null);
     const [groupsList, setGroupsList] = useState([]); 
 
@@ -15,8 +16,11 @@ export default function Main() {
     const [groupsRefreshSignal, setGroupsRefreshSignal] = useState(0);
     const [calRefreshSignal, setCalRefreshSignal] = useState(0);
     
+    //sidebars
     const [isGroupsSidebarOpen, setIsGroupsSidebarOpen] = useState(false);
     const [isEventSidebarOpen, setIsEventSidebarOpen] = useState(false);
+
+    //invites
     const [pendingInvite, setPendingInvite] = useState(null);
     const [inviteActionLoading, setInviteActionLoading] = useState(false);
     const [inviteError, setInviteError] = useState('');
@@ -26,6 +30,9 @@ export default function Main() {
 
     // State to hold the autofill data from a calendar click
     const [clickedCellDetails, setClickedCellDetails] = useState(null);
+
+    // username info
+    const [username, setUsername] = useState(null);
 
     // The handler we will pass down to the Calendar
     const handleCalendarCellClick = (clickedDate, hour) => {
@@ -149,7 +156,19 @@ export default function Main() {
         }
     };
 
+    // fetch user info
+    const fetchUsername = async () => {
+        try {
+            const me = await apiGet('/api/me');
+            setUsername(me.user.username);
+        } catch (err) {
+            console.error("Fetching user info failed:", err);
+            setError(err.message);
+        }
+    };
+
     useEffect(() => {
+        fetchUsername();
         fetchEvents();
         fetchGroups();
         fetchPendingInvite();
@@ -224,6 +243,7 @@ export default function Main() {
                 onDecline={() => handleInviteDecision('decline')}
             />
             <section id="manButtons">
+                <p>It's {username}'s schedule!</p>
                 <button id="syncCals" onClick={handleSyncCals}>Sync Calendars</button>
                 <button id="logout" onClick={handleLogout}>Logout</button>
             </section>
