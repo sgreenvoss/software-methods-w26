@@ -212,8 +212,10 @@ export default function Main() {
         }
     };
     
-    const handleOpenPetition = (groupId) => {
+    const handleOpenPetition = async (groupId) => {
         // Keep petition target and rendered availability group in sync.
+        await fetchGroups();
+
         setSelectedGroupId(Number(groupId));
         setEventMode('petition');
         setPetitionGroupId(groupId);

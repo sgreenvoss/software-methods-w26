@@ -44,7 +44,6 @@ function UserSearch({ onUserSelect }) {
                     <li className="suggestion"
                     key={user.id}
                     onClick={() => {
-                        console.log("clicked", user);
                         onUserSelect(user);
                         setQuery('');
                         setSuggestions([]);
