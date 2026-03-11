@@ -1,7 +1,7 @@
 /* Mirror the #groups container exactly to get the same scroll, radius, and color */
 .event-sidebar-container {
-  width: 100%;
-  margin: 0;
+  width: 90%;
+  margin: 10px;
   padding: 10px;
   font-family: 'Courier New', Courier, monospace;
   background-color: #f9f9fb;
@@ -46,7 +46,8 @@
   justify-content: space-between;
   gap: 10px;
   margin-bottom: 15px;
-  width: 100%;
+  width: 90%;
+  align-self: center;
 }
 
 .mode-toggle button {

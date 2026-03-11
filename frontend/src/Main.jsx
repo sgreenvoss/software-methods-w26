@@ -6,6 +6,7 @@ import EventSidebar from './components/Calendar/EventSidebar';
 import { ErrorContext } from './ErrorContext';
 import './css/main.css';
 import {apiGet, apiPost} from './api';
+import ResizableSidebar from './components/ResizeableSidebar';
 
 export default function Main() {
     // groups
@@ -291,14 +292,14 @@ export default function Main() {
             <main className="main-layout">
                 {/* The Groups sidebar. */}
                 {isGroupsSidebarOpen && (
-                    <aside className="groups-sidebar">
+                    <ResizableSidebar side="left" defaultWidth={320} minWidth={250} maxWidth={600} className="groups-sidebar">
                         <Groups
                             selectedGroupId={selectedGroupId}
                             onSelectGroup={(id) => setSelectedGroupId(id == null ? null : Number(id))}
                             onOpenPetition={handleOpenPetition} 
                             refreshSignal={groupsRefreshSignal}
                         />
-                    </aside>
+                    </ResizableSidebar>
                 )}
 
                 {/* The Calendar always renders.*/}
@@ -316,7 +317,7 @@ export default function Main() {
 
                 {/* The Event sidebar, which is used for both creating and editing events. */}
                 {isEventSidebarOpen && (
-                    <aside className="event-sidebar">
+                    <ResizableSidebar side="right" defaultWidth={350} minWidth={280} maxWidth={600} className="event-sidebar">
                         <EventSidebar 
                             setDraftEvent={setDraftEvent}
                             mode={eventMode}
@@ -332,7 +333,7 @@ export default function Main() {
                                 //<Calendar refreshTrigger={calRefreshSignal} draftEvent={draftEvent} selectedGroupId={selectedGroupId}/>
                             }}
                         />
-                    </aside>
+                    </ResizableSidebar>
                 )}
 
             </main>

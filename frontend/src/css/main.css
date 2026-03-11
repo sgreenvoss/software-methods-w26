@@ -155,9 +155,8 @@ button:hover {
 
 .groups-sidebar {
   width: 35%;
-  width: 35%;
   /* min-width: 300px; */
-  max-width: 400px;
+  /* max-width: 400px; */
   background-color: #ffffff;
   border-right: 1px solid #e5e5e5;
   overflow-y: auto; /* Allows scrolling if group list gets long */
@@ -169,7 +168,7 @@ button:hover {
 .event-sidebar {
   width: 35%;
   /* min-width: 300px; */
-  max-width: 400px;
+  /* max-width: 400px; */
   background-color: #ffffff;
   border-right: 1px solid #e5e5e5;
   overflow-y: auto; /* Allows scrolling if group list gets long */
@@ -268,4 +267,31 @@ button:hover {
     /* Ensure the sidebar itself can scroll if the phone is very short */
     overflow-y: auto; 
   }
+}
+
+/* --- RESIZABLE SIDEBAR HANDLES --- */
+.resize-handle {
+    position: absolute;
+    top: 0;
+    bottom: 0;
+    width: 10px; /* Wide enough to easily grab with the mouse */
+    cursor: ew-resize; /* The standard <--> horizontal drag cursor */
+    z-index: 50;
+    transition: background-color 0.2s;
+}
+
+/* Position it exactly over the right border */
+.resize-handle-right {
+    right: -5px; 
+}
+
+/* Position it exactly over the left border */
+.resize-handle-left {
+    left: -5px;
+}
+
+/* Give the user a nice visual hint when they hover or grab it */
+.resize-handle:hover,
+.resize-handle:active {
+    background-color: rgba(0, 184, 148, 0.3); /* A soft green highlight */
 }
