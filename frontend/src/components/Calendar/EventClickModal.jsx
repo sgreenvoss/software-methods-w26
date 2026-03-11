@@ -123,13 +123,17 @@ export default function EventClickModal({ event, onClose, onRefresh }) {
         </div>
 
         <div className="modal-actions-row">
-          <button
-            onClick={handleDelete}
-            disabled={isSaving}
-            className="modal-btn-muted"
-          >
-            Delete Event
-          </button>
+          {/* shouldn't be able to 'delete' gcal events. */}
+          {(event.mode !== 'normal') && (
+            <button
+              onClick={handleDelete}
+              disabled={isSaving}
+              className="modal-btn-muted"
+            >
+              Delete Event
+            </button>
+          )}
+
           <button className="modal-btn-success" onClick={handleSave} disabled={isSaving}>
             {isSaving ? 'Saving...' : 'Save Changes'}
           </button>

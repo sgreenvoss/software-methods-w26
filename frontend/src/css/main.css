@@ -153,19 +153,7 @@ button:hover {
   overflow: hidden; /* Contains the scrollable children */
 }
 
-.groups-sidebar {
-  width: 35%;
-  /* min-width: 300px; */
-  /* max-width: 400px; */
-  background-color: #ffffff;
-  border-right: 1px solid #e5e5e5;
-  overflow-y: auto; /* Allows scrolling if group list gets long */
-  padding: 12px;
-  flex-shrink: 0; /* Prevents sidebar from shrinking too much */
-  transition: width 0.3s ease; /* Optional animation if you switch to CSS-based toggling */
-}
-
-.event-sidebar {
+.main-sidebar {
   width: 35%;
   /* min-width: 300px; */
   /* max-width: 400px; */
@@ -236,11 +224,6 @@ button:hover {
     line-height: 1.2;
   }
 
-  #sidebarToggle {
-    flex-wrap: wrap;
-    padding: 0 12px 10px;
-  }
-
   #groupsBtn,
   #eventBtn {
     width: 100%;
@@ -251,8 +234,7 @@ button:hover {
     padding: 0 12px 12px;
   }
 
-  .groups-sidebar, 
-  .event-sidebar {
+  .main-sidebar {
     /* position: absolute; */
     top: 0;
     left: 0;
@@ -266,6 +248,13 @@ button:hover {
     
     /* Ensure the sidebar itself can scroll if the phone is very short */
     overflow-y: auto; 
+  }
+}
+
+@media (max-width: 550px) {
+  #sidebarToggle {
+    flex-wrap: wrap;
+    padding: 0 12px 10px;
   }
 }
 
