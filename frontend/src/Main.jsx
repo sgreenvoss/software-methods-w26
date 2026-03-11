@@ -74,7 +74,8 @@ export default function Main() {
             endTime: `${endHour}:00`
         });
 
-        setEventMode(targetMode);
+        // targetMode is undefined, removing for now
+        // setEventMode(targetMode);
 
         // instantly auto-fill the dropdown with that group's ID!
         if (selectedGroupId) {
