@@ -1,5 +1,12 @@
+/*
+NotAuthenticated.jsx
+Error page for authentication error
+Created on 2026-3-6 by Anna Norris
+*/
+
 import React from 'react';
 
+// page for authentication error
 export default function ServerError({ message }) {
   return (
     <div className="error-page">

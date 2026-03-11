@@ -1,5 +1,12 @@
+/*
+Forbidden.jsx
+Error page for 403 error
+Created on 2026-3-6 by Anna Norris
+*/
+
 import React from 'react';
 
+// displays the page for user attempting to access forbidden info
 export default function Forbidden() {
   return (
     <div className="error-page">

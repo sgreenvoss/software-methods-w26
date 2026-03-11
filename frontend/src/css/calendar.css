@@ -394,3 +394,11 @@ button:disabled {
   border: 1px solid #ced4da;
   border-radius: 8px;
 }
+
+.time-label {
+  z-index: 9;
+}
+
+.day-header {
+  z-index: 10;
+}

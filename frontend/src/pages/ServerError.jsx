@@ -1,5 +1,12 @@
+/*
+ServerError.jsx
+Error page for server error
+Created on 2026-3-6 by Anna Norris
+*/
+
 import React from 'react';
 
+// error page for server error
 export default function ServerError({ message }) {
   return (
     <div className="error-page">

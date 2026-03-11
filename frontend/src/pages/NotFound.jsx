@@ -1,5 +1,12 @@
+/*
+NotFound.jsx
+Error page for no existing page
+Created on 2026-3-6 by Anna Norris
+*/
+
 import React from 'react';
 
+// page for 404 error
 export default function NotFound() {
     return (
         <div className="error-page">

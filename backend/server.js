@@ -1,3 +1,10 @@
+/*
+  server.js
+  this is the central Express backend that manages 
+  auth/sessions, API routes, calendar/event operations, 
+  and serves the React app.
+*/
+
 const express = require('express');
 const cors = require('cors'); // gemini assisted fix for CORS issues
 const { google } = require('googleapis');
