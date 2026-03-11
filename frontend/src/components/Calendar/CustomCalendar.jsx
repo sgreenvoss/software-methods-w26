@@ -308,8 +308,9 @@ export default function CustomCalendar({ refreshTrigger, groupId, draftEvent, on
       <div className="calendar-grid-shell">
         <div className="calendar-grid">
           
-          {/* Top-Left empty sticky corner */}
-          <div className="corner-cell"></div>
+          {/* Stella - I changed this to be just another day header,
+              when scrolling horizontally this went on top of the other cells!*/}
+          <div className="day-header"></div>
           
           {/* Top sticky column headers (Mon, Tue, Wed...) */}
           {days.map((day, i) => (

@@ -73,7 +73,7 @@ export default function EventClickModal({ event, onClose, onRefresh }) {
     <div className="modal-backdrop" onClick={onClose}>
       <div className="modal-shell" onClick={(e) => e.stopPropagation()}>
         <div className="modal-header">
-          <h3>{event.title}</h3>
+          <h2>{event.title}</h2>
           <button onClick={onClose} disabled={isSaving} className="cancel-btn" aria-label="Close event modal">
             &times;
           </button>
