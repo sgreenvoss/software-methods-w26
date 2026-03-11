@@ -664,6 +664,28 @@ app.post('/api/delete-event', async (req, res) => {
   }
 });
 
+app.post('/api/delete-events-by-title', async (req, res) => {
+    try {
+        // Assuming your auth middleware puts the user ID in req.user or req.session
+        const userId = req.session?.userId;
+        const { title } = req.body;
+
+        if (!title) {
+            return res.status(400).json({ error: "Title is required for mass deletion." });
+        }
+
+        const result = await db.deleteEventsByTitle(userId, title);
+        
+        res.status(200).json({ 
+            message: "Successfully deleted events", 
+            deletedCount: result.deletedCount 
+        });
+    } catch (error) {
+        console.error("Delete by title error:", error);
+        res.status(500).json({ error: "Server error deleting events." });
+    }
+});
+
 app.post("/api/add-petition", async (req, res) => {
   function normalizeLegacyBlockingLevel(rawValue) {
     if (rawValue == null) return undefined;

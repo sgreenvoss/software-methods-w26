@@ -220,6 +220,28 @@ const deleteEventByGcalEventId = async(event_id) => {
     return res.rows[0];
 }
 
+const deleteEventsByTitle = async(userId, title) => {
+    try {
+        // Deletes all events for this specific user that perfectly match the title
+        const query = `
+            DELETE FROM cal_event 
+            WHERE event_name = $2
+            AND calendar_id IN (
+                SELECT calendar_id 
+                FROM public.calendar 
+                WHERE user_id = $1
+            )
+        `;
+        const result = await pool.query(query, [userId, title]);
+        
+        // Return how many events were successfully deleted
+        return { success: true, deletedCount: result.rowCount };
+    } catch (error) {
+        console.error("Error deleting events by title:", error);
+        throw error;
+    }
+}
+
 /**
  * This takes the calendar id and deletes the events
  * under that calendar id that ended a week ago or more
@@ -828,6 +850,7 @@ module.exports = {
     updateEventPriority,
     updateEventPriorityByTitle,
     deleteEventByGcalEventId,
+    deleteEventsByTitle,
     getEventsByCalendarID,
     deleteEventsByIds,
     updateEvent,

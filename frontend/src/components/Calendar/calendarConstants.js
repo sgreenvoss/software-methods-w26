@@ -49,3 +49,12 @@ export const COLORS = {
   SOFT_BLOCK: '#aecbfa', // Light Pastel Blue
   NORMAL: '#6395ee'      // Default Blue
 };
+
+export const ZINDEX = {
+  NORMAL: 20,
+  BLOCKING: 30,
+  AVAIL: 50,
+  PETITION: 40,
+  DEEMPHASIZE: 10,
+  PREVIEW: 60
+}

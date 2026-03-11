@@ -10,7 +10,7 @@
 */
 
 import React from 'react';
-import { COLORS, DEEMPHASIZED_EVENT_OPACITY } from './calendarConstants';
+import { ZINDEX, COLORS, DEEMPHASIZED_EVENT_OPACITY } from './calendarConstants';
 import { 
   getAvailabilityColor, 
   getAvailabilityOpacity, 
@@ -69,7 +69,7 @@ export default function CalendarEventBlock({
   let backgroundColor = COLORS.NORMAL;
   let textColor = undefined;
   let opacity = 1;
-  let zIndex = 2; // Default z-index puts personal events ABOVE the grid but BELOW petitions
+  let zIndex = ZINDEX.NORMAL; // Default z-index puts personal events ABOVE the grid but BELOW petitions
   let petitionClass = '';
   let isAboveAvailability = false;
 
@@ -92,14 +92,14 @@ export default function CalendarEventBlock({
       petitionClass = 'petition-open';
     }
     // Petitions ALWAYS render on top of everything else
-    zIndex = 4;
+    zIndex = ZINDEX.PETITION;
     
   } else if (event.mode === 'avail') {
     // Heatmap specific styling
     backgroundColor = getAvailabilityColor(event.availLvl, legendMaxCount);
     opacity = getAvailabilityOpacity(event.availLvl, legendMaxCount);
     // Heatmap sits between personal events and petitions
-    zIndex = 3;
+    zIndex = ZINDEX.AVAIL;
     
   } else {
     // Normal / Blocking Events
@@ -109,7 +109,7 @@ export default function CalendarEventBlock({
     isAboveAvailability = shouldRenderRegularEventAboveAvailability(effectiveAvailabilityView, normalizedBlockingLevel);
     
     // If it is, bump it to z-index 4. Otherwise, leave it at 2 (under the heatmap).
-    zIndex = isAboveAvailability ? 4 : 2;
+    // zIndex = isAboveAvailability ? 4 : 2;
     opacity = event.mode === 'blocking' ? 0.6 : 1;
     
     // Assign color based on backend data, or fall back to constants
@@ -120,6 +120,7 @@ export default function CalendarEventBlock({
   // Override color if it's a manually created event that hasn't synced with Google yet
   if (!event.isPreview && typeof event.id === 'string' && event.id.startsWith('manual-')) {
     backgroundColor = COLORS.MANUAL;
+    zIndex = ZINDEX.BLOCKING;
   }
 
   // --- DE-EMPHASIS LOGIC ---
@@ -127,9 +128,9 @@ export default function CalendarEventBlock({
   const shouldDeEmphasize = shouldDeEmphasizeEventSegment(event);
   const finalOpacity = shouldDeEmphasize ? Math.min(opacity, DEEMPHASIZED_EVENT_OPACITY) : opacity;
   // Push de-emphasized events to the absolute bottom z-index layer
-  let finalZIndex = (shouldDeEmphasize && !isAboveAvailability) ? 1 : zIndex;
+  let finalZIndex = (shouldDeEmphasize) ? ZINDEX.DEEMPHASIZE : zIndex;
   if (event.isPreview) {
-      finalZIndex = 20;
+      finalZIndex = ZINDEX.PREVIEW;
   }
 
   // Add a dashed border if it's a drag-and-drop preview
@@ -210,7 +211,16 @@ export default function CalendarEventBlock({
         color: textColor,
         border: borderStyle,
         // Change mouse pointer to hand icon if clickable
-        cursor: event.isPreview ? 'grab' : (event.mode === 'petition' || isRegularEventClickable ? 'pointer' : 'default')      }}
+        cursor: event.isPreview ? 'grab' : (event.mode === 'petition' || isRegularEventClickable ? 'pointer' : 'default'),
+
+        // Push the event 12px to the right for every level of overlap
+        left: event.overlapIndex ? `${event.overlapIndex * 12}px` : '0px',
+        // Shrink the width so it doesn't bleed off the right edge of the calendar cell
+        width: event.overlapIndex ? `calc(90% - ${event.overlapIndex * 12}px)` : '90%',
+        // Ensure the stacked cards render in the correct top-to-bottom order
+        zIndex: finalZIndex + (event.overlapIndex || 0)
+      
+      }}
     >
       {/* Do not render titles on the green heatmap blocks, it clutters the UI */}
       {event.mode === 'avail' ? null : (event.titleRaw || event.title)}

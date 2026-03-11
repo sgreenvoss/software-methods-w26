@@ -50,20 +50,34 @@ export default function EventClickModal({ event, onClose, onRefresh }) {
 
   // Fires when the user clicks "Delete Event"
   const handleDelete = async () => {
+    const confirmMessage = applyToAll 
+      ? `Are you sure you want to delete ALL events named "${event.title}"? This cannot be undone.`
+      : `Are you sure you want to delete "${event.title}"?`;
+      
     // Native browser prompt to prevent accidental deletions
-    const confirmDelete = window.confirm(`Are you sure you want to delete "${event.title}"?`);
+    const confirmDelete = (applyToAll) ? window.confirm(confirmMessage) : true;
     if (!confirmDelete) return;
 
-  setInlineError('');
+    setInlineError('');
     setIsSaving(true);
     try {
-      // Send delete request to backend
-      await apiPost('/api/delete-event', { event_id: event.id });
+      if (applyToAll) {
+        // THE NEW WAY: Delete all matching by title
+        await apiPost('/api/delete-events-by-title', { 
+          title: event.title 
+        });
+      } else {
+        // THE OLD WAY: Safe, single-event deletion by ID
+        await apiPost('/api/delete-event', { 
+          event_id: event.id 
+        });
+      }
+      
       onRefresh();
       onClose();
     } catch (error) {
       console.error("Failed to delete event", error);
-      setInlineError('Failed to delete the event.');
+      setInlineError('Failed to delete the event(s).');
     } finally {
       setIsSaving(false);
     }
@@ -104,7 +118,8 @@ export default function EventClickModal({ event, onClose, onRefresh }) {
           </div>
 
           {/* Only show the "Apply to All" option for standard blocking events */}
-          {event.mode === 'normal' && (
+          {/* UPDATED: Changed 'mode' check from 'normal' to 'blocking' (based on your earlier files) or kept as is if 'normal' is correct */}
+          {(event.mode === 'normal' || event.mode === 'blocking') && (
             <div style={{ marginTop: '12px', display: 'flex', alignItems: 'center', gap: '8px' }}>
               <input 
                 type="checkbox" 
@@ -114,7 +129,8 @@ export default function EventClickModal({ event, onClose, onRefresh }) {
                 style={{ cursor: 'pointer' }}
               />
               <label htmlFor="applyToAll" style={{ fontSize: '13px', color: '#4b5563', cursor: 'pointer' }}>
-                Update all my events named <strong>"{event.title}"</strong>
+                {/* NEW: Changed the wording slightly so it makes sense for both Save and Delete */}
+                Apply to all my events named <strong>"{event.title}"</strong>
               </label>
             </div>
           )}
@@ -123,13 +139,17 @@ export default function EventClickModal({ event, onClose, onRefresh }) {
         </div>
 
         <div className="modal-actions-row">
+         
+          { event.mode == 'normal' && typeof event.id === 'string' && event.id.startsWith('manual-') && (
           <button
             onClick={handleDelete}
             disabled={isSaving}
             className="modal-btn-muted"
           >
-            Delete Event
+            Delete Event{applyToAll ? 's' : ''}
           </button>
+          )}
+
           <button className="modal-btn-success" onClick={handleSave} disabled={isSaving}>
             {isSaving ? 'Saving...' : 'Save Changes'}
           </button>

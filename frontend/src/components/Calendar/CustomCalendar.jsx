@@ -232,6 +232,39 @@ export default function CustomCalendar({ refreshTrigger, groupId, draftEvent, on
   // Finally, run all arrays through the core date processor to handle midnight splits
   const allEvents = processEvents(finalRawEvents).concat(processEvents(groupAvailability), processEvents(visiblePetitions));
 
+  // --- NEW: CARD STACK OVERLAP LOGIC ---
+  // 1. Sort all events chronologically. 
+  // If they start at the exact same time, force the green 'avail' blocks to be processed first.
+  allEvents.sort((a, b) => {
+    if (a.start.getTime() !== b.start.getTime()) {
+      return a.start.getTime() - b.start.getTime();
+    }
+    if (a.mode === 'avail' && b.mode !== 'avail') return -1;
+    if (a.mode !== 'avail' && b.mode === 'avail') return 1;
+    return 0;
+  });
+
+  // 2. Loop through and tag overlapping personal/petition events
+  let currentOverlapIndex = 0;
+  for (let i = 0; i < allEvents.length; i++) {
+    // Never shift the green background heatmap blocks
+    if (allEvents[i].mode === 'avail') {
+      allEvents[i].overlapIndex = 0;
+    } else {
+      // If this event starts at the exact same time as the PREVIOUS regular event, stack it!
+      if (i > 0 && 
+          allEvents[i].start.getTime() === allEvents[i-1].start.getTime() && 
+          allEvents[i-1].mode !== 'avail'
+      ) {
+        currentOverlapIndex++;
+      } else {
+        currentOverlapIndex = 0; // Reset for a new time block
+      }
+      allEvents[i].overlapIndex = currentOverlapIndex;
+    }
+  }
+  // -------------------------------------
+
   // Build the array of 7 days for the column headers
   const days = Array.from({ length: 7 }, (_, i) => {
     const d = new Date(weekStart);
