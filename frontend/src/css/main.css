@@ -240,7 +240,6 @@ button:hover {
     left: 0;
     width: 60%;          /* Take up the full width of the screen */
     height: 100%;         /* Take up the full height */
-    z-index: 100;         /* Stack it high so it covers the calendar (which is z-index 1-4) */
     background-color: var(--your-background-color, #ffffff); /* MUST be solid so calendar doesn't bleed through */
     
     /* Optional: Add a subtle shadow so it pops off the background */
@@ -265,7 +264,6 @@ button:hover {
     bottom: 0;
     width: 10px; /* Wide enough to easily grab with the mouse */
     cursor: ew-resize; /* The standard <--> horizontal drag cursor */
-    z-index: 50;
     transition: background-color 0.2s;
 }
 

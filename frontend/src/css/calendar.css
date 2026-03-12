@@ -165,7 +165,6 @@ html, body, #root {
   position: sticky;
   top: 0;
   left: 0; /* Stick to the left AND top */
-  z-index: 200; /* Absolute highest so nothing covers it */
   background-color: #f4f5f7;
   border-bottom: 1px solid #d9dee6;
   /* Optional: add a right border so it matches the hour column */
@@ -177,7 +176,6 @@ html, body, #root {
   font-weight: bold;
   position: sticky;
   top: 0;
-  z-index: 150;
   padding: 12px 8px;
   background-color: #f4f5f7;
   border-bottom: 1px solid #d9dee6;
@@ -193,7 +191,6 @@ html, body, #root {
 .time-label {
   height: 100%;
   left: 0;
-  z-index: 140;
   height: 100%;
   box-sizing: border-box;
   text-align: right;
@@ -224,7 +221,6 @@ html, body, #root {
   line-height: 1.25;
   padding: 6px 6px;
   box-sizing: border-box;
-  z-index: 10;
   border-radius: 6px;
   overflow: hidden;
   box-shadow: 0 2px 6px rgba(0, 0, 0, 0.12);
@@ -232,14 +228,12 @@ html, body, #root {
 }
 
 .calendar-event:hover {
-  z-index: 100 !important; 
   border: 2px solid #ffffff;
   padding: 5px 5px;
 }
 
 .availability-tooltip {
   position: fixed;
-  z-index: 2200;
   pointer-events: none;
   padding: 7px 8px;
   border-radius: 8px;
@@ -308,7 +302,6 @@ button:disabled {
   display: flex;
   align-items: center;
   justify-content: center;
-  z-index: 2000;
   padding: 16px;
 }
 
@@ -395,10 +388,3 @@ button:disabled {
   border-radius: 8px;
 }
 
-.time-label {
-  z-index: 9;
-}
-
-.day-header {
-  z-index: 10;
-}

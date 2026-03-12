@@ -256,7 +256,9 @@ export default function EventSidebar({
             <div className="mode-toggle">
                 <button id="blockingBtn"
                         style={{
-                          transform: mode === 'blocking' ? 'scale(1.05)' : 'scale(1)',
+                          transform: mode === 'blocking' ? 'scale(1.1)' : 'scale(1)',
+                          border: mode === 'blocking' ? '3px solid #ffffff' : '1px solid #ffffff',
+                          boxShadow: '0 2px 6px rgba(0, 0, 0, 0.2)',
                           zIndex: mode === 'blocking' ? 1 : 0
                         }}
                     onClick={() => setMode('blocking')}
@@ -265,7 +267,9 @@ export default function EventSidebar({
                 </button>
                 <button id="petitionBtn" 
                     style={{
-                      transform: mode === 'petition' ? 'scale(1.05)' : 'scale(1)',
+                      transform: mode === 'petition' ? 'scale(1.1)' : 'scale(1)',
+                      border: mode === 'petition' ? '3px solid #ffffff' : '1px solid #ffffff',
+                    boxShadow: '0 2px 6px rgba(0, 0, 0, 0.2)',
                       zIndex: mode === 'petition' ? 1 : 0
                     }}
                     onClick={() => setMode('petition')}

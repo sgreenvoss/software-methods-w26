@@ -7,7 +7,6 @@
   display: flex;
   justify-content: center;
   align-items: center;
-  z-index: 1000;
 }
 
 /* The White Box */
@@ -102,7 +101,6 @@
   margin: 4px 0 0 0;
   padding: 0;
   list-style: none; /* Kills the bullet points */
-  z-index: 100; /* Forces it to sit above everything else in the modal */
 }
 
 /* The individual users in the list */

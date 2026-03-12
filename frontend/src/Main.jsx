@@ -27,8 +27,7 @@ import { ErrorContext } from './ErrorContext';
 
 /* Global page styles for main layout, sidebars, and controls. */
 import './css/main.css';
-
-/* Shared API helpers for authenticated backend requests. */
+import './css/zindex.css';
 import {apiGet, apiPost} from './api';
 
 /* Reusable container that provides draggable width adjustment for sidebars. */
@@ -101,8 +100,7 @@ export default function Main() {
             endTime: `${endHour}:00`
         });
 
-        // targetMode is undefined, removing for now
-        // setEventMode(targetMode);
+        setEventMode(targetMode);
 
         // instantly auto-fill the dropdown with that group's ID!
         if (selectedGroupId) {
