@@ -1,4 +1,4 @@
-import { createEventManagementModule, EventStore } from "./index.js";
+import { createEventManagementModule, EventStore } from "../index.js";
 
 describe("event_management module factory", () => {
   test("creates module with default model/view/controller", () => {

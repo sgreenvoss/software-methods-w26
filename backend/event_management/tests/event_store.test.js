@@ -1,4 +1,4 @@
-import { EventStore, EventStoreError, EventSources } from "./model.js";
+import { EventStore, EventStoreError, EventSources } from "../model.js";
 import { BlockingLevel } from "../types/algorithm_types.js";
 
 const USER_A = "user-a";

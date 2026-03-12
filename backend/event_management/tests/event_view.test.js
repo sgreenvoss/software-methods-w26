@@ -1,4 +1,4 @@
-import { createEventView } from "./view.js";
+import { createEventView } from "../view.js";
 
 describe("Event view helpers", () => {
   test("success helpers return ok actions", () => {

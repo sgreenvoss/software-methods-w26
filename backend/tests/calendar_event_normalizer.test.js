@@ -1,4 +1,4 @@
-const { deriveAllDayMetadata, normalizeCalendarEvent } = require('./calendar_event_normalizer');
+const { deriveAllDayMetadata, normalizeCalendarEvent } = require('../calendar_event_normalizer');
 
 describe('calendar_event_normalizer', () => {
   test('marks midnight UTC whole-day ranges as all-day', () => {

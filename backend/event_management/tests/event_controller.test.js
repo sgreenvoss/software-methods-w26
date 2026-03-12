@@ -1,6 +1,6 @@
-import { EventStore, EventStoreError } from "./model.js";
-import { EventController } from "./controller.js";
-import { createEventView } from "./view.js";
+import { EventStore, EventStoreError } from "../model.js";
+import { EventController } from "../controller.js";
+import { createEventView } from "../view.js";
 import { BlockingLevel } from "../types/algorithm_types.js";
 
 describe("EventController: happy paths", () => {
