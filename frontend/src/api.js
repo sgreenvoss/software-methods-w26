@@ -1,16 +1,29 @@
-/* 
-api.js
-Provides functions for HTTP requests
-Created on 2026-2-2 by Garrett Caldwell
-parseJSONResponse(), apiGetwithMeta(), and apiPostwithMeta() are from updates
+/*
+File: api.js
+Purpose: Centralizes frontend HTTP helpers for GET/POST requests and normalizes
+response metadata (status, ok flag, data payload, and trace id).
+Creation Date: 2026-02-02
+Initial Author(s): Garrett Caldwell
+
+System Context:
+This file is part of the Social Schedule frontend service layer. It provides a
+single request utility surface used by UI components to communicate with backend
+API endpoints while enforcing consistent response parsing and error handling.
+
+Significant Modifications:
+- Added `parseJsonResponse`, `apiGetWithMeta`, and `apiPostWithMeta` to support
+  response metadata and trace-id-aware request flows.
 */
 
+/**
+ * Parses a fetch Response as JSON and returns a normalized response object.
+ *
+ * @param {Response} response - Raw response object returned by `fetch`.
+ * @returns {Promise<{ok: boolean, status: number, data: any, traceId: string|null}>}
+ * Normalized response shape containing HTTP status flags, parsed JSON, and trace id.
+ * @throws {Error} Throws when the response content type is not JSON.
+ */
 async function parseJsonResponse(response) {
-  /* 
-  Validates response is JSON, parses and returns normalized result objects
-  argument is response from a fetch request
-  returns a normalized result object
-  */
   const contentType = response.headers.get('content-type');
   if (!contentType || !contentType.includes('application/json')) {
     console.error('Response is not JSON:', response.status, await response.text());
@@ -28,12 +41,13 @@ async function parseJsonResponse(response) {
   };
 }
 
+/**
+ * Sends an authenticated GET request and returns only the parsed JSON payload.
+ *
+ * @param {string} path - Backend endpoint path to request.
+ * @returns {Promise<any>} Parsed JSON response body (`parsed.data`).
+ */
 export async function apiGet(path) {
-  /*
-  Sends a GET request to the backend
-  Argument is endpoint
-  returns parsed json response
-  */
   console.log("api getting path:", path);
 
   // make fetch request
@@ -46,12 +60,14 @@ export async function apiGet(path) {
   return parsed.data;
 }
 
+/**
+ * Sends an authenticated GET request and returns parsed payload plus metadata.
+ *
+ * @param {string} path - Backend endpoint path to request.
+ * @returns {Promise<{ok: boolean, status: number, data: any, traceId: string|null}>}
+ * Normalized response with metadata.
+ */
 export async function apiGetWithMeta(path) {
-  /* 
-  Sends a GET request and returns whole response
-  Argument is endpoint
-  Returns JSON response with metadeta
-  */
   const response = await fetch(path, {
     credentials: "include"
   });
@@ -60,13 +76,14 @@ export async function apiGetWithMeta(path) {
   return parseJsonResponse(response);
 }
 
+/**
+ * Sends an authenticated POST request with JSON body and returns parsed payload.
+ *
+ * @param {string} path - Backend endpoint path to request.
+ * @param {any} data - Request body serialized as JSON.
+ * @returns {Promise<any>} Parsed JSON response body (`parsed.data`).
+ */
 export async function apiPost(path, data) {
-  /* 
-  Sends a POST request and parses the response
-  Arguments are the backend endpoint and data to be used/changed
-  Returns a parsed JSON response
-  */
-
   // Make a POST request and receive a response
   const response = await fetch(path, {
     method: "POST",
@@ -80,13 +97,15 @@ export async function apiPost(path, data) {
   return parsed.data;
 }
 
+/**
+ * Sends an authenticated POST request with JSON body and returns payload plus metadata.
+ *
+ * @param {string} path - Backend endpoint path to request.
+ * @param {any} data - Request body serialized as JSON.
+ * @returns {Promise<{ok: boolean, status: number, data: any, traceId: string|null}>}
+ * Normalized response with metadata.
+ */
 export async function apiPostWithMeta(path, data) {
-  /* 
-  Sends a POST request without parsing response
-  Arguments are backend endpoint and data to be used/changed
-  Returns a JSON response with metadata
-  */
-
   // Make post request and receive response
   const response = await fetch(path, {
     method: "POST",

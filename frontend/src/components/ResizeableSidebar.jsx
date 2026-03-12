@@ -1,3 +1,10 @@
+/*
+ResizeableSidebar.jsx
+Allows user to grow or shrink sidebar, mainly for usability purposes
+on smaller screen size
+Created on 2026-3-10 by Garrett Caldwell
+*/
+
 import React, { useState, useEffect, useRef } from 'react';
 
 export default function ResizableSidebar({ 
@@ -8,6 +15,12 @@ export default function ResizableSidebar({
     children,
     className = ''
 }) {
+    /*
+    takes side ('left'|'right'), defaultWidth, minWidth, maxWidth, optional className, 
+    and children, and outputs an <aside> container that renders those children 
+    inside a vertically scrollable area with a draggable resize handle 
+    that constrains width between min/max bounds.
+    */
     const [isResizing, setIsResizing] = useState(false);
     const sidebarRef = useRef(null);
     const dragData = useRef({ startX: 0, startWidth: 0 });

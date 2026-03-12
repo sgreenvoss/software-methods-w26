@@ -1,20 +1,44 @@
 /*
-UsernameCreation.jsx
-Page for new users to create their username and choose calendars to import
-Created on 2026-2-18 by Anna Norris
-Updated to include calendar selection
+File: UsernameCreation.jsx
+Purpose: Provides the onboarding flow where a new user creates a username and
+selects one or more calendars to import before entering the main app.
+Creation Date: 2026-02-18
+Initial Author(s): Anna Norris
+
+System Context:
+This file is part of the Social Schedule frontend onboarding system. It sits
+between login and the main dashboard, validating username input and collecting
+initial calendar selections for backend setup.
 */
 
+/*
+Library: react
+Purpose: Supplies functional component rendering and Hooks for local state and effects.
+Reason Included: This file uses `useState` for onboarding state and `useEffect` for initial data loading.
+*/
 import React, { useState, useEffect } from 'react';
+
+/*
+Module: ./api.js
+Purpose: Exposes API helper functions for GET/POST requests.
+Reason Included: Username creation and calendar selection are submitted/fetched via backend endpoints.
+*/
 import { apiGet, apiPost } from './api.js';
+
+/*
+Component: CalendarSelectionModal
+Purpose: Displays selectable calendars and confirmation controls.
+Reason Included: The second onboarding step is rendered in this modal.
+*/
 import CalendarSelectionModal from './components/CalendarSelectionModal.jsx'; 
 
+/**
+ * Username onboarding component that validates username input and collects
+ * initial calendar selections before redirecting into the app.
+ *
+ * @returns {JSX.Element} Onboarding page and calendar-selection modal.
+ */
 export default function UsernameCreation() {
-    /*
-    Main page to handle username creation
-    Once user creates a username and chooses at least one calendar, they are 
-    redirected to main
-    */
     const [username, setUsername] = useState('');
     const [errors, setErrors] = useState([]);
     const [step, setStep] = useState('username'); // 'username' or 'calendars'
@@ -23,6 +47,12 @@ export default function UsernameCreation() {
     const [calendars, setCalendars] = useState([]);
     const [selectedCals, setSelectedCals] = useState([]);
 
+    /**
+     * Toggles calendar selection in local state for the onboarding modal.
+     *
+     * @param {{id: string|number, summary?: string, displayName?: string}} calendar - Calendar object to add/remove.
+     * @returns {void}
+     */
     const handleCheckboxChange = (calendar) => {
         // with each calendar, handle whether user selects or deselects calendar choice
         if (selectedCals.some(cal => cal.id === calendar.id)) {
@@ -34,12 +64,13 @@ export default function UsernameCreation() {
         }
     };
 
+    /**
+     * Validates username input and advances onboarding to the calendar step.
+     *
+     * @param {React.FormEvent<HTMLFormElement>} e - Form submission event.
+     * @returns {Promise<void>} Resolves after validation and state updates.
+     */
     const handleSubmit = async (e) => {
-        /* 
-        handle input for username and submission
-        checks whether username is valid based on validation rules
-        gets the current input and moves on to calendars modal
-        */
         e.preventDefault();
 
         // usernames must be 4-16 characters and include only alphabetic chars, _, and .
@@ -65,10 +96,12 @@ export default function UsernameCreation() {
         setStep('calendars');
     }
 
+    /**
+     * Submits username and selected calendars to backend onboarding endpoints.
+     *
+     * @returns {Promise<void>} Resolves after submission workflow and loading state cleanup.
+     */
     const handleSelectCalendars = async () => {
-        /*
-        sends the selected calendars to the backend
-        */
         if (selectedCals.length < 1) {
             setErrors(['Please select at least one calendar.']);
             return;
@@ -92,15 +125,27 @@ export default function UsernameCreation() {
         }
     }
 
+    /**
+     * Returns the user from the calendar step back to username entry.
+     *
+     * @returns {void}
+     */
     const handleBackToUsername = () => {
         setStep('username');
         setErrors([]);
     }
 
+    /**
+     * Loads available calendars once on component mount for selection in step two.
+     *
+     * @returns {void}
+     */
     useEffect(() => {
-        /*
-        immediately upon page load, get the calendars for the user and set calendars for modal
-        */
+        /**
+         * Fetches calendars for the current user and normalizes fields for modal display.
+         *
+         * @returns {Promise<void>} Resolves after calendars are loaded into component state.
+         */
         const getCals = async () => {
             const cals = await apiGet('/api/calendars');
             const updatedCals = cals.map((cal) => {

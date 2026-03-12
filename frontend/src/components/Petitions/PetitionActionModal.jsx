@@ -1,6 +1,34 @@
+/*
+PetitionActionModal.jsx
+Renders and controls the petition action modal, allowing users to view 
+petition details, submit accept/decline responses, or delete a petition 
+when they are the creator.
+Created on 2026-03-01 by David Haddad
+
+This file is part of the frontend petition feature in the application.
+Presents petition information to users.
+*/
+
+/*
+Library: react
+Purpose: Provides component rendering and React Hooks used for local state and lifecycle side effects.
+Reason Included: This file is a functional React UI component that needs `useState` and `useEffect`.
+*/
 import React, { useEffect, useState } from 'react';
+
+/*
+Stylesheet: ../../css/calendar.css
+Purpose: Provides shared modal and calendar-related styling classes used by this component.
+Reason Included: Petition modal class names in this file rely on CSS rules defined in this stylesheet.
+*/
 import '../../css/calendar.css';
 
+/**
+ * Safely reads JSON from a fetch Response only when the response is JSON.
+ *
+ * @param {Response} response - Fetch response object to inspect and parse.
+ * @returns {Promise<object|null>|null} Parsed JSON payload (possibly as a Promise) when content type is JSON; otherwise null.
+ */
 function getJsonOrNull(response) {
   const contentType = response.headers.get('content-type') || '';
   if (!contentType.includes('application/json')) {
@@ -9,6 +37,12 @@ function getJsonOrNull(response) {
   return response.json();
 }
 
+/**
+ * Builds a user-friendly date/time range string from petition time fields.
+ *
+ * @param {object} petition - Petition object containing start/end values (`start_time`, `start`, `startMs`, `end_time`, `end`, `endMs`).
+ * @returns {string} Formatted date/time range, or an empty string when dates are missing/invalid.
+ */
 function formatDateTimeRange(petition) {
   if (!petition) return '';
 
@@ -34,6 +68,17 @@ function formatDateTimeRange(petition) {
   return `${start.toLocaleString()} - ${end.toLocaleString()}`;
 }
 
+/**
+ * Petition action modal component for viewing details and taking petition actions.
+ *
+ * @param {object} props - Component props.
+ * @param {boolean} props.open - Controls whether the modal is visible.
+ * @param {object|null} props.petition - Petition payload used to render metadata and current status.
+ * @param {number|string|null} props.currentUserId - Current authenticated user id, used to determine creator privileges.
+ * @param {Function} props.onClose - Callback invoked when the modal should close.
+ * @param {Function} props.onActionComplete - Callback invoked after a successful accept/decline/delete action.
+ * @returns {JSX.Element|null} Modal JSX when open with a petition; otherwise null.
+ */
 export default function PetitionActionModal({
   open,
   petition,
@@ -44,6 +89,11 @@ export default function PetitionActionModal({
   const [submitting, setSubmitting] = useState(false);
   const [inlineError, setInlineError] = useState('');
 
+  /**
+   * Clears inline error state whenever the modal closes or petition context changes.
+   *
+   * @returns {void}
+   */
   useEffect(() => {
     if (!open) {
       setInlineError('');
@@ -123,6 +173,11 @@ export default function PetitionActionModal({
 
   const participantButtonsDisabled = submitting || status !== 'OPEN' || hasResponded;
 
+  /**
+   * Derives the current user's response label from normalized response values.
+   *
+   * @returns {string} "Accepted", "Declined", or an empty string when no response is present.
+   */
   const currentResponseLabel = (() => {
     if (normalizedCurrentUserResponse === 'ACCEPTED' || normalizedCurrentUserResponse === 'ACCEPT') {
       return 'Accepted';
@@ -136,6 +191,12 @@ export default function PetitionActionModal({
   const acceptLabel = currentResponseLabel === 'Accepted' ? 'Accept (Selected)' : 'Accept';
   const declineLabel = currentResponseLabel === 'Declined' ? 'Decline (Selected)' : 'Decline';
 
+  /**
+   * Sends an accept/decline response for the current petition.
+   *
+   * @param {'ACCEPT'|'DECLINE'} responseValue - Participant decision submitted to the API.
+   * @returns {Promise<void>} Resolves after updating UI state and invoking completion callback on success.
+   */
   const handleRespond = async(responseValue) => {
     try {
       setSubmitting(true);
@@ -163,6 +224,11 @@ export default function PetitionActionModal({
     }
   };
 
+  /**
+   * Deletes the current petition when invoked by its creator.
+   *
+   * @returns {Promise<void>} Resolves after API completion and UI state updates.
+   */
   const handleDelete = async() => {
     try {
       setSubmitting(true);

@@ -1,18 +1,38 @@
-/* 
-Login.jsx
-Gives user button to continue with Google and info about app
-Created on 2026-2-12 by Anna Norris
-Part of account creation system
+/*
+File: Login.jsx
+Purpose: Renders the public login/onboarding entry page and starts Google OAuth login.
+Creation Date: 2026-02-12
+Initial Author(s): Anna Norris
+
+System Context:
+This file is part of the Social Schedule frontend authentication and onboarding
+experience. It serves as the first screen users see, provides product context,
+and routes users into backend OAuth authentication.
 */
 
+/*
+Library: react
+Purpose: Provides component rendering and Hooks for local state and side effects.
+Reason Included: Login is implemented as a functional React component using
+`useState` and `useEffect`.
+*/
 import React, { useState, useEffect } from 'react';
 import './css/login.css';
 
+/**
+ * Login page component for initiating OAuth and displaying app overview content.
+ *
+ * @returns {JSX.Element} Login screen with Google auth button and feature descriptions.
+ */
 export default function Login() {
   // Handles users logging in or creating an account, first page users will see
   const [errorMsg, setErrorMsg] = useState('');
 
-  // check if user has given all permissions
+  /**
+   * Reads auth error query params once on mount and surfaces permission guidance.
+   *
+   * @returns {void}
+   */
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
     const error = params.get('error');
@@ -23,7 +43,12 @@ export default function Login() {
   }, []);
 
 
-  const handleLogin = () => {
+    /**
+     * Redirects the user to the backend Google OAuth start endpoint.
+     *
+     * @returns {void}
+     */
+    const handleLogin = () => {
       // fix localhost redirect issues with different frontend/backend ports
       const baseURL = process.env.BACKEND_URL || '';
       window.location.href = `${baseURL}/auth/google`;

@@ -1,20 +1,45 @@
 /*
-Main.jsx
-Handles the main page of the app, parent of calendar component
-Initially created 2026-2-12 by Anna Norris
-Updated extensively to handle petitions, group, and time blocks by all developers
+File: Main.jsx
+Purpose: Defines the primary authenticated application view and coordinates calendar,
+groups, invitations, and event-creation sidebars.
+Creation Date: 2026-02-12
+Initial Author(s): Anna Norris
+
+System Context:
+This file is part of the Social Schedule frontend application. It acts as the
+container/orchestrator page that wires together major UI modules (calendar,
+group management, petition flow, and invite handling) and shared state updates.
 */
 
+/*
+Library: react
+Purpose: Provides component rendering and state/effect/context hooks.
+Reason Included: Main is a React functional component that manages app-level UI state.
+*/
 import React, { useState, useEffect, useContext } from 'react';
+
+/* UI modules used by Main to compose the primary page layout and flows. */
 import Calendar from './components/Calendar/CustomCalendar';
 import Groups from './components/Groups/Groups';
 import PendingInviteModal from './components/Groups/PendingInviteModal';
 import EventSidebar from './components/Calendar/EventSidebar';
 import { ErrorContext } from './ErrorContext';
+
+/* Global page styles for main layout, sidebars, and controls. */
 import './css/main.css';
+
+/* Shared API helpers for authenticated backend requests. */
 import {apiGet, apiPost} from './api';
+
+/* Reusable container that provides draggable width adjustment for sidebars. */
 import ResizableSidebar from './components/ResizeableSidebar';
 
+/**
+ * Main authenticated application container.
+ *
+ * @returns {JSX.Element} Full page layout containing management controls,
+ * groups sidebar, calendar, and event sidebar.
+ */
 export default function Main() {
     // groups
     const [selectedGroupId, setSelectedGroupId] = useState(null);
@@ -50,12 +75,14 @@ export default function Main() {
     const { setError } = useContext(ErrorContext);
 
 
+    /**
+     * Handles calendar cell selection and pre-fills event form values.
+     *
+     * @param {Date} clickedDate - Date value for the selected calendar cell.
+     * @param {number} hour - Hour-of-day (0-23) selected in the calendar grid.
+     * @returns {void}
+     */
     const handleCalendarCellClick = (clickedDate, hour) => {
-        /*
-        The handler we will pass down to the Calendar
-        Arguments are the date user clicks and the hour they clicked on
-        Opens group sidebar and sets the details of clicked cell
-        */
 
         // Format the date as YYYY-MM-DD
         const year = clickedDate.getFullYear();
@@ -89,12 +116,15 @@ export default function Main() {
         }
     };
 
+    /**
+     * Repositions the in-progress draft event and syncs sidebar form fields.
+     *
+     * @param {Date} droppedDate - Target date where the draft event was dropped.
+     * @param {number} startHour - New start hour for the draft event.
+     * @param {number} startMin - New start minute for the draft event.
+     * @returns {void}
+     */
     const handleDraftDrop = (droppedDate, startHour, startMin) => {
-        /* 
-        Handles the drag-and-drop of the draft event
-        Arguments are the date, start hour and minute
-        Overwrites sidebar inputs with clicked event
-        */
         if (!draftEvent) return;
 
         // Calculate the current duration of the event in milliseconds
@@ -127,11 +157,12 @@ export default function Main() {
         });
     };
 
+    /**
+     * Loads calendar events from the backend and triggers a calendar refresh.
+     *
+     * @returns {Promise<void>} Resolves after the fetch attempt and refresh handling.
+     */
     const fetchEvents = async () => {
-        /* 
-        grab all of the events using api/events on login
-        no arguments, gets events and refreshes calendar
-        */
         try {
             // get events from endpoint
             await apiGet('/api/events');
@@ -144,11 +175,12 @@ export default function Main() {
         }
     }
 
+    /**
+     * Loads the current user's groups and stores them in local state.
+     *
+     * @returns {Promise<void>} Resolves after group state is updated or reset on error.
+     */
     const fetchGroups = async () => {
-        /*
-        fetch all of the groups for user
-        no arguments, updates the list of groups for user
-        */
         try {
             // Hit the ACTUAL endpoint
             const response = await apiGet('/user/groups'); 
@@ -168,11 +200,12 @@ export default function Main() {
         }
     };
 
+    /**
+     * Fetches any pending invite associated with the current user session.
+     *
+     * @returns {Promise<void>} Resolves after pending invite state is set or cleared.
+     */
     const fetchPendingInvite = async () => {
-        /*
-        fetch any pending invites from clicking on shared link
-        no arguments, sets pending invite based on json response
-        */
         try {
             // find if user has a pending invite
             const response = await apiGet('/api/group-invite/pending');
@@ -190,11 +223,12 @@ export default function Main() {
         }
     };
 
+    /**
+     * Logs out the current user and redirects to logout/login routes.
+     *
+     * @returns {Promise<void>} Resolves when logout flow and redirect decision are complete.
+     */
     const handleLogout = async () => {
-        /*
-        handle user logging out by clicking button
-        no arguments, user's window redirected using logout
-        */
         try {
             await apiPost('/logout'); 
             window.location.href = '/logout'; 
@@ -203,12 +237,12 @@ export default function Main() {
         }
     };
 
-    // fetch user info
+    /**
+     * Retrieves the authenticated user's profile and stores display username.
+     *
+     * @returns {Promise<void>} Resolves after username state is updated.
+     */
     const fetchUsername = async () => {
-        /*
-        handle fetching username to display on main page
-        no arguments, sets the username for main page to display
-        */
         try {
             // get username and set it to display
             const me = await apiGet('/api/me');
@@ -220,10 +254,12 @@ export default function Main() {
         }
     };
 
+    /**
+     * Initial data bootstrap effect for username, events, groups, and pending invites.
+     *
+     * @returns {void}
+     */
     useEffect(() => {
-        /*
-        Immediately upon page load, fetch all existing user events, groups, invites, and username
-        */
         fetchUsername();
         fetchEvents();
         fetchGroups();
@@ -231,6 +267,11 @@ export default function Main() {
     }, []);
 
 
+    /**
+     * Clears transient draft UI state when the event sidebar closes.
+     *
+     * @returns {void}
+     */
     useEffect(() => {
         // Automatically clear the ghost draft event if the sidebar gets closed
         if (!isEventSidebarOpen) {
@@ -239,20 +280,31 @@ export default function Main() {
         }
     }, [isEventSidebarOpen]);
 
-    // Toggle the sidebar open/closed
+    /**
+     * Toggles the groups sidebar open/closed state.
+     *
+     * @returns {void}
+     */
     const toggleGroupsSidebar = () => {
         setIsGroupsSidebarOpen(!isGroupsSidebarOpen);
     }
+
+    /**
+     * Toggles the event sidebar open/closed state.
+     *
+     * @returns {void}
+     */
     const toggleEventSidebar = () => {
         setIsEventSidebarOpen(!isEventSidebarOpen);
     }
 
+    /**
+     * Submits an invitation response and updates invite/group state accordingly.
+     *
+     * @param {'accept'|'decline'} decision - User's invitation decision.
+     * @returns {Promise<void>} Resolves after API processing and UI state updates.
+     */
     const handleInviteDecision = async (decision) => {
-        /* 
-        handles whether a user accepts or declines an invitation
-        argument is accept or decline
-        if accept, app refetches groups
-        */
         setInviteActionLoading(true);
         setInviteError('');
         try {
@@ -277,6 +329,12 @@ export default function Main() {
         }
     };
     
+    /**
+     * Opens petition creation flow for a selected group and syncs dependent state.
+     *
+     * @param {number|string} groupId - Group identifier to associate with the petition.
+     * @returns {Promise<void>} Resolves after state synchronization and sidebar transitions.
+     */
     const handleOpenPetition = async (groupId) => {
         // Keep petition target and rendered availability group in sync.
         await fetchGroups();
@@ -288,11 +346,12 @@ export default function Main() {
         setIsEventSidebarOpen(true);   // Open event sidebar
     };
 
+    /**
+     * Synchronizes calendar data and forces a calendar refresh regardless of API outcome.
+     *
+     * @returns {Promise<void>} Resolves after sync attempt and refresh signal update.
+     */
     const handleSyncCals = async () => {
-        /*
-        Synchronize google calendar events and existing events, and petitions/timeblocks 
-        no arguments, refreshes calendar after resyncing with api/events endpoint
-        */
         try {
             await apiGet('/api/events');
         } catch (error) {

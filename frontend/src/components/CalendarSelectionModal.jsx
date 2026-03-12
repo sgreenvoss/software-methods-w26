@@ -1,7 +1,15 @@
+/*
+CalendarSelectionModal.jsx
+Provides the modal to select calendars after users have submitted a valid username
+Created on 2026-3-6 by Anna Norris
+Presented on login page for onboarding
+*/
+
 import React from 'react';
 import '../css/calendarSelectModal.css';
 
 // modal view for users selecting calendars after creating a valid username
+// inherits whether it is opened and functions to facillitate calendar selection
 export default function CalendarSelectionModal({ 
     isOpen, 
     calendars, 
@@ -15,6 +23,7 @@ export default function CalendarSelectionModal({
     if (!isOpen) return null;
 
     return (
+        // uses basic framework of modal
         <div className="calendar-modal-overlay">
             <div className="calendar-modal-content">
                 <h2>Select Your Calendars</h2>
@@ -26,6 +35,7 @@ export default function CalendarSelectionModal({
                     {calendars.map((calendar) => (
                         <div key={calendar.id} className="calendar-item">
                             <label>
+                                {/* when item is checked/unchecked, add to selected calendars*/}
                                 <input
                                     type="checkbox"
                                     checked={selectedCals.some(cal => cal.id === calendar.id)}
