@@ -1,6 +1,6 @@
 /*
-index.cjs
-Loads the ESM event-management module for CommonJS callers.
+File: index.cjs
+Purpose: Loads the ESM event-management module for CommonJS callers.
 This keeps the package export shape consistent with the algorithm module.
 */
 

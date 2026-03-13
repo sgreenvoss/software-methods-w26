@@ -1,7 +1,7 @@
 /*
-invite_state_service.js
-Stores the pending invite token in both the session and a signed cookie.
-This keeps invite links working across login redirects.
+File: invite_state_service.js
+Purpose: Stores the pending invite token in both the session and a signed cookie.
+    This keeps invite links working across login redirects.
 */
 
 function createInviteStateService({

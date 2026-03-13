@@ -1,7 +1,7 @@
 /*
-petition_routes.js
-Registers the petition API routes.
-This file centralizes auth checks, petition validation, and error formatting.
+File: petition_routes.js
+Purpose: Registers the petition API routes.
+    This file centralizes auth checks, petition validation, and error formatting.
 */
 
 const crypto = require("crypto");

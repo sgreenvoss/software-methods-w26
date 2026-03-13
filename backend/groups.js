@@ -1,7 +1,7 @@
 /*
-groups.js
-Registers the group, invite, and petition route modules.
-This file keeps the backend group features wired together in one place.
+File: groups.js
+Purpose: Registers the group, invite, and petition route modules.
+    This file keeps the backend group features wired together in one place.
 */
 const db = require("./db/dbInterface");
 const inviteToken = require("./inviteToken");

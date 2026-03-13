@@ -1,7 +1,7 @@
 /*
-dbInterface.js
-Holds the shared PostgreSQL queries used across the backend.
-This file keeps connection setup, user/group helpers, and petition helpers in one place.
+File: dbInterface.js
+Purpose: Holds the shared PostgreSQL queries used across the backend.
+    This file keeps connection setup, user/group helpers, and petition helpers in one place.
 */
 
 const fs = require('fs');

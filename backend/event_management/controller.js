@@ -1,7 +1,7 @@
 /*
-controller.js
-Coordinates the in-memory event store and the event view helpers.
-This keeps controller methods focused on translating model results into responses.
+File: controller.js
+Purpose: Coordinates the in-memory event store and the event view helpers.
+    This keeps controller methods focused on translating model results into responses.
 */
 
 import { EventStore, EventStoreError } from "./model.js";

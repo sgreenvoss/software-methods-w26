@@ -1,7 +1,7 @@
 /*
-model.js
-Implements the in-memory event store used by the event-management module.
-This file keeps the validation and mutation rules in one place.
+File: model.js
+Purpose: Implements the in-memory event store used by the event-management module.
+    This file keeps the validation and mutation rules in one place.
 */
 
 import { BlockingLevel } from "../types/algorithm_types.js";

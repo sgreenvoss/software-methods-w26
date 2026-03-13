@@ -1,7 +1,7 @@
 /*
-emailer.js
-Sends backend invitation emails through Resend.
-This module stays small because the invite routes handle the flow around it.
+File: emailer.js
+Purpose: Sends backend invitation emails through Resend.
+    This module stays small because the invite routes handle the flow around it.
 */
 
 const {Resend} = require('resend');

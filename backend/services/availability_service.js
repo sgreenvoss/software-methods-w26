@@ -1,7 +1,7 @@
 /*
-availability_service.js
-Builds the availability payload for the group heatmap route.
-This file fetches participants, runs the algorithm, and formats the response.
+File: availability_service.js
+Purpose: Builds the availability payload for the group heatmap route.
+    This file fetches participants, runs the algorithm, and formats the response.
 */
 
 const { fetchAndMapGroupEvents } = require('../algorithm/algorithm_adapter.js');

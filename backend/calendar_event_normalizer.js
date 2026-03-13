@@ -1,7 +1,7 @@
 /*
-calendar_event_normalizer.js
-Normalizes calendar events before they go back to the frontend.
-This keeps all-day metadata consistent for Google events and manual events.
+File: calendar_event_normalizer.js
+Purpose: Normalizes calendar events before they go back to the frontend.
+    This keeps all-day metadata consistent for Google events and manual events.
 */
 
 const DAY_MS = 24 * 60 * 60 * 1000;
