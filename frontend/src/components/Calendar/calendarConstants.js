@@ -54,10 +54,10 @@ export const COLORS = {
 };
 
 export const ZINDEX = {
+  DEEMPHASIZE: 10,
   NORMAL: 20,
   BLOCKING: 30,
-  AVAIL: 50,
-  PETITION: 40,
-  DEEMPHASIZE: 10,
+  AVAIL: 40,
+  PETITION: 50,
   PREVIEW: 60
 }
