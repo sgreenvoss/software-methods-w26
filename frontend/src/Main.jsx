@@ -32,6 +32,7 @@ import {apiGet, apiPost} from './api';
 
 /* Reusable container that provides draggable width adjustment for sidebars. */
 import ResizableSidebar from './components/ResizeableSidebar';
+import HelpModal from './components/HelpModal';
 
 /**
  * Main authenticated application container.
@@ -51,6 +52,7 @@ export default function Main() {
     //sidebars
     const [isGroupsSidebarOpen, setIsGroupsSidebarOpen] = useState(false);
     const [isEventSidebarOpen, setIsEventSidebarOpen] = useState(false);
+    const [isHelpModalOpen, setIsHelpModalOpen] = useState(false);
 
     //invites
     const [pendingInvite, setPendingInvite] = useState(null);
@@ -73,10 +75,8 @@ export default function Main() {
     // error handling
     const { setError } = useContext(ErrorContext);
 
-
     // Handles calendar cell selection and pre-fills event form values
-    const handleCalendarCellClick = (clickedDate, hour, targetMode /*<- NEVER REMOVE THIS */) => {
-
+    const handleCalendarCellClick = (clickedDate, hour, targetMode = 'blocking' /*<- NEVER REMOVE THIS */) => {
         // Format the date as YYYY-MM-DD
         const year = clickedDate.getFullYear();
         const month = String(clickedDate.getMonth() + 1).padStart(2, '0');
@@ -247,6 +247,7 @@ export default function Main() {
     }
 
     // Submits an invitation response and updates invite/group state accordingly.
+
     const handleInviteDecision = async (decision) => {
         setInviteActionLoading(true);
         setInviteError('');
@@ -311,6 +312,7 @@ export default function Main() {
             {/* management buttons and username display*/}
             <section id="manButtons">
                 <p>It's {username}'s schedule!</p>
+                <button onClick={() => setIsHelpModalOpen(true)}>?</button>
                 <button id="syncCals" onClick={handleSyncCals}>Sync Calendars</button>
                 <button id="logout" onClick={handleLogout}>Logout</button>
             </section>
@@ -352,6 +354,10 @@ export default function Main() {
             </section>
 
             <main className="main-layout">
+                {isHelpModalOpen && (
+                    <HelpModal onClose={() => setIsHelpModalOpen(false)}></HelpModal>
+                )}
+
                 {/* The Groups sidebar. */}
                 {isGroupsSidebarOpen && (
                     <ResizableSidebar side="left" defaultWidth={320} minWidth={250} maxWidth={600} className="main-sidebar">

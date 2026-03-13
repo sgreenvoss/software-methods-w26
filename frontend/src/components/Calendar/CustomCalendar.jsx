@@ -201,6 +201,7 @@ export default function CustomCalendar({ refreshTrigger, groupId, draftEvent, on
       setSelectedPetition(event);
       setIsPetitionModalOpen(true);
     } else {
+      console.log(event.mode);
       setSelectedEvent(event);
     }
   };

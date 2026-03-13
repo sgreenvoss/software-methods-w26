@@ -258,7 +258,7 @@ export default function PetitionActionModal({
     <div className="modal-backdrop" onClick={onClose}>
       <div className="modal-shell" onClick={(e) => e.stopPropagation()}>
         <div className="modal-header">
-          <h3>{title}</h3>
+          <h2>{title}</h2>
           <button className="cancel-btn" onClick={onClose} disabled={submitting}>
             ×
           </button>
