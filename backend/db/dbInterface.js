@@ -3,7 +3,7 @@ File: dbInterface.js
 Purpose: Holds the shared PostgreSQL queries used across the backend.
     This file keeps connection setup, user/group helpers, and petition helpers in one place.
 
-Creation Date: Feb 23, 2026
+Creation Date: 2026-02-23
 Initial Authors(s): Stella Greenvoss
 
 System Context:
