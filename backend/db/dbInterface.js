@@ -2,6 +2,9 @@
 File: dbInterface.js
 Purpose: Holds the shared PostgreSQL queries used across the backend.
     This file keeps connection setup, user/group helpers, and petition helpers in one place.
+
+    Creation Date: Feb 23, 2026
+    Initial Authors(s): Stella Greenvoss
 */
 
 const fs = require('fs');
@@ -27,6 +30,13 @@ const pool = new Pool(
       }
 );
 
+
+/**
+ * Ensure the database is successfully connected
+ *
+ * @async
+  
+ */
 const testConnection = async () => {
     const result = await pool.query('SELECT NOW()');
     return {
@@ -38,6 +48,13 @@ const testConnection = async () => {
 
 const PETITION_TABLE_NAMES = ["petitions", "petition_responses"];
 
+
+/**
+ * Description placeholder
+ *
+ * @param {err} error 
+ * @returns {*} 
+ */
 const isMissingPetitionRelationError = (error) => {
     if (!error) return false;
     if (error.appCode === "PETITION_SCHEMA_MISSING") return true;
@@ -47,6 +64,13 @@ const isMissingPetitionRelationError = (error) => {
     return PETITION_TABLE_NAMES.some((tableName) => message.includes(tableName));
 }
 
+
+/**
+ * Error Handling the Petitons Schema
+ *
+ * @param {err} error 
+ * @returns {*} 
+ */
 const toPetitionSchemaError = (error) => {
     if (!isMissingPetitionRelationError(error)) return error;
 
@@ -58,6 +82,14 @@ const toPetitionSchemaError = (error) => {
     return wrapped;
 }
 
+
+/**
+ * check that Petition schema is ready
+ *
+ * @async
+ * @param {*} [executor=pool] 
+ * @returns {*} 
+ */
 const assertPetitionSchemaReady = async(executor = pool) => {
     try {
         const checkSql = `
@@ -88,6 +120,13 @@ const assertPetitionSchemaReady = async(executor = pool) => {
     }
 }
 
+
+/**
+ * Ensure the petiton schema is correct
+ *
+ * @async
+ * @returns {*} 
+ */
 const ensurePetitionSchema = async() => {
     const schemaPath = path.resolve(__dirname, '..', '..', 'db', '001_petitions_schema.sql');
     const schemaSql = fs.readFileSync(schemaPath, 'utf8');
@@ -97,13 +136,15 @@ const ensurePetitionSchema = async() => {
 
 
 /**
- * @param {*} google_id 
- * @param {*} email 
- * @param {*} first_name 
- * @param {*} last_name 
- * @param {*} username if the user is new, the username will be set to the string "New user!" 
- * @param {*} refresh_token 
- * @param {*} access_token 
+ * Try to add a new user or update an exisiting one with new information
+ * 
+ * @param {string} google_id 
+ * @param {string} email 
+ * @param {string} first_name 
+ * @param {string} last_name 
+ * @param {string} username if the user is new, the username will be set to the string "New user!" 
+ * @param {bigint} refresh_token 
+ * @param {bigint} access_token 
  * @param {bigint} token_expiry 
  * @returns user_id
  */
@@ -136,6 +177,16 @@ const insertUpdateUser = async(google_id, email, first_name, last_name, username
     return result.rows[0].user_id;
 }
 
+
+/**
+ * Add a calendar to the database
+ *
+ * @async
+ * @param {bigint} user_id 
+ * @param {string} [calendar_name="primary"] 
+ * @param {string} [google_calendar_id="primary"] 
+  
+ */
 const addCalendar = async(user_id, calendar_name="primary", google_calendar_id="primary") => {
     const result = await pool.query(
         `INSERT INTO calendar (user_id, calendar_name, google_calendar_id)
@@ -152,6 +203,14 @@ const addCalendar = async(user_id, calendar_name="primary", google_calendar_id="
     return result.rows[0]
 }
 
+
+/**
+ * Retrieve calendar ID based on user ID
+ *
+ * @async
+ * @param {bigint} user_id 
+ * @returns calendar_id
+ */
 const getCalendarID = async(user_id) => {
     const result = await pool.query(
         `SELECT calendar_id FROM calendar
@@ -161,6 +220,14 @@ const getCalendarID = async(user_id) => {
     return result.rows[0];
 }
 
+
+/**
+ * Reitreve all calendar information from a user
+ *
+ * @async
+ * @param {bigint} user_id 
+ * @returns {calendar_id, calendar_name, google_calendar_id} 
+ */
 const getCalendarsByUserID = async(user_id) => {
     const result = await pool.query(
         `SELECT calendar_id, calendar_name, google_calendar_id FROM calendar
@@ -170,6 +237,16 @@ const getCalendarsByUserID = async(user_id) => {
     return result.rows;
 }
 
+
+/**
+ * Add a cal_event to the database
+ *
+ * @async
+ * @param {bigint} cal_id 
+ * @param {*} events 
+ * @param {number} [priority=3] 
+ * @returns {*} 
+ */
 const addEvents = async(cal_id, events, priority=3) => {
     for (let i = 0; i < events.length; i++) { 
         await pool.query(
@@ -188,7 +265,14 @@ const addEvents = async(cal_id, events, priority=3) => {
     };
 }
 
-// Update the blocking level for one stored event.
+/**
+ * Update the blocking level for one stored event.
+ *
+ * @async
+ * @param {bigint} event_id 
+ * @param {int} priority 
+ * @returns updated cal_event
+ */
 const updateEventPriority = async(event_id, priority) => {
     const query = `
         UPDATE cal_event
@@ -200,7 +284,16 @@ const updateEventPriority = async(event_id, priority) => {
     return res.rows[0];
 }
 
-// Update every matching title for one user's calendars.
+
+/**
+ * Update every matching title for one user's calendars.
+ *
+ * @async
+ *  @param {bigint} userId 
+ *  @param {string} title
+ * @param {int} priority 
+  
+ */
 const updateEventPriorityByTitle = async (userId, title, priority) => {
     const query = `
         UPDATE cal_event
@@ -213,7 +306,14 @@ const updateEventPriorityByTitle = async (userId, title, priority) => {
     return res.rows; // Returns array of all updated rows
 }
 
-// Delete one event by its Google Calendar event id.
+
+/**
+ * Delete one event by its Google Calendar event id.
+ *
+ * @async
+ * @param {bigint} event_id 
+  
+ */
 const deleteEventByGcalEventId = async(event_id) => {
     const query = `
         DELETE FROM cal_event
@@ -224,9 +324,17 @@ const deleteEventByGcalEventId = async(event_id) => {
     return res.rows[0];
 }
 
+
+/**
+ * Delete all exact title matches for this user's calendars.
+ *
+ * @async
+ *  @param {bigint} userId 
+ *  @param {string} title
+  
+ */
 const deleteEventsByTitle = async(userId, title) => {
     try {
-        // Delete all exact title matches for this user's calendars.
         const query = `
             DELETE FROM cal_event 
             WHERE event_name = $2
@@ -248,8 +356,8 @@ const deleteEventsByTitle = async(userId, title) => {
 
 /**
  * Deletes events for one calendar that ended before the provided cutoff date.
- * @param {*} cal_id
- * @param {*} date
+ * @param {bigint} cal_id
+ * @param {bigint} date
  */
 const cleanEvents = async(cal_id, date) => {
     await pool.query(
@@ -263,6 +371,14 @@ const cleanEvents = async(cal_id, date) => {
     );
 }
 
+
+/**
+ * get all events tied to a particular calendar id
+ *
+ * @async
+ * @param {bigint} cal_id 
+  
+ */
 const getEventsByCalendarID = async(cal_id) => {
     const result = await pool.query(
         `SELECT * FROM cal_event
@@ -273,6 +389,15 @@ const getEventsByCalendarID = async(cal_id) => {
     return result.rows;
 }
 
+
+/**
+ * delete alle vents tied to a particular calendar id
+ *
+ * @async
+ * @param {bigint} cal_id 
+ * @param {string} gcal_event_ids 
+ * @returns {*} 
+ */
 const deleteEventsByIds = async(cal_id, gcal_event_ids) => {
     if (!gcal_event_ids || gcal_event_ids.length === 0) return;
     
@@ -284,6 +409,16 @@ const deleteEventsByIds = async(cal_id, gcal_event_ids) => {
     );
 }
 
+
+/**
+ * Update an existing event with new start time, end time, title, cal_id, and gcal_event_id data
+ *
+ * @async
+ * @param {bigint} cal_id 
+ * @param {string} gcal_event_id 
+ * @param {*} eventData 
+ * @returns {*} 
+ */
 const updateEvent = async(cal_id, gcal_event_id, eventData) => {
     await pool.query(
         `UPDATE cal_event 
@@ -299,6 +434,14 @@ const updateEvent = async(cal_id, gcal_event_id, eventData) => {
     );
 }
 
+
+/**
+ * get user information from db by mathcing a user ID
+ *
+ * @async
+ * @param {bigint} user_id 
+  
+ */
 const getUserByID = async(user_id) => {
     const result = await pool.query(
         `SELECT user_id, username, email, first_name, last_name, google_id, refresh_token, access_token, token_expiry 
@@ -308,6 +451,14 @@ const getUserByID = async(user_id) => {
     return result.rows[0];
 }
 
+
+/**
+ * get user information by matching to user first_name
+ *
+ * @async
+ * @param {string} name 
+  
+ */
 const getUsersWithName = async(name) => {
     console.log('running q');
     const query = `
@@ -319,6 +470,14 @@ const getUsersWithName = async(name) => {
     return result;
 }
 
+
+/**
+ * gets user information by mathcing to user id
+ *
+ * @async
+ * @param {bigint} id 
+  
+ */
 const getNameByID = async(id) => {
     const query =  `
     SELECT email, first_name, username FROM person
@@ -327,8 +486,15 @@ const getNameByID = async(id) => {
     return result;
 }
 
+
+/**
+ * Match usernames by prefix so the search dropdown can autocomplete.
+ *
+ * @async
+ * @param {string} search 
+  
+ */
 const searchFor = async(search) => {
-    // Match usernames by prefix so the search dropdown can autocomplete.
     const result = await pool.query(
         `SELECT user_id, username FROM person 
         WHERE username ILIKE $1 LIMIT 10`,
@@ -414,6 +580,15 @@ const createGroupWithCreator = async(g_name, creator_user_id) => {
     }
 }
 
+
+/**
+ * add a user to a group
+ *
+ * @async
+ * @param {bigint} group_id 
+ * @param {bigint} user_id 
+ * @returns {*} 
+ */
 const addUserToGroup = async(group_id, user_id) => {
     const query = `
         INSERT INTO group_match (group_id, user_id)
@@ -425,6 +600,14 @@ const addUserToGroup = async(group_id, user_id) => {
     ]);
 }
 
+
+/**
+ * get groups a user belongs to
+ *
+ * @async
+ * @param {bigint} user_id 
+  
+ */
 const getGroupsByUID = async(user_id) => {
     const query = `
         SELECT * FROM f_group
@@ -434,6 +617,15 @@ const getGroupsByUID = async(user_id) => {
     return result.rows;
 }
 
+
+
+/**
+ * get user id by matching group id
+ *
+ * @async
+ * @param {bigint} group_id 
+  
+ */
 const getUIDByGroupID = async(group_id) => {
     const query = `
         SELECT user_id FROM group_match
@@ -442,6 +634,13 @@ const getUIDByGroupID = async(group_id) => {
     return res;
 }
 
+
+/**
+ * get group info by group id
+ *
+ * @async
+ * @param {bigint} group_id  
+ */
 const getGroupById = async(group_id) => {
     const query = `
         SELECT group_id, group_name FROM f_group
@@ -450,6 +649,15 @@ const getGroupById = async(group_id) => {
     return res.rows[0] || null;
 }
 
+
+/**
+ * check if user is in a particular group
+ *
+ * @async
+ * @param {bigint} user_id 
+ * @param {bigint} group_id 
+ * @returns {bool} 
+ */
 const isUserInGroup = async(user_id, group_id) => {
     const query = `
         SELECT user_id FROM group_match
@@ -458,6 +666,14 @@ const isUserInGroup = async(user_id, group_id) => {
     return (res.rowCount > 0);
 }
 
+
+/**
+ * get group by group id
+ *
+ * @async
+ * @param {bigint} group_id 
+ * @returns {JSON} 
+ */
 const getGroupByID = async(group_id) => {
     const query = `
         SELECT * FROM f_group WHERE group_id = ($1)`;
@@ -465,6 +681,13 @@ const getGroupByID = async(group_id) => {
     return res.rows;
 }
 
+
+/**
+ * get group members by group id
+ *
+ * @async
+ * @param {bigint} group_id 
+ */
 const getGroupMembersByID = async(group_id) => {
     const query = `
         SELECT p.username, p.user_id 
@@ -476,11 +699,28 @@ const getGroupMembersByID = async(group_id) => {
     return res.rows;
 }
 
+
+/**
+ * Delete a group
+ *
+ * @async
+ * @param {bigint} group_id 
+ * @returns {*} 
+ */
 const deleteGroup = async(group_id) => {
     const query = `DELETE FROM f_group WHERE group_id = ($1)`;
     await pool.query(query, [group_id]);
 }
 
+
+/**
+ * leave a group
+ *
+ * @async
+ * @param {bigint} user_id 
+ * @param {bigint} group_id 
+ * @returns {*} 
+ */
 const leaveGroup = async(user_id, group_id) => {
     try {
         const query = `
@@ -516,6 +756,14 @@ const updateUsername = async(user_id, new_username) => {
     }
 }
 
+
+/**
+ * check if a username exits
+ *
+ * @async
+ * @param {string} username 
+  
+ */
 const checkUsernameExists = async(username) => {
     const result = await pool.query(
         `SELECT user_id FROM person WHERE username = $1`,
@@ -567,6 +815,16 @@ const PETITION_SELECT_COLUMNS = `
     g.group_name
 `;
 
+
+/**
+ * get petition by a user id
+ *
+ * @async
+ * @param {*} executor 
+ * @param {bigint} petitionId 
+ * @param {bigint} userId 
+  
+ */
 const getPetitionByIdForUser = async(executor, petitionId, userId) => {
     const sql = `
         ${PETITION_CTES}
@@ -585,6 +843,22 @@ const getPetitionByIdForUser = async(executor, petitionId, userId) => {
     return result.rows[0] || null;
 }
 
+
+
+/**
+ * create a new petition
+ *
+ * @async
+ * @param {{ groupId: any; creatorUserId: any; title: any; startMs: any; endMs: any; blockingLevel: any; }} param0 
+ * @param {bigint} param0.groupId 
+ * @param {bigint} param0.creatorUserId 
+ * @param {string} param0.title 
+ * @param {BigInt64Array} param0.startMs 
+ * @param {BigInt64Array} param0.endMs 
+ * @param {int} param0.blockingLevel 
+  
+  
+ */
 const createPetition = async({ groupId, creatorUserId, title, startMs, endMs, blockingLevel }) => {
     const client = await pool.connect();
     try {
@@ -653,6 +927,16 @@ const createPetition = async({ groupId, creatorUserId, title, startMs, endMs, bl
     }
 }
 
+
+/**
+ * generate list of petitions in a group
+ *
+ * @async
+ * @param {{ groupId: any; userId: any; }} param0 
+ * @param {bigint} param0.groupId 
+ * @param {bigint} param0.userId 
+  
+ */
 const listGroupPetitions = async({ groupId, userId }) => {
     try {
         const sql = `
@@ -676,6 +960,15 @@ const listGroupPetitions = async({ groupId, userId }) => {
     }
 }
 
+
+/**
+ * list petitions from a user
+ *
+ * @async
+ * @param {{ userId: any; }} param0 
+ * @param {bigint} param0.userId 
+  
+ */
 const listUserPetitions = async({ userId }) => {
     try {
         const sql = `
@@ -703,6 +996,17 @@ const listUserPetitions = async({ userId }) => {
     }
 }
 
+
+/**
+ * log the user response to a petition
+ *
+ * @async
+ * @param {{ petitionId: any; userId: any; response: any; }} param0 
+ * @param {bigint} param0.petitionId 
+ * @param {bigint} param0.userId 
+ * @param {stirng} param0.response 
+  
+ */
 const respondToPetition = async({ petitionId, userId, response }) => {
     const normalizedResponse = String(response || "").toUpperCase();
     if (normalizedResponse !== "ACCEPTED" && normalizedResponse !== "DECLINED") {
@@ -780,6 +1084,16 @@ const respondToPetition = async({ petitionId, userId, response }) => {
     }
 }
 
+
+/**
+ * delete a petition from all users with the petition
+ *
+ * @async
+ * @param {{ petitionId: any; userId: any; }} param0 
+ * @param {bigint} param0.petitionId 
+ * @param {bigint} param0.userId 
+  
+ */
 const deletePetitionByCreator = async({ petitionId, userId }) => {
     const client = await pool.connect();
     try {
