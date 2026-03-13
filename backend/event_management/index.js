@@ -2,8 +2,8 @@
 File: index.js
 Purpose: Builds the event-management MVC bundle for ESM callers.
     It exports the factory plus the model, controller, and view helpers.
-Date Created:
-Author(s): David Haddad
+Date Created: 2026-02-06
+Initial Author(s): David Haddad
 Not in final project.
 */
 

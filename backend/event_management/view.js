@@ -2,8 +2,8 @@
 File: view.js
 Purpose: Builds the response helpers for the in-memory event-management module.
     Each helper returns the payload shape the tests and controller expect.
-Date Created:
-Author(s): David Haddad
+Date Created: 2026-02-06
+Initial Author(s): David Haddad
 Not used in final project.
 */
 

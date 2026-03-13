@@ -4,7 +4,7 @@ Purpose: This component handles the group creation module,
     including searching for existing users and creating a 
     shareable link.
 Creation date: 2026-02-16
-Author(s): Anna Norris
+Initial Author(s): Anna Norris
 
 System Context:
 Part of the frontend system. Newly created groups are shown in 

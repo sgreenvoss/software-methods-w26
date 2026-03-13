@@ -3,7 +3,7 @@ File: EventClickModal.jsx
 Purpose: This handles the popup when a user clicks a personal event to change its priority or 
         delete it. Keeping it separate makes the main calendar file much easier to read.
 Creation date: 2026-03-09
-Author(s): Garrett Caldwell
+Initial Author(s): Garrett Caldwell
 
 System Context:
 Part of frontend calendar system. Rendered by CustomCalendar upon user clicking

@@ -4,7 +4,7 @@ Purpose: this is the central Express backend that manages
     auth/sessions, API routes, calendar/event operations, 
     and serves the React app.
 Date Created: 2026-02-03
-Author(s): Stella Greenvoss, heavily edited by all developers
+Initial Author(s): Stella Greenvoss, heavily edited by all developers
  
 System Context:
  Acts as the main backend entry point for the application. It configures Express middleware,

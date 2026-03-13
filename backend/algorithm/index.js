@@ -2,7 +2,7 @@
 File: index.js
 Purpose: ESM barrel entrypoint that re-exports the availability algorithm public API.
 Creation Date: 2026-02-02
-Author(s): David Haddad
+Initial Author(s): David Haddad
 
 System Context: 
 This file is the package-level import entry used by consumers of the algorithm module.

@@ -5,7 +5,7 @@ Purpose:
  * This file handles the dirty work: SQL queries, raw data formatting, and 
  * mapping flat rows into the nested ParticipantSnapshot structure.
 Creation Date: 2026-02-19
-Author(s): David Haddad
+Initial Author(s): David Haddad
 
 System Context:
  * Sits between persistence and computation layers for group availability. It fetches raw event rows

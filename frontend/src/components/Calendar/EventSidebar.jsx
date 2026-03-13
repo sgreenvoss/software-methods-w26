@@ -3,7 +3,7 @@ File: EventSidebar.jsx
 Purpose: This allows the user to handle both creating custom time
         blocks and petitions. User can open or close the sidebar.
 Creation date: 2026-02-21
-Author(s): Garrett Caldwell
+Initial Author(s): Garrett Caldwell
 
 System Context:
 Part of frontend system. Clicking a button on main component

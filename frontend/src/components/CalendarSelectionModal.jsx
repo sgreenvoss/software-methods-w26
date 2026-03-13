@@ -3,7 +3,7 @@ File: CalendarSelectionModal.jsx
 Purpose: Provides the modal to select calendars after users 
         have submitted a valid username
 Creation Date: 2026-03-06
-Author(s): Anna Norris
+Initial Author(s): Anna Norris
 
 System Context:
 Presented on login page for onboarding, selected calendars are

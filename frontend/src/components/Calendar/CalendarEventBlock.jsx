@@ -4,7 +4,7 @@ Purpose: This component calculates exactly where an event should sit on the scre
         It uses percentages so that if a user opens the app on an iPhone or 
         drags their desktop window smaller, the events scale perfectly with the grid.
 Creation date: 2026-03-09
-Author(s): Garrett Caldwell
+Initial Author(s): Garrett Caldwell
 
 System Context:
 Renders calendar event blocks used in calendar,

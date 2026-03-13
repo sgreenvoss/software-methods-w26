@@ -2,15 +2,22 @@
 File: inviteToken.js
 Purpose: Creates and verifies stateless invite tokens for group invitations.
     The token carries the group id and expiration time in a signed payload.
-Date Created:
-Author(s):
+Date Created: 2026-02-20
+Initial Author(s): Stella Greenvoss
 
 System Context:
+Creates the token that will be used by the invitation module.
 */
 
 const crypto = require('crypto');
 
-// Encode the token parts with URL-safe Base64 so they can travel in invite links.
+
+/**
+ * Encode the token parts with URL-safe Base64 so they can travel in invite links.
+ * 
+ * @param {string|Buffer|Uint8Array} buf
+ * @returns {string}
+ */
 function b64url(buf) {
   return Buffer.from(buf)
     .toString('base64')
@@ -18,19 +25,37 @@ function b64url(buf) {
     .replace(/\+/g, '-')
     .replace(/\//g, '_');
 }
-// Decode the URL-safe Base64 payload back into the raw JSON bytes.
+ 
+/**
+ * Decode the URL-safe Base64 payload back into the raw JSON bytes.
+ * 
+ * @param {string} str
+ * @returns {Buffer}
+ */
 function b64urlDecode(str) {
   str = str.replace(/-/g, '+').replace(/_/g, '/');
   while (str.length % 4) str += '=';
   return Buffer.from(str, 'base64');
 }
 
-// Sign the payload so tampering shows up during verification.
+/**
+ * Sign the payload so tampering shows up during verification.
+ * 
+ * @param {string} payloadPart
+ * @param {string} secret
+ * @returns {string}
+ */
 function sign(payloadPart, secret) {
   return b64url(crypto.createHmac('sha256', secret).update(payloadPart).digest());
 }
 
-// Create the signed invite token the routes send back to the frontend.
+/**
+ * Create the signed invite token the routes send back to the frontend.
+ * 
+ * @param {Object} groupId
+ * @param {number} expiresAtMs
+ * @returns {string}
+ */
 function createInviteToken({ groupId, expiresAtMs }) {
   const secret = process.env.INVITE_LINK_SECRET;
   if (!secret) throw new Error('INVITE_LINK_SECRET is required');
@@ -42,6 +67,12 @@ function createInviteToken({ groupId, expiresAtMs }) {
   return `${payloadPart}.${sigPart}`;
 }
 
+/**
+ * Verifies that an invite token has not expired and is secure
+ * 
+ * @param {string} token
+ * @returns {Object}
+ */
 function verifyInviteToken(token) {
   // Verify the token without a database lookup so invite links stay stateless.
   const secret = process.env.INVITE_LINK_SECRET;

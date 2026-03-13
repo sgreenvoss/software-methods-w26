@@ -17,7 +17,7 @@ Purpose:
  *   - B1 view counts B1+B2+B3
  * 
 Creation Date: 2026-02-02
-Author(s): David Haddad
+Initial Author(s): David Haddad
 
 System Context:
  * Core compute layer for availability scoring. This module is intentionally pure and receives

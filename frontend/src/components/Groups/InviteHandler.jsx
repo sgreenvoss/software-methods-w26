@@ -3,7 +3,7 @@ File: InviteHandler.jsx
 Purpose: This component handles the user clicking on the shareable
     link to join a group.
 Date Created: 2026-02-26
-Author(s): David Haddad
+Initial Author(s): David Haddad
 
 System Context:
 This is part of the invitation module and frontend system.

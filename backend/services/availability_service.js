@@ -2,11 +2,12 @@
 File: availability_service.js
 Purpose: Builds the availability payload for the group heatmap route.
     This file fetches participants, runs the algorithm, and formats the response.
-Date Created:
-Author(s):
+Date Created: 2026-02-25
+Initial Author(s): David Haddad
 
 System Context:
-
+Is the main doorway to run the algorithm module and use its results.
+It uses dbInterface,
 */
 
 const { fetchAndMapGroupEvents } = require('../algorithm/algorithm_adapter.js');
@@ -15,6 +16,14 @@ const db = require('../db/dbInterface.js');
 
 const availabilityService = {
   
+  /**
+   * Runs the algorithm module and formats it so that the controller for availability can use it
+   * 
+   * @param {BigInt|string} groupId 
+   * @param {number} windowStartMs 
+   * @param {number} windowEndMs 
+   * @returns {Objects}
+   */
   async getGroupAvailability(groupId, windowStartMs, windowEndMs) {
     // Validate the time window before touching the database or the algorithm.
     if (!windowStartMs || !windowEndMs || windowEndMs <= windowStartMs) {

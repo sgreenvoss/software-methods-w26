@@ -2,11 +2,12 @@
 File: group_routes.js
 Purpose: Registers the backend group routes.
     This file handles group creation, listing, details, and leaving a group.
-Date Created:
-Author(s):
+Date Created: 2026-02-23
+Initial Author(s): David Haddad
 
 System Context:
-
+Interacts with frontend via Express routes to handle operations that
+support frontend Groups UI flows.
 */
 
 module.exports = function registerGroupRoutes(app, { db }) {

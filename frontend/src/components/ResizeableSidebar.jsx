@@ -5,7 +5,7 @@ Purpose: takes side ('left'|'right'), defaultWidth, minWidth, maxWidth, optional
         inside a vertically scrollable area with a draggable resize handle 
         that constrains width between min/max bounds on smaller screen size
 Creation Date: 2026-03-10 
-Author(s): Garrett Caldwell
+Initial Author(s): Garrett Caldwell
 
 System Context: Used on sidebars to adjust their width.
 */

@@ -3,7 +3,7 @@ File: Groups.jsx
 Purpose: Main groups management section displaying user's groups 
         with actions for viewing, creating, petitioning, and leaving
 Date Created: 2026-02-13
-Author(s): Anna Norris
+Initial Author(s): Anna Norris
 
 System Context:
 Renders a list of groups the user belongs to, with controls 

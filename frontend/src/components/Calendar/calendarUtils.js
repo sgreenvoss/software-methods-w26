@@ -3,7 +3,7 @@ File: calendarUtils.js
 Purpose: This file contains the "Business Logic". These are pure JavaScript functions 
         that crunch dates and numbers
 Creation date: 2026-03-09
-Author(s): Garrett Caldwell
+Initial Author(s): Garrett Caldwell
 
 System Context:
 Used to format the datetime for rendering on the calendar

@@ -2,8 +2,8 @@
 File: model.js
 Purpose: Implements the in-memory event store used by the event-management module.
     This file keeps the validation and mutation rules in one place.
-Date Created:
-Author(s): David Haddad
+Date Created: 2026-02-06
+Initial Author(s): David Haddad
 Not used in final project.
 */
 

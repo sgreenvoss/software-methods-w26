@@ -2,11 +2,12 @@
 File: groups.js
 Purpose: Registers the group, invite, and petition route modules.
     This file keeps the backend group features wired together in one place.
-Date Created:
-Author(s):
+Date Created: 2026-02-09
+Initial Author(s): Anna Norris, Stella Greenvoss
 
 System Context:
-
+Handles the routes associated with groups. Originally was a separate file
+with the endpoints for groups.
 */
 const db = require("./db/dbInterface");
 const inviteToken = require("./inviteToken");

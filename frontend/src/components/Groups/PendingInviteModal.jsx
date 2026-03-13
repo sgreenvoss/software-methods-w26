@@ -2,7 +2,7 @@
  * File: PendingInviteModal.jsx
  * Purpose: Modal for presenting a pending group invitation and allowing the user to accept or decline it
  * Date Created: 2026-02-23
- * Author(s): David Haddad
+ * Initial Author(s): David Haddad
  *
  * System Context:
  * Renders as a blocking overlay when the application detects an outstanding group invitation for the

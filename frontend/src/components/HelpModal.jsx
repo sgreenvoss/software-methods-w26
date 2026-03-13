@@ -2,7 +2,7 @@
 File: HelpModal.jsx
 Purpose: Provides some guidance to users on how to use basic features of the app
 Creation Date:
-Author(s): Stella Greenvoss, Anna Norris
+Initial Author(s): Stella Greenvoss, Anna Norris
 
 System Context:
 Part of the larger frontend system. This placed with management buttons and username display to

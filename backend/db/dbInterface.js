@@ -4,7 +4,7 @@ Purpose: Holds the shared PostgreSQL queries used across the backend.
     This file keeps connection setup, user/group helpers, and petition helpers in one place.
 
 Creation Date: 2026-02-23
-Initial Authors(s): Stella Greenvoss
+Initial Author(s): Stella Greenvoss
 
 System Context:
 dbInterface is used by the backend to make queries to the PostgreSQL database.

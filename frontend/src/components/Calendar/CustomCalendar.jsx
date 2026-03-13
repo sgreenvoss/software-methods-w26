@@ -4,7 +4,7 @@ Purpose: fetches the data, merges it together, and maps over it to render the UI
         By moving all the logic out to calendarUtils.js, this file is strictly 
         focused on React State and the DOM.
 Creation date: 2026-02-18
-Author(s): Garrett Caldwell
+Initial Author(s): Garrett Caldwell
 
 Significant Changes:
     Parts of Custom calendar was significantly refactored for workability and

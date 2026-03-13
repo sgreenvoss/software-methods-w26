@@ -2,7 +2,7 @@
 File: GroupInfo.jsx
 Purpose: Modal component for displaying group information, member list, and invitation link generation
 Date Created: 2026-02-24
-Author(s): Garrett Caldwell
+Initial Author(s): Garrett Caldwell
 
 System Context: Renders as an overlay modal displaying group details (name, members) 
 and providing functionality to generate shareable invite links for adding new members 

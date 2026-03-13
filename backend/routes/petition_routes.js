@@ -2,15 +2,23 @@
 File: petition_routes.js
 Purpose: Registers the petition API routes.
     This file centralizes auth checks, petition validation, and error formatting.
-Date Created:
-Author(s):
+Date Created: 2026-02-23
+Initial Author(s): David Haddad
 
 System Context:
-
+Acts as the backend petition API boundary for the group scheduling workflow.
+Authenticates and validates petitions made by users on the frontend and sends responses.
 */
 
 const crypto = require("crypto");
 
+/**
+ * Ensures a stable trace ID is attached to the current request/response lifecycle.
+ * Reuses an existing trace ID when already present on `res.locals`.
+ *
+ * @param {Object} res - Express response object
+ * @returns {string} Trace ID associated with the request
+ */
 function ensureTraceId(res) {
   // Reuse one trace id for the whole request so logs and responses line up.
   if (!res.locals.traceId) {
@@ -20,17 +28,45 @@ function ensureTraceId(res) {
   return res.locals.traceId;
 }
 
+/**
+ * Middleware that attaches a trace ID to each incoming request before route handlers run.
+ *
+ * @param {Object} req - Express request object
+ * @param {Object} res - Express response object
+ * @param {Function} next - Express next callback
+ * @returns {void}
+ */
 function withTraceId(req, res, next) {
   ensureTraceId(res);
   next();
 }
 
+/**
+ * Sends a standardized API error response payload including trace ID and optional metadata.
+ *
+ * @param {Object} req - Express request object
+ * @param {Object} res - Express response object
+ * @param {number} status - HTTP status code
+ * @param {string} message - Error message for API client
+ * @param {Object} [extra={}] - Additional error payload fields
+ * @returns {Object} Express JSON response
+ */
 function sendApiError(req, res, status, message, extra = {}) {
   // Attach the trace id to every error response the frontend sees.
   const traceId = ensureTraceId(res);
   return res.status(status).json({ error: message, traceId, ...extra });
 }
 
+/**
+ * Writes a structured petition-route error log entry for diagnostics and tracing.
+ *
+ * @param {Object} req - Express request object
+ * @param {Object} res - Express response object
+ * @param {string} stage - Logical stage name where the error occurred
+ * @param {Error} error - Error object
+ * @param {Object} [extra={}] - Extra log metadata
+ * @returns {void}
+ */
 function logRouteError(req, res, stage, error, extra = {}) {
   // Keep the route logs structured so petition failures can be traced back quickly.
   const traceId = ensureTraceId(res);
@@ -47,6 +83,14 @@ function logRouteError(req, res, stage, error, extra = {}) {
   });
 }
 
+/**
+ * Middleware that enforces authenticated session access and stores normalized user ID on request.
+ *
+ * @param {Object} req - Express request object
+ * @param {Object} res - Express response object
+ * @param {Function} next - Express next callback
+ * @returns {Object|void} Early error response or next middleware invocation
+ */
 function requireAuth(req, res, next) {
   // Copy the session user id onto the request once auth passes.
   if (!req.session || !req.session.userId || !req.session.isAuthenticated) {
@@ -57,7 +101,21 @@ function requireAuth(req, res, next) {
   return next();
 }
 
+/**
+ * Factory for middleware that validates group existence and current-user group membership.
+ *
+ * @param {Object} db - Database interface with group lookup helpers
+ * @returns {Function} Express middleware function
+ */
 function requireGroupMember(db) {
+  /**
+   * Middleware that validates groupId param, confirms group exists, and ensures current user is a member.
+   *
+   * @param {Object} req - Express request object
+   * @param {Object} res - Express response object
+   * @param {Function} next - Express next callback
+   * @returns {Promise<Object|void>} Early error response or next middleware invocation
+   */
   return async function requireGroupMemberMiddleware(req, res, next) {
     // Validate the route parameter before hitting the database.
     const groupId = Number(req.params.groupId);
@@ -85,6 +143,12 @@ function requireGroupMember(db) {
   };
 }
 
+/**
+ * Parses timestamp input as epoch milliseconds from number, numeric string, or date string.
+ *
+ * @param {number|string|*} value - Timestamp candidate input
+ * @returns {number} Parsed epoch milliseconds, or `NaN` for invalid input
+ */
 function parseEpochMs(value) {
   // Accept either epoch-like numbers or date strings from older callers.
   if (typeof value === "number" && Number.isFinite(value)) return value;
@@ -97,6 +161,12 @@ function parseEpochMs(value) {
   return NaN;
 }
 
+/**
+ * Normalizes petition blocking level values to supported uppercase tokens.
+ *
+ * @param {string|*} input - Blocking-level input value
+ * @returns {"B1"|"B2"|"B3"|null} Normalized blocking level or null when invalid
+ */
 function normalizeBlockingLevel(input) {
   // Default to the middle blocking level when callers omit the field.
   const level = String(input || "B2").toUpperCase();
@@ -104,6 +174,12 @@ function normalizeBlockingLevel(input) {
   return null;
 }
 
+/**
+ * Normalizes petition response payload values to canonical `ACCEPTED` / `DECLINED` values.
+ *
+ * @param {string|*} input - Response input value
+ * @returns {"ACCEPTED"|"DECLINED"|null} Normalized response value or null when invalid
+ */
 function normalizeResponse(input) {
   const raw = String(input || "").toUpperCase();
   if (raw === "ACCEPT" || raw === "ACCEPTED") return "ACCEPTED";
@@ -111,6 +187,14 @@ function normalizeResponse(input) {
   return null;
 }
 
+/**
+ * Creates a decorated Error object with attached HTTP status and optional metadata.
+ *
+ * @param {number} status - HTTP status code to attach
+ * @param {string} message - Error message
+ * @param {Object} [extra={}] - Additional error fields
+ * @returns {Error} Decorated error instance
+ */
 function createHttpError(status, message, extra = {}) {
   const error = new Error(message);
   error.status = status;
@@ -118,6 +202,14 @@ function createHttpError(status, message, extra = {}) {
   return error;
 }
 
+/**
+ * Validates and normalizes incoming petition-creation payload into internal route input shape.
+ * Supports both legacy and current field naming.
+ *
+ * @param {Object} body - Petition creation request body
+ * @returns {{startMs:number,endMs:number,title:string,blockingLevel:"B1"|"B2"|"B3"}} Normalized petition input
+ * @throws {Error} HTTP-style validation error for missing/invalid fields
+ */
 function parseCreatePetitionInput(body) {
   // Normalize the legacy and modern petition payload shapes into one validated object.
   const startMs = parseEpochMs(body?.start);
@@ -146,6 +238,12 @@ function parseCreatePetitionInput(body) {
   };
 }
 
+/**
+ * Detects whether an error indicates petition schema/tables are missing in persistence.
+ *
+ * @param {Error|Object|null|undefined} error - Error candidate
+ * @returns {boolean} True when error maps to missing petition schema condition
+ */
 function isPetitionSchemaMissingError(error) {
   // Recognize both wrapped app errors and raw Postgres missing-table errors.
   if (!error) return false;
@@ -155,6 +253,13 @@ function isPetitionSchemaMissingError(error) {
   return message.includes("petitions") || message.includes("petition_responses");
 }
 
+/**
+ * Maps raw petition-route errors into API response status/message/extra payload fields.
+ *
+ * @param {Error|Object} error - Error object from route logic
+ * @param {string} fallbackMessage - Default message when error has none
+ * @returns {{status:number,message:string,extra:Object}} 
+ */
 function resolvePetitionApiError(error, fallbackMessage) {
   if (isPetitionSchemaMissingError(error)) {
     return {
@@ -180,11 +285,27 @@ function resolvePetitionApiError(error, fallbackMessage) {
   return { status, message, extra };
 }
 
+/**
+ * Sends a classified petition API error response using resolved status/message/metadata.
+ *
+ * @param {Object} req - Express request object
+ * @param {Object} res - Express response object
+ * @param {Error|Object} error
+ * @param {string} fallbackMessage - Default message when error has none
+ * @returns {Object} Express JSON response
+ */
 function sendClassifiedError(req, res, error, fallbackMessage) {
   const resolved = resolvePetitionApiError(error, fallbackMessage);
   return sendApiError(req, res, resolved.status, resolved.message, resolved.extra);
 }
 
+/**
+ * Adds route-level convenience flags to petition payload for frontend display logic.
+ *
+ * @param {Object} petition - Petition object from persistence layer
+ * @param {number|string} userId - Current authenticated user ID
+ * @returns {Object} Petition object decorated with `is_creator` boolean
+ */
 function decoratePetitionForUser(petition, userId) {
   // Add the creator flag the frontend uses for button visibility.
   if (!petition || typeof petition !== "object") {
@@ -203,6 +324,12 @@ function decoratePetitionForUser(petition, userId) {
   };
 }
 
+/**
+ * Registers petition-related API routes and middleware on an Express application instance.
+ *
+ * @param {Object} app - Express app instance
+ * @param {{db:Object}} deps 
+ */
 function registerPetitionRoutes(app, { db }) {
   // Verify that the petition tables exist before the frontend opens petition UI.
   app.get("/api/groups/:groupId/petitions/preflight", withTraceId, requireAuth, requireGroupMember(db), async (req, res) => {

@@ -8,7 +8,7 @@ Purpose:
  *
  * Keeping the contract stable is the whole point.
 Creation Date: 2026-02-19
-Author(s): David Haddad
+Initial Author(s): David Haddad
 
 System Context:
  * Defines the shared type and semantics contract for the availability pipeline.
