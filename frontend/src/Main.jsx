@@ -75,7 +75,7 @@ export default function Main() {
 
 
     // Handles calendar cell selection and pre-fills event form values
-    const handleCalendarCellClick = (clickedDate, hour) => {
+    const handleCalendarCellClick = (clickedDate, hour, targetMode /*<- NEVER REMOVE THIS */) => {
 
         // Format the date as YYYY-MM-DD
         const year = clickedDate.getFullYear();
